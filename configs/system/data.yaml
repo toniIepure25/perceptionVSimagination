@@ -1,0 +1,156 @@
+# =============================================================================
+# NSD Dataset Configuration
+# =============================================================================
+#
+# Configuration for Natural Scenes Dataset (NSD) access and processing.
+# 
+# Dataset Reference:
+#   Allen et al. (2022). A massive 7T fMRI dataset to bridge cognitive 
+#   neuroscience and artificial intelligence. Nature Neuroscience.
+#
+# Data Structure:
+#   - S3 bucket: natural-scenes-dataset (AWS us-east-2)
+#   - 8 subjects, ~30,000 trials each
+#   - 73,000 unique images from COCO
+#   - Multiple preprocessing pipelines available
+#
+# =============================================================================
+
+# S3 Configuration
+# -----------------------------------------------------------------------------
+s3:
+  bucket: natural-scenes-dataset    # AWS S3 bucket name
+  region: us-east-2                 # AWS region
+  anon: true                        # Anonymous access (no credentials needed)
+  base_url: "s3://natural-scenes-dataset"
+  endpoint_url: null                # Custom endpoint (null for AWS)
+  
+  # Connection settings
+  max_retries: 3                    # Retry failed requests
+  timeout: 60                       # Request timeout (seconds)
+
+# Cache Configuration
+# -----------------------------------------------------------------------------
+cache:
+  cache_dir: cache                  # Local cache directory
+  s3_cache: cache/s3_cache          # S3 file cache
+  enable_caching: true              # Enable local caching
+  cache_size_limit: 100GB           # Maximum cache size (null = unlimited)
+  auto_cleanup: false               # Auto-cleanup old files
+
+# NSD File Structure
+# -----------------------------------------------------------------------------
+nsd:
+  # Metadata files
+  metadata_files:
+    stim_info: "nsddata/experiments/nsd/nsd_stim_info_merged.csv"
+    experiment_design: "nsddata/experiments/nsd/nsd_expdesign.mat"
+    
+  # Stimuli
+  stimuli:
+    hdf5_file: "nsddata_stimuli/stimuli/nsd/nsd_stimuli.hdf5"
+    format: RGB                     # Image format
+    resolution: [425, 425]          # Image resolution [H, W]
+    
+  # fMRI Data
+  fmri:
+    # Preprocessing pipelines (in order of recommendation)
+    pipelines:
+      betas_fithrf_GLMdenoise_RR:   # Best quality (recommended)
+        pattern: "nsddata_betas/ppdata/subj{subject:02d}/func1pt8mm/betas_fithrf_GLMdenoise_RR/betas_session{session:02d}.nii.gz"
+        description: "Fitted HRF + GLMdenoise + Ridge regression"
+        
+      betas_fithrf:                 # Good quality
+        pattern: "nsddata_betas/ppdata/subj{subject:02d}/func1pt8mm/betas_fithrf/betas_session{session:02d}.nii.gz"
+        description: "Fitted HRF only"
+        
+      betas_assumehrf:              # Baseline
+        pattern: "nsddata_betas/ppdata/subj{subject:02d}/func1pt8mm/betas_assumehrf/betas_session{session:02d}.nii.gz"
+        description: "Assumed canonical HRF"
+    
+    # Default pipeline
+    default_pipeline: betas_fithrf_GLMdenoise_RR
+    
+    # Resolution options
+    resolutions:
+      func1pt8mm: "1.8mm isotropic"  # Recommended
+      func1mm: "1.0mm isotropic"     # Higher res, larger files
+    default_resolution: func1pt8mm
+    
+    # ROI masks (optional)
+    roi_masks: "nsddata/ppdata/subj{subject:02d}/anat/*roi*.nii.gz"
+
+subjects:
+  default: [1, 2, 3, 4, 5, 6, 7, 8]
+  details:
+    1:
+      description: "Subject 01"
+      approx_sessions: 40
+    2:
+      description: "Subject 02"
+      approx_sessions: 40
+    3:
+      description: "Subject 03"
+      approx_sessions: 32
+    4:
+      description: "Subject 04"
+      approx_sessions: 30
+    5:
+      description: "Subject 05"
+      approx_sessions: 40
+    6:
+      description: "Subject 06"
+      approx_sessions: 32
+    7:
+      description: "Subject 07"
+      approx_sessions: 40
+    8:
+      description: "Subject 08"
+      approx_sessions: 30
+
+sessions:
+  # NOTE: Sessions have variable trial counts!
+  # Use canonical index builder to get actual trial counts per session.
+  # Do NOT assume fixed trial counts for stimulus-fMRI pairing.
+  approx_trials_per_session: 750 # Approximate - varies by session
+  actual_counts_from: "session_design_files" # Use design matrices for exact counts
+
+paths:
+  output_dir: "outputs"
+  checkpoint_dir: "checkpoints"
+  log_dir: "logs"
+  index_file: "cache/nsd_canonical_index.parquet" # Optional local fallback; primary layout is partitioned per subject
+
+processing:
+  default_fmri_pipeline: "betas_fithrf_GLMdenoise_RR"
+  memory:
+    max_cache_size_gb: 50
+    use_memory_mapping: true
+
+splits:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  random_seed: 42
+
+preprocess:
+  reliability_threshold: 0.1 # Minimum split-half correlation for voxel inclusion
+  min_variance: 1.0e-6 # Fallback variance threshold
+  pca_k: 4096 # Default number of PCA components
+
+ablation:
+  # Reliability sweep follows NSD practice to trade voxel count vs. SNR
+  # (GLMsingle/NSD reliability literature: PMC)
+  rel_grid: [0.05, 0.1, 0.2]
+  # Dimensionality sweep (PCA) mirrors principal-component regression
+  # used in encoding/decoding work (standard in vision-fMRI)
+  pca_k_grid: [512, 1024, 4096]
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+debug:
+  verbose_data_loading: false
+  validate_paths: true
+  profile_performance: false
