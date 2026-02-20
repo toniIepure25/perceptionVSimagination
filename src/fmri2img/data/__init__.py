@@ -2,39 +2,42 @@
 Data Package
 ============
 
-Data loading, preprocessing, and indexing for NSD dataset.
+Data loading, preprocessing, indexing, and dataset classes for the NSD
+perception and imagery pipelines.
 """
 
-# Preprocessing
 from .preprocess import NSDPreprocessor
-
-# CLIP cache
 from .clip_cache import CLIPCache
-
-# Data loaders
 from .loaders import (
     DataLoaderFactory,
     FMRIDataset,
     train_val_test_split,
-    extract_features_and_targets
+    extract_features_and_targets,
 )
-
-# Index utilities
 from .nsd_index_reader import read_subject_index
+from .nsd_imagery import (
+    ImageryTrial,
+    NSDImageryDataset,
+    build_nsd_imagery_index,
+)
+from .torch_dataset import NSDIterableDataset
 
 __all__ = [
     # Preprocessing
     "NSDPreprocessor",
-    
-    # CLIP
+    # CLIP cache
     "CLIPCache",
-    
     # Data loaders
     "DataLoaderFactory",
     "FMRIDataset",
     "train_val_test_split",
     "extract_features_and_targets",
-    
     # Index
     "read_subject_index",
+    # Imagery
+    "ImageryTrial",
+    "NSDImageryDataset",
+    "build_nsd_imagery_index",
+    # Torch dataset
+    "NSDIterableDataset",
 ]

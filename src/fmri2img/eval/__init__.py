@@ -1,5 +1,9 @@
 """
-Evaluation metrics for fMRI → image reconstruction
+Evaluation Package
+==================
+
+Metrics for fMRI-to-image reconstruction quality: embedding retrieval,
+perceptual image similarity, brain alignment, and uncertainty calibration.
 """
 
 from .retrieval import cosine_sim, retrieval_at_k, compute_ranking_metrics
@@ -10,7 +14,14 @@ from .image_metrics import (
     ssim_score,
     lpips_score,
     compute_all_metrics,
-    pixel_mse
+    pixel_mse,
+)
+from .uncertainty import (
+    enable_dropout,
+    predict_with_mc_dropout,
+    compute_uncertainty_error_correlation,
+    evaluate_uncertainty_calibration,
+    compute_confidence_intervals,
 )
 
 __all__ = [
@@ -25,5 +36,11 @@ __all__ = [
     "ssim_score",
     "lpips_score",
     "compute_all_metrics",
-    "pixel_mse"
+    "pixel_mse",
+    # Uncertainty estimation
+    "enable_dropout",
+    "predict_with_mc_dropout",
+    "compute_uncertainty_error_correlation",
+    "evaluate_uncertainty_calibration",
+    "compute_confidence_intervals",
 ]

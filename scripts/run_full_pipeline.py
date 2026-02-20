@@ -751,7 +751,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from fmri2img.models.mlp import MLPEncoder
-from fmri2img.data.datasets import NSDDataset
+from fmri2img.data.loaders import FMRIDataset as NSDDataset
 from fmri2img.eval.uncertainty import (
     predict_with_mc_dropout,
     compute_uncertainty_error_correlation,

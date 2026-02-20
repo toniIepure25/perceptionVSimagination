@@ -1,8 +1,9 @@
 """
-fMRI-to-Image Models
-===================
+Models Package
+==============
 
-Neural and linear models for mapping fMRI activity to image representations.
+Neural and linear decoders for mapping fMRI activity to image
+representations, plus imagery adapters for cross-domain transfer.
 """
 
 from .ridge import RidgeEncoder
@@ -18,28 +19,23 @@ from .adapters import (
     load_imagery_adapter,
 )
 from .encoders import (
-    ResidualBlock,
     ResidualMLPEncoder,
-    CLIPMappingHead,
     TwoStageEncoder,
     MultiLayerTwoStageEncoder,
     SelfSupervisedPretrainer,
     save_two_stage_encoder,
-    load_two_stage_encoder
+    load_two_stage_encoder,
 )
 from .multi_target_decoder import (
-    IPAdapterTokenHead,
-    SDLatentHead,
     MultiTargetDecoder,
     MultiTaskLoss,
     save_multi_target_decoder,
-    load_multi_target_decoder
+    load_multi_target_decoder,
 )
 from .encoding_model import (
-    ImageEncoder,
     EncodingModel,
     save_encoding_model,
-    load_encoding_model
+    load_encoding_model,
 )
 from .losses import (
     cosine_loss,
@@ -47,19 +43,20 @@ from .losses import (
     info_nce_loss,
     infonce_loss,
     compose_loss,
-    ComposedLoss
+    ComposedLoss,
 )
 
 __all__ = [
-    # Baseline models
+    # Baseline decoders
     "RidgeEncoder",
     "MLPEncoder",
     "save_mlp",
     "load_mlp",
+    # CLIP adapter
     "CLIPAdapter",
     "save_adapter",
     "load_adapter",
-    # Imagery adapters
+    # Imagery adapters (perception -> imagination transfer)
     "LinearAdapter",
     "MLPAdapter",
     "ConditionEmbedding",
@@ -68,23 +65,18 @@ __all__ = [
     "save_imagery_adapter",
     "load_imagery_adapter",
     # Two-stage encoder
-    "ResidualBlock",
     "ResidualMLPEncoder",
-    "CLIPMappingHead",
     "TwoStageEncoder",
     "MultiLayerTwoStageEncoder",
     "SelfSupervisedPretrainer",
     "save_two_stage_encoder",
     "load_two_stage_encoder",
-    # Multi-target decoder (novel)
-    "IPAdapterTokenHead",
-    "SDLatentHead",
+    # Multi-target decoder (semantic-structural dissociation)
     "MultiTargetDecoder",
     "MultiTaskLoss",
     "save_multi_target_decoder",
     "load_multi_target_decoder",
-    # Encoding model (for BOI-lite)
-    "ImageEncoder",
+    # Encoding model
     "EncodingModel",
     "save_encoding_model",
     "load_encoding_model",
@@ -94,6 +86,5 @@ __all__ = [
     "info_nce_loss",
     "infonce_loss",
     "compose_loss",
-    "ComposedLoss"
+    "ComposedLoss",
 ]
-

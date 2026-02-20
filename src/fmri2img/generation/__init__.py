@@ -1,17 +1,20 @@
 """
-Image generation utilities for fMRI reconstruction
+Generation Package
+==================
+
+Stable Diffusion-based image reconstruction from decoded CLIP embeddings,
+including best-of-N strategies and diffusion pipeline management.
 """
 
 from .advanced_diffusion import (
     generate_best_of_n,
     refine_with_boi_lite,
-    generate_with_all_strategies
+    generate_with_all_strategies,
 )
-
 from .diffusion_utils import (
     load_diffusion_pipeline,
     generate_from_clip_embedding,
-    load_clip_model
+    load_clip_model,
 )
 
 __all__ = [
@@ -20,5 +23,5 @@ __all__ = [
     "generate_with_all_strategies",
     "load_diffusion_pipeline",
     "generate_from_clip_embedding",
-    "load_clip_model"
+    "load_clip_model",
 ]
