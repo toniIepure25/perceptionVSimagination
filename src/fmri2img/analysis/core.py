@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
+from scipy import stats as scipy_stats
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,14 @@ class EmbeddingBundle:
     perception_meta: List[Dict] = field(default_factory=list)
     imagery_meta: List[Dict] = field(default_factory=list)
 
+    # Stimulus IDs for paired (shared-stimulus) analysis
+    perception_nsd_ids: Optional[np.ndarray] = None  # (N_p,)
+    imagery_nsd_ids: Optional[np.ndarray] = None  # (N_i,)
+
+    # Multi-layer embeddings for hierarchical analysis
+    multilayer_perception: Optional[Dict[str, np.ndarray]] = None
+    multilayer_imagery: Optional[Dict[str, np.ndarray]] = None
+
     @property
     def perception_cosines(self) -> np.ndarray:
         p = _l2(self.perception)
@@ -42,6 +51,25 @@ class EmbeddingBundle:
         p = _l2(self.imagery)
         t = _l2(self.imagery_targets)
         return np.sum(p * t, axis=1)
+
+    @property
+    def perception_norms(self) -> np.ndarray:
+        return np.linalg.norm(self.perception, axis=1)
+
+    @property
+    def imagery_norms(self) -> np.ndarray:
+        return np.linalg.norm(self.imagery, axis=1)
+
+    def get_shared_stimulus_pairs(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        """Return (shared_nsd_ids, perc_indices, imag_indices) for matched stimuli."""
+        if self.perception_nsd_ids is None or self.imagery_nsd_ids is None:
+            return None
+        shared = np.intersect1d(self.perception_nsd_ids, self.imagery_nsd_ids)
+        if len(shared) == 0:
+            return None
+        perc_idx = np.array([np.where(self.perception_nsd_ids == sid)[0][0] for sid in shared])
+        imag_idx = np.array([np.where(self.imagery_nsd_ids == sid)[0][0] for sid in shared])
+        return shared, perc_idx, imag_idx
 
 
 def _l2(x: np.ndarray) -> np.ndarray:
@@ -106,16 +134,19 @@ def collect_embeddings(
                 "trial_id": sample.get("trial_id"),
                 "stimulus_type": sample.get("stimulus_type", "unknown"),
                 "condition": sample.get("condition", label),
+                "nsd_id": sample.get("nsd_id"),
             })
 
-        return np.array(preds), np.array(targets), metas
+        nsd_ids = np.array([m["nsd_id"] for m in metas])
+        has_ids = not np.all(nsd_ids == None)  # noqa: E711
+        return np.array(preds), np.array(targets), metas, nsd_ids if has_ids else None
 
     logger.info("Collecting perception embeddings...")
-    p_preds, p_targets, p_meta = _run(perception_dataset, "perception")
+    p_preds, p_targets, p_meta, p_nsd_ids = _run(perception_dataset, "perception")
     logger.info(f"  Perception: {p_preds.shape[0]} samples")
 
     logger.info("Collecting imagery embeddings...")
-    i_preds, i_targets, i_meta = _run(imagery_dataset, "imagery")
+    i_preds, i_targets, i_meta, i_nsd_ids = _run(imagery_dataset, "imagery")
     logger.info(f"  Imagery: {i_preds.shape[0]} samples")
 
     return EmbeddingBundle(
@@ -126,6 +157,8 @@ def collect_embeddings(
         embed_dim=p_preds.shape[1],
         perception_meta=p_meta,
         imagery_meta=i_meta,
+        perception_nsd_ids=p_nsd_ids,
+        imagery_nsd_ids=i_nsd_ids,
     )
 
 
@@ -136,6 +169,8 @@ def generate_synthetic_embeddings(
     imagery_dim_fraction: float = 0.6,
     imagery_noise_scale: float = 0.3,
     seed: int = 42,
+    n_shared: Optional[int] = None,
+    include_multilayer: bool = False,
 ) -> EmbeddingBundle:
     """
     Generate synthetic perception/imagery embeddings that exhibit the
@@ -144,44 +179,81 @@ def generate_synthetic_embeddings(
     The synthetic imagery embeddings are constructed to occupy a
     lower-dimensional subspace with added noise, mimicking the
     hypothesized "dimensionality collapse" of mental imagery.
+
+    Perception embeddings have higher L2 norms (stronger signal strength)
+    than imagery, reflecting Dijkstra's signal strength model.
+
+    Args:
+        n_shared: Number of shared stimuli between conditions for paired analysis.
+            Defaults to min(n_perception, n_imagery).
+        include_multilayer: Generate synthetic multi-layer embeddings (L4, L8, L12, final).
     """
     rng = np.random.RandomState(seed)
 
-    # Ground-truth CLIP targets span the full space
     gt_targets = rng.randn(n_perception + n_imagery, embed_dim).astype(np.float32)
     gt_targets /= np.linalg.norm(gt_targets, axis=1, keepdims=True)
 
     perc_targets = gt_targets[:n_perception]
     imag_targets = gt_targets[n_perception:]
 
-    # Perception predictions: noisy but high-dimensional
+    # Perception: higher signal strength (norms ~1.0-1.3)
     perc_preds = perc_targets + rng.randn(n_perception, embed_dim).astype(np.float32) * 0.15
-    perc_preds /= np.linalg.norm(perc_preds, axis=1, keepdims=True)
+    perc_norms = 1.0 + np.abs(rng.randn(n_perception, 1).astype(np.float32)) * 0.15
+    perc_preds = _l2(perc_preds) * perc_norms
 
-    # Imagery predictions: projected onto a lower-dimensional subspace
+    # Imagery: lower signal strength (norms ~0.6-0.9), lower-dimensional subspace
     effective_dim = max(10, int(embed_dim * imagery_dim_fraction))
     projection = rng.randn(embed_dim, effective_dim).astype(np.float32)
     projection /= np.linalg.norm(projection, axis=0, keepdims=True)
     back_proj = projection @ projection.T / effective_dim
 
     imag_preds = (imag_targets @ back_proj) + rng.randn(n_imagery, embed_dim).astype(np.float32) * imagery_noise_scale
-    imag_preds /= np.linalg.norm(imag_preds, axis=1, keepdims=True)
+    imag_norms = 0.6 + np.abs(rng.randn(n_imagery, 1).astype(np.float32)) * 0.15
+    imag_preds = _l2(imag_preds) * imag_norms
 
-    # Synthetic stimulus types
+    # Shared stimulus IDs for paired analysis
+    if n_shared is None:
+        n_shared = min(n_perception, n_imagery)
+    n_shared = min(n_shared, n_perception, n_imagery)
+    shared_ids = np.arange(n_shared)
+    perc_nsd_ids = np.concatenate([shared_ids, np.arange(n_shared, n_perception) + 10000])
+    imag_nsd_ids = np.concatenate([shared_ids, np.arange(n_shared, n_imagery) + 20000])
+
     stim_types = ["simple", "complex", "conceptual"]
     perc_meta = [
-        {"trial_id": i, "stimulus_type": stim_types[i % 3], "condition": "perception"}
+        {"trial_id": i, "stimulus_type": stim_types[i % 3], "condition": "perception",
+         "nsd_id": int(perc_nsd_ids[i])}
         for i in range(n_perception)
     ]
     imag_meta = [
-        {"trial_id": n_perception + i, "stimulus_type": stim_types[i % 3], "condition": "imagery"}
+        {"trial_id": n_perception + i, "stimulus_type": stim_types[i % 3], "condition": "imagery",
+         "nsd_id": int(imag_nsd_ids[i])}
         for i in range(n_imagery)
     ]
+
+    # Multi-layer embeddings: increasing discriminability at higher layers
+    multilayer_perc = None
+    multilayer_imag = None
+    if include_multilayer:
+        layer_names = ["layer_4", "layer_8", "layer_12", "final"]
+        layer_dims = [768, 768, 768, 512]
+        # Signal strength gap widens at higher layers (matching cortical hierarchy)
+        layer_gaps = [0.05, 0.10, 0.20, 0.30]
+        multilayer_perc = {}
+        multilayer_imag = {}
+        for name, dim, gap in zip(layer_names, layer_dims, layer_gaps):
+            p = rng.randn(n_perception, dim).astype(np.float32)
+            p_norms = 1.0 + gap + np.abs(rng.randn(n_perception, 1).astype(np.float32)) * 0.1
+            multilayer_perc[name] = _l2(p) * p_norms
+
+            im = rng.randn(n_imagery, dim).astype(np.float32)
+            im_norms = 1.0 - gap + np.abs(rng.randn(n_imagery, 1).astype(np.float32)) * 0.1
+            multilayer_imag[name] = _l2(im) * im_norms
 
     logger.info(
         f"Generated synthetic embeddings: perception={n_perception}, "
         f"imagery={n_imagery}, dim={embed_dim}, "
-        f"imagery_effective_dim={effective_dim}"
+        f"imagery_effective_dim={effective_dim}, n_shared={n_shared}"
     )
 
     return EmbeddingBundle(
@@ -192,4 +264,8 @@ def generate_synthetic_embeddings(
         embed_dim=embed_dim,
         perception_meta=perc_meta,
         imagery_meta=imag_meta,
+        perception_nsd_ids=perc_nsd_ids,
+        imagery_nsd_ids=imag_nsd_ids,
+        multilayer_perception=multilayer_perc,
+        multilayer_imagery=multilayer_imag,
     )

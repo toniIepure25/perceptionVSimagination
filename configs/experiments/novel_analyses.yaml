@@ -12,14 +12,18 @@ experiment:
     dimensionality gap, uncertainty-vividness, semantic survival,
     topological RSA, and cross-subject imagery fingerprints.
 
-# Which analyses to run (all six directions)
+# Which analyses to run (all ten directions)
 analyses:
-  - dimensionality   # Direction 1: The Dimensionality Gap
-  - uncertainty      # Direction 2: Uncertainty as Vividness
-  - semantic         # Direction 3: Semantic Survival
-  - topology         # Direction 4: Topological RSA
-  - cross_subject    # Direction 5: Cross-Subject Imagery Fingerprint
-  - dissociation     # Direction 6: Semantic-Structural Dissociation
+  - dimensionality       # Direction 1: The Dimensionality Gap
+  - uncertainty          # Direction 2: Uncertainty as Vividness
+  - semantic             # Direction 3: Semantic Survival
+  - topology             # Direction 4: Topological RSA
+  - cross_subject        # Direction 5: Cross-Subject Imagery Fingerprint
+  - dissociation         # Direction 6: Semantic-Structural Dissociation
+  - reality_monitor      # Direction 7: Computational Reality Monitor
+  - confusion_mapping    # Direction 8: Reality Confusion Mapping
+  - adversarial_reality  # Direction 9: Adversarial Reality Probing
+  - hierarchical_reality # Direction 10: Hierarchical Reality Gradient
 
 # Model checkpoint (perception-trained encoder)
 model:
@@ -63,6 +67,29 @@ cross_subject:
 dissociation:
   targets: ["clip", "ip_adapter", "sd_vae"]
   ssi_formula: "clip_preservation / sd_vae_preservation"
+
+# Direction 7: Computational Reality Monitor (Dijkstra's PRM)
+reality_monitor:
+  n_folds: 5
+  n_pca_content: 50
+  feature_modes: ["signal_strength", "content", "combined"]
+
+# Direction 8: Reality Confusion Mapping
+confusion_mapping:
+  n_bins: 20  # bins for sigmoid boundary estimation
+
+# Direction 9: Adversarial Reality Probing
+adversarial_reality:
+  n_epochs: 100
+  batch_size: 64
+  hidden_dim: 256
+  lr_discriminator: 1e-3
+  lr_generator: 5e-4
+
+# Direction 10: Hierarchical Reality Gradient
+hierarchical_reality:
+  layers: ["layer_4", "layer_8", "layer_12", "final"]
+  n_folds: 5
 
 # Output
 output:

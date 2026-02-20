@@ -429,6 +429,11 @@ def plot_degradation_similarity(data: Dict, output_dir: Path):
 
 # --- Direction 6: Semantic-Structural Dissociation ---
 
+MONITOR_COLOR = "#E91E63"
+THRESHOLD_COLOR = "#FF9800"
+GAN_GEN_COLOR = "#00BCD4"
+GAN_DISC_COLOR = "#795548"
+
 def plot_dissociation_summary(data: Dict, output_dir: Path):
     """Bar chart comparing the preservation ratio of CLIP, IP-Tokens, and SD-Latent."""
     gap = data.get("gap", {})
@@ -464,6 +469,389 @@ def plot_dissociation_summary(data: Dict, output_dir: Path):
 
     fig.savefig(output_dir / "fig6_semantic_structural_dissociation.png")
     fig.savefig(output_dir / "fig6_semantic_structural_dissociation.pdf")
+    plt.close(fig)
+
+
+# --- Direction 7: Computational Reality Monitor ---
+
+def plot_reality_classifier_comparison(data: Dict, output_dir: Path):
+    """Bar chart comparing AUC across signal_strength, content, and combined classifiers."""
+    classifiers = data.get("classifiers", {})
+    if not classifiers:
+        return
+
+    modes = ["signal_strength", "content", "combined"]
+    labels = ["Signal\nStrength", "Content\n(PCA)", "Combined"]
+    aucs = [classifiers.get(m, {}).get("mean_auc", 0) for m in modes]
+    stds = [classifiers.get(m, {}).get("std_auc", 0) for m in modes]
+    colors = [MONITOR_COLOR, PERC_COLOR, "#673AB7"]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    bars = ax.bar(labels, aucs, yerr=stds, capsize=5, color=colors,
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+
+    for bar, val in zip(bars, aucs):
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + 0.02,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold")
+
+    ax.axhline(y=0.5, color="gray", linestyle="--", alpha=0.5, label="Chance")
+    ax.set_ylabel("Classification AUC")
+    ax.set_title("Reality Monitor: Signal Strength vs Content Features")
+    ax.set_ylim(0, 1.05)
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig7a_reality_classifier_comparison.png")
+    fig.savefig(output_dir / "fig7a_reality_classifier_comparison.pdf")
+    plt.close(fig)
+
+
+def plot_reality_roc(data: Dict, output_dir: Path):
+    """ROC curves for the three classifier modes."""
+    classifiers = data.get("classifiers", {})
+    if not classifiers:
+        return
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    colors_map = {"signal_strength": MONITOR_COLOR, "content": PERC_COLOR, "combined": "#673AB7"}
+    labels_map = {"signal_strength": "Signal Strength", "content": "Content (PCA)", "combined": "Combined"}
+
+    for mode in ["signal_strength", "content", "combined"]:
+        clf_data = classifiers.get(mode, {})
+        fpr = clf_data.get("roc_fpr", [])
+        tpr = clf_data.get("roc_tpr", [])
+        auc_val = clf_data.get("mean_auc", 0)
+        if fpr and tpr:
+            ax.plot(fpr, tpr, color=colors_map[mode], linewidth=2,
+                    label=f"{labels_map[mode]} (AUC={auc_val:.3f})")
+
+    ax.plot([0, 1], [0, 1], "k--", alpha=0.3, label="Chance")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("Reality Monitor ROC Curves")
+    ax.legend(loc="lower right", framealpha=0.9)
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_aspect("equal")
+    ax.grid(alpha=0.2)
+
+    fig.savefig(output_dir / "fig7b_reality_roc.png")
+    fig.savefig(output_dir / "fig7b_reality_roc.pdf")
+    plt.close(fig)
+
+
+def plot_signal_strength_threshold(data: Dict, output_dir: Path):
+    """Distribution of norms with the estimated reality threshold."""
+    threshold = data.get("reality_threshold", {})
+    if not threshold:
+        return
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    rng = np.random.RandomState(42)
+    n = 500
+    perc_norms = rng.normal(threshold["perception_mean_norm"],
+                             threshold["perception_std_norm"], n)
+    imag_norms = rng.normal(threshold["imagery_mean_norm"],
+                             threshold["imagery_std_norm"], n)
+
+    ax.hist(perc_norms, bins=40, alpha=0.6, color=PERC_COLOR, label="Perception",
+            density=True, edgecolor="white", linewidth=0.5)
+    ax.hist(imag_norms, bins=40, alpha=0.6, color=IMAG_COLOR, label="Imagery",
+            density=True, edgecolor="white", linewidth=0.5)
+
+    t = threshold.get("optimal_threshold", 0)
+    ax.axvline(t, color=THRESHOLD_COLOR, linewidth=2.5, linestyle="-",
+               label=f"Reality Threshold = {t:.3f}")
+
+    d = threshold.get("cohens_d", 0)
+    ax.text(0.97, 0.95, f"Cohen's d = {d:.3f}\nAUC = {threshold.get('auc_norm_only', 0):.3f}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+
+    ax.set_xlabel("Embedding L2 Norm (Signal Strength)")
+    ax.set_ylabel("Density")
+    ax.set_title("Signal Strength Distributions: The Reality Threshold")
+    ax.legend(framealpha=0.9)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig7c_signal_strength_threshold.png")
+    fig.savefig(output_dir / "fig7c_signal_strength_threshold.pdf")
+    plt.close(fig)
+
+
+# --- Direction 8: Reality Confusion Mapping ---
+
+def plot_confusion_by_category(data: Dict, output_dir: Path):
+    """Bar chart of mean confusion index by stimulus category."""
+    cat_data = data.get("category_confusability", {}).get("per_category", {})
+    if not cat_data:
+        return
+
+    categories = sorted(cat_data.keys())
+    means = [cat_data[c]["mean_confusion"] for c in categories]
+    stds = [cat_data[c]["std_confusion"] for c in categories]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x = np.arange(len(categories))
+    bars = ax.bar(x, means, yerr=stds, capsize=4, color=MONITOR_COLOR,
+                   edgecolor="black", linewidth=1, alpha=0.8)
+
+    for bar, val in zip(bars, means):
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + 0.01,
+                f"{val:.3f}", ha="center", va="bottom", fontsize=9)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories, rotation=30, ha="right")
+    ax.set_ylabel("Mean Confusion Index")
+    ax.set_title("Category-Level Reality Confusion")
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig8a_confusion_by_category.png")
+    fig.savefig(output_dir / "fig8a_confusion_by_category.pdf")
+    plt.close(fig)
+
+
+def plot_reality_boundary(data: Dict, output_dir: Path):
+    """Sigmoid fit of signal strength vs confusion (the reality boundary)."""
+    boundary = data.get("reality_boundary", {})
+    if not boundary or not boundary.get("threshold_estimated"):
+        return
+
+    bin_centers = np.array(boundary["bin_centers"])
+    bin_means = np.array(boundary["bin_means"])
+    params = boundary["sigmoid_params"]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    ax.scatter(bin_centers, bin_means, color=MONITOR_COLOR, s=60,
+               edgecolors="black", linewidth=0.5, zorder=3, label="Binned data")
+
+    x_fit = np.linspace(bin_centers.min(), bin_centers.max(), 200)
+    y_fit = params["L"] / (1.0 + np.exp(-params["k"] * (x_fit - params["x0"]))) + params["b"]
+    ax.plot(x_fit, y_fit, color=THRESHOLD_COLOR, linewidth=2.5, label="Sigmoid fit")
+
+    threshold = boundary["reality_threshold"]
+    ax.axvline(threshold, color="gray", linestyle="--", alpha=0.7,
+               label=f"Threshold = {threshold:.3f}")
+
+    ax.text(0.97, 0.05,
+            f"R² = {boundary['r_squared']:.3f}\nSteepness = {boundary['steepness']:.2f}",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", alpha=0.9))
+
+    ax.set_xlabel("Imagery Signal Strength (L2 Norm)")
+    ax.set_ylabel("Confusion Index")
+    ax.set_title("The Reality Boundary: Where Imagination Meets Perception")
+    ax.legend(framealpha=0.9)
+    ax.grid(alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig8b_reality_boundary.png")
+    fig.savefig(output_dir / "fig8b_reality_boundary.pdf")
+    plt.close(fig)
+
+
+# --- Direction 9: Adversarial Reality Probing ---
+
+def plot_adversarial_dynamics(data: Dict, output_dir: Path):
+    """Training dynamics: D accuracy and losses over epochs."""
+    dynamics = data.get("training_dynamics", {})
+    if not dynamics:
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    epochs = np.arange(len(dynamics.get("d_loss", [])))
+
+    # Losses
+    ax = axes[0]
+    ax.plot(epochs, dynamics.get("d_loss", []), color=GAN_DISC_COLOR,
+            linewidth=2, label="Discriminator")
+    ax.plot(epochs, dynamics.get("g_loss", []), color=GAN_GEN_COLOR,
+            linewidth=2, label="Generator")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.set_title("Adversarial Training Losses")
+    ax.legend(framealpha=0.9)
+    ax.grid(alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Discriminator accuracy
+    ax = axes[1]
+    ax.plot(epochs, dynamics.get("d_acc_total", []), color=GAN_DISC_COLOR,
+            linewidth=2, label="Overall")
+    ax.plot(epochs, dynamics.get("d_acc_real", []), color=PERC_COLOR,
+            linewidth=1.5, alpha=0.7, linestyle="--", label="Perception (real)")
+    ax.plot(epochs, dynamics.get("d_acc_fake", []), color=IMAG_COLOR,
+            linewidth=1.5, alpha=0.7, linestyle="--", label="Imagery (fake)")
+    ax.axhline(0.5, color="gray", linestyle=":", alpha=0.5, label="Chance")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Accuracy")
+    ax.set_title("Reality Discriminator Accuracy")
+    ax.set_ylim(-0.05, 1.05)
+    ax.legend(fontsize=9, framealpha=0.9)
+    ax.grid(alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Adversarial Reality Probing: Can Imagery Fool the Detector?",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig9a_adversarial_dynamics.png")
+    fig.savefig(output_dir / "fig9a_adversarial_dynamics.pdf")
+    plt.close(fig)
+
+
+def plot_perturbation_histogram(data: Dict, output_dir: Path):
+    """Histogram of per-trial perturbation distances (distance to reality)."""
+    perturbation = data.get("perturbation", {})
+    per_trial = perturbation.get("per_trial_l2", [])
+    if not per_trial:
+        return
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    ax.hist(per_trial, bins=40, color=GAN_GEN_COLOR, edgecolor="white",
+            linewidth=0.5, alpha=0.8)
+
+    mean_l2 = perturbation.get("mean_l2", 0)
+    ax.axvline(mean_l2, color=THRESHOLD_COLOR, linewidth=2.5, linestyle="-",
+               label=f"Mean = {mean_l2:.4f}")
+
+    ax.set_xlabel("Perturbation Distance (L2)")
+    ax.set_ylabel("Count")
+    ax.set_title("Distance to Reality: Per-Trial Generator Perturbation")
+    ax.legend(framealpha=0.9)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig9b_perturbation_histogram.png")
+    fig.savefig(output_dir / "fig9b_perturbation_histogram.pdf")
+    plt.close(fig)
+
+
+# --- Direction 10: Hierarchical Reality Gradient ---
+
+def plot_layer_discriminability(data: Dict, output_dir: Path):
+    """AUC and Cohen's d at each processing layer."""
+    layer_disc = data.get("per_layer_discriminability", {})
+    if not layer_disc:
+        return
+
+    layer_order = ["layer_4", "layer_8", "layer_12", "final"]
+    layer_labels = ["L4\n(Early)", "L8\n(Mid)", "L12\n(Late)", "Final\n(CLIP)"]
+
+    layers_present = [l for l in layer_order if l in layer_disc]
+    labels = [layer_labels[layer_order.index(l)] for l in layers_present]
+    aucs = [layer_disc[l]["classification_auc"] for l in layers_present]
+    auc_stds = [layer_disc[l].get("classification_auc_std", 0) for l in layers_present]
+    cohens_ds = [layer_disc[l]["cohens_d"] for l in layers_present]
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # AUC gradient
+    ax = axes[0]
+    x = np.arange(len(layers_present))
+    bars = ax.bar(x, aucs, yerr=auc_stds, capsize=4,
+                   color=[PERC_COLOR if a < max(aucs) else MONITOR_COLOR for a in aucs],
+                   edgecolor="black", linewidth=1, alpha=0.85)
+    for bar, val in zip(bars, aucs):
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + 0.02,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, label="Chance")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Classification AUC")
+    ax.set_title("Per-Layer Perception vs Imagery AUC")
+    ax.set_ylim(0, 1.05)
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Cohen's d gradient
+    ax = axes[1]
+    ax.plot(x, cohens_ds, "o-", color=MONITOR_COLOR, linewidth=2.5, markersize=10)
+    for i, d in enumerate(cohens_ds):
+        ax.annotate(f"{d:.2f}", (x[i], d), textcoords="offset points",
+                    xytext=(0, 10), ha="center", fontsize=9, fontweight="bold")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Cohen's d (Signal Strength Gap)")
+    ax.set_title("Hierarchical Signal Strength Divergence")
+    ax.grid(alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Hierarchical Reality Gradient: Where Does the Distinction Emerge?",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig10a_layer_discriminability.png")
+    fig.savefig(output_dir / "fig10a_layer_discriminability.pdf")
+    plt.close(fig)
+
+
+def plot_cascade_summary(data: Dict, output_dir: Path):
+    """Summary of the threshold cascade analysis."""
+    cascade = data.get("threshold_cascade", {})
+    if not cascade or cascade.get("cascade_type") == "insufficient_layers":
+        return
+
+    per_layer_auc = cascade.get("per_layer_auc", {})
+    per_layer_sep = cascade.get("per_layer_separation", {})
+    if not per_layer_auc:
+        return
+
+    layer_order = ["layer_4", "layer_8", "layer_12", "final"]
+    layer_labels = ["L4", "L8", "L12", "Final"]
+    layers = [l for l in layer_order if l in per_layer_auc]
+    labels = [layer_labels[layer_order.index(l)] for l in layers]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    x = np.arange(len(layers))
+    aucs_vals = [per_layer_auc[l] for l in layers]
+    sep_vals = [per_layer_sep.get(l, 0) for l in layers]
+
+    ax.plot(x, aucs_vals, "o-", color=MONITOR_COLOR, linewidth=2.5, markersize=10, label="AUC")
+
+    ax2 = ax.twinx()
+    ax2.plot(x, sep_vals, "s--", color=IMAG_COLOR, linewidth=2, markersize=8, label="Separation")
+    ax2.set_ylabel("Separation Index", color=IMAG_COLOR)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Classification AUC", color=MONITOR_COLOR)
+    ax.set_xlabel("Processing Level")
+
+    cascade_type = cascade.get("cascade_type", "unknown")
+    peak = cascade.get("peak_layer", "N/A")
+    prm_match = cascade.get("prm_prediction_matched", False)
+    ax.set_title(f"Threshold Cascade: {cascade_type.title()} "
+                 f"(peak={peak}, PRM match={prm_match})")
+
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(lines1 + lines2, labels1 + labels2, framealpha=0.9)
+
+    ax.grid(alpha=0.2)
+    ax.spines["top"].set_visible(False)
+
+    fig.savefig(output_dir / "fig10b_cascade_summary.png")
+    fig.savefig(output_dir / "fig10b_cascade_summary.pdf")
     plt.close(fig)
 
 
@@ -511,6 +899,35 @@ def generate_all_figures(results_dir: Path, output_dir: Path):
     if dissociation_data:
         plot_dissociation_summary(dissociation_data, output_dir)
         generated.append("fig6")
+
+    # Direction 7: Computational Reality Monitor
+    monitor_data = load_json(results_dir / "reality_monitor.json")
+    if monitor_data:
+        plot_reality_classifier_comparison(monitor_data, output_dir)
+        plot_reality_roc(monitor_data, output_dir)
+        plot_signal_strength_threshold(monitor_data, output_dir)
+        generated.extend(["fig7a", "fig7b", "fig7c"])
+
+    # Direction 8: Reality Confusion Mapping
+    confusion_data = load_json(results_dir / "reality_confusion.json")
+    if confusion_data:
+        plot_confusion_by_category(confusion_data, output_dir)
+        plot_reality_boundary(confusion_data, output_dir)
+        generated.extend(["fig8a", "fig8b"])
+
+    # Direction 9: Adversarial Reality Probing
+    adversarial_data = load_json(results_dir / "adversarial_reality.json")
+    if adversarial_data:
+        plot_adversarial_dynamics(adversarial_data, output_dir)
+        plot_perturbation_histogram(adversarial_data, output_dir)
+        generated.extend(["fig9a", "fig9b"])
+
+    # Direction 10: Hierarchical Reality Gradient
+    hierarchical_data = load_json(results_dir / "hierarchical_reality.json")
+    if hierarchical_data:
+        plot_layer_discriminability(hierarchical_data, output_dir)
+        plot_cascade_summary(hierarchical_data, output_dir)
+        generated.extend(["fig10a", "fig10b"])
 
     print(f"Generated {len(generated)} figures in {output_dir}")
     return generated

@@ -78,6 +78,9 @@ fmri2img-check-headers = "fmri2img.data.check_index_headers:main"
 fmri2img-download-sd = "fmri2img.generation.download_sd_model:main"
 fmri2img-status = "fmri2img.utils.quick_status:main"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.black]
 line-length = 100
 target-version = ['py310']

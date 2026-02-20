@@ -44,7 +44,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("novel_analyses")
 
-ALL_ANALYSES = ["dimensionality", "uncertainty", "semantic", "topology", "cross_subject", "dissociation"]
+ALL_ANALYSES = [
+    "dimensionality", "uncertainty", "semantic", "topology", "cross_subject", "dissociation",
+    "reality_monitor", "confusion_mapping", "adversarial_reality", "hierarchical_reality",
+]
 
 
 def run_dimensionality(bundle, output_dir):
@@ -108,6 +111,48 @@ def run_dissociation(output_dir, model=None, perception_dataset=None, imagery_da
     return results
 
 
+def run_reality_monitor(bundle, output_dir):
+    from fmri2img.analysis.reality_monitor import analyze_reality_monitor
+
+    results = analyze_reality_monitor(bundle)
+    out = output_dir / "reality_monitor.json"
+    _save_json(results, out)
+    return results
+
+
+def run_confusion_mapping(bundle, output_dir):
+    from fmri2img.analysis.reality_confusion import analyze_reality_confusion
+
+    results = analyze_reality_confusion(bundle)
+    out = output_dir / "reality_confusion.json"
+    _save_json(results, out)
+    return results
+
+
+def run_adversarial_reality(bundle, output_dir, device="cpu", n_epochs=100):
+    from fmri2img.analysis.adversarial_reality import analyze_adversarial_reality
+
+    results = analyze_adversarial_reality(bundle, n_epochs=n_epochs, device=device)
+    out = output_dir / "adversarial_reality.json"
+    _save_json(results, out)
+    return results
+
+
+def run_hierarchical_reality(bundle, output_dir, model=None, perception_dataset=None,
+                             imagery_dataset=None, device="cpu", max_samples=None):
+    from fmri2img.analysis.hierarchical_reality import analyze_hierarchical_reality
+
+    results = analyze_hierarchical_reality(
+        bundle, model=model,
+        perception_dataset=perception_dataset,
+        imagery_dataset=imagery_dataset,
+        device=device, max_samples=max_samples,
+    )
+    out = output_dir / "hierarchical_reality.json"
+    _save_json(results, out)
+    return results
+
+
 def _save_json(data, path):
     """Save results, converting numpy types for JSON serialization."""
 
@@ -165,6 +210,10 @@ def main():
         default=["subj01"],
         help="Subjects for cross-subject analysis",
     )
+
+    # Adversarial analysis parameters
+    parser.add_argument("--adversarial-epochs", type=int, default=100,
+                        help="Training epochs for adversarial reality probing")
 
     # Synthetic data parameters (for dry-run)
     parser.add_argument("--n-perception", type=int, default=500)
@@ -325,6 +374,54 @@ def main():
                 device=args.device,
                 max_samples=args.max_samples,
                 is_dry_run=False
+            )
+        logger.info("")
+
+    if "reality_monitor" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 7: Computational Reality Monitor")
+        logger.info("-" * 60)
+        all_results["reality_monitor"] = run_reality_monitor(bundle, output_dir)
+        logger.info("")
+
+    if "confusion_mapping" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 8: Reality Confusion Mapping")
+        logger.info("-" * 60)
+        all_results["confusion_mapping"] = run_confusion_mapping(bundle, output_dir)
+        logger.info("")
+
+    if "adversarial_reality" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 9: Adversarial Reality Probing")
+        logger.info("-" * 60)
+        all_results["adversarial_reality"] = run_adversarial_reality(
+            bundle, output_dir, device=args.device,
+            n_epochs=getattr(args, "adversarial_epochs", 100),
+        )
+        logger.info("")
+
+    if "hierarchical_reality" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 10: Hierarchical Reality Gradient")
+        logger.info("-" * 60)
+        if args.dry_run:
+            bundle_ml = generate_synthetic_embeddings(
+                n_perception=args.n_perception,
+                n_imagery=args.n_imagery,
+                embed_dim=args.embed_dim,
+                include_multilayer=True,
+            )
+            all_results["hierarchical_reality"] = run_hierarchical_reality(
+                bundle_ml, output_dir, device=args.device,
+            )
+        else:
+            all_results["hierarchical_reality"] = run_hierarchical_reality(
+                bundle, output_dir, model=model,
+                perception_dataset=perc_ds,
+                imagery_dataset=imag_ds,
+                device=args.device,
+                max_samples=args.max_samples,
             )
         logger.info("")
 
