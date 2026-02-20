@@ -1,10 +1,18 @@
+# =============================================================================
+# Data Configuration — Default for Training Scripts
+# =============================================================================
+#
+# This is the default data config loaded by train_ridge.py, train_mlp.py,
+# train_clip_adapter.py, and ablate_preproc_and_ridge.py.
+#
+# For NSD-specific settings (S3 paths, preprocessing pipelines, subjects),
+# see configs/system/data.yaml.
+# For experiment-specific split overrides, use --override at runtime.
+# =============================================================================
+
 preprocessing:
   splits:
     train_ratio: 0.8
     val_ratio: 0.1
     test_ratio: 0.1
     random_seed: 42
-
-# Minimal data config used for quick tests. The project also contains
-# `configs/base.yaml` with full defaults; this file overrides only the
-# split parameters needed by training scripts.

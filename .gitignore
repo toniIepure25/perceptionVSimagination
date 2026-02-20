@@ -95,8 +95,7 @@ venv.bak/
 *.pth
 *.ckpt
 *.safetensors
-checkpoints/*.pt
-checkpoints/*.pth
+/checkpoints/
 !checkpoints/.gitkeep
 
 # Training logs

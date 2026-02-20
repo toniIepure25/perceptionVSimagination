@@ -133,7 +133,7 @@ splits:
   test_ratio: 0.1
   random_seed: 42
 
-preprocess:
+preprocessing:
   reliability_threshold: 0.1 # Minimum split-half correlation for voxel inclusion
   min_variance: 1.0e-6 # Fallback variance threshold
   pca_k: 4096 # Default number of PCA components

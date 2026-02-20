@@ -19,7 +19,7 @@
 # =============================================================================
 
 # Inherit from base configuration
-_base_: two_stage_sota.yaml
+_base_: ../training/two_stage_sota.yaml
 
 # Experiment Metadata
 # -----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ experiment:
   
   # Ablation tracking
   ablation_id: null                 # Will be set by ablation driver
-  baseline_config: two_stage_sota.yaml
+  baseline_config: ../training/two_stage_sota.yaml
 
 # Ablation Parameters (Override these for each run)
 # -----------------------------------------------------------------------------
@@ -60,28 +60,28 @@ loss_ablations:
     loss:
       mse_weight: 1.0
       cosine_weight: 0.0
-      info_nce_weight: 0.0
+      infonce_weight: 0.0
   
   # Cosine only
   cosine_only:
     loss:
       mse_weight: 0.0
       cosine_weight: 1.0
-      info_nce_weight: 0.0
+      infonce_weight: 0.0
   
   # InfoNCE only
   infonce_only:
     loss:
       mse_weight: 0.0
       cosine_weight: 0.0
-      info_nce_weight: 1.0
+      infonce_weight: 1.0
   
   # MSE + Cosine (no InfoNCE)
   no_infonce:
     loss:
       mse_weight: 0.5
       cosine_weight: 0.5
-      info_nce_weight: 0.0
+      infonce_weight: 0.0
 
 # 2. Architecture Ablations
 architecture_ablations:

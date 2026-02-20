@@ -1,7 +1,9 @@
+# =============================================================================
 # Novel Perception-vs-Imagery Analysis Configuration
+# =============================================================================
 #
-# Five research directions for neuroscience discovery.
-# See: scripts/run_novel_analyses.py
+# Six research directions for neuroscience discovery.
+# See: scripts/run_novel_analyses.py, docs/research/PAPER_DRAFT_OUTLINE.md
 
 experiment:
   name: "novel_perception_vs_imagery"
@@ -10,13 +12,14 @@ experiment:
     dimensionality gap, uncertainty-vividness, semantic survival,
     topological RSA, and cross-subject imagery fingerprints.
 
-# Which analyses to run (all five directions)
+# Which analyses to run (all six directions)
 analyses:
   - dimensionality   # Direction 1: The Dimensionality Gap
   - uncertainty      # Direction 2: Uncertainty as Vividness
   - semantic         # Direction 3: Semantic Survival
   - topology         # Direction 4: Topological RSA
   - cross_subject    # Direction 5: Cross-Subject Imagery Fingerprint
+  - dissociation     # Direction 6: Semantic-Structural Dissociation
 
 # Model checkpoint (perception-trained encoder)
 model:
@@ -56,6 +59,10 @@ topology:
 
 cross_subject:
   adapter_checkpoint_pattern: "checkpoints/adapters/{subject}/best.pt"
+
+dissociation:
+  targets: ["clip", "ip_adapter", "sd_vae"]
+  ssi_formula: "clip_preservation / sd_vae_preservation"
 
 # Output
 output:

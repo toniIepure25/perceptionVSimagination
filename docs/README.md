@@ -10,7 +10,7 @@
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | **[Quick Start Guide](../START_HERE.md)** | Get started in <5 minutes | New users |
-| **[Adapter Quick Start](../ADAPTER_QUICK_START.md)** | Imagery adapter training | Researchers |
+| **[Adapter Quick Start](guides/ADAPTER_QUICK_START.md)** | Imagery adapter training | Researchers |
 | **[Project README](../README.md)** | Project overview & setup | Everyone |
 
 ---
@@ -44,7 +44,7 @@ Implementation details, data formats, and troubleshooting.
 Step-by-step onboarding and usage instructions.
 
 - **[START_HERE.md](../START_HERE.md)** — Full walkthrough: installation, data preparation, training, evaluation, and the perception-vs-imagery track.
-- **[ADAPTER_QUICK_START.md](../ADAPTER_QUICK_START.md)** — Quick reference for training imagery adapters on top of frozen perception-trained encoders.
+- **[ADAPTER_QUICK_START.md](guides/ADAPTER_QUICK_START.md)** — Quick reference for training imagery adapters on top of frozen perception-trained encoders.
 
 ---
 
@@ -60,7 +60,7 @@ Step-by-step onboarding and usage instructions.
 
 1. Start with [START_HERE.md](../START_HERE.md) for environment setup and data preparation
 2. Train a perception encoder (Ridge → MLP → Two-Stage)
-3. Train an imagery adapter using [ADAPTER_QUICK_START.md](../ADAPTER_QUICK_START.md)
+3. Train an imagery adapter using [ADAPTER_QUICK_START.md](guides/ADAPTER_QUICK_START.md)
 
 ### I want to evaluate cross-domain transfer
 

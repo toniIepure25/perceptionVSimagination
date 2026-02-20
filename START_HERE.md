@@ -107,7 +107,7 @@ python scripts/train_imagery_adapter.py \
 # Or: make imagery-adapter
 ```
 
-See [ADAPTER_QUICK_START.md](ADAPTER_QUICK_START.md) for the full adapter guide.
+See [Adapter Quick Start](docs/guides/ADAPTER_QUICK_START.md) for the full adapter guide.
 
 ### Path 4: Novel Neuroscience Analyses
 
@@ -193,7 +193,7 @@ See `configs/experiments/reproducibility.yaml` for the full experimental protoco
 | Document | Purpose |
 |----------|---------|
 | [README.md](README.md) | Project overview, architecture, hypotheses |
-| [ADAPTER_QUICK_START.md](ADAPTER_QUICK_START.md) | Imagery adapter training guide |
+| [Adapter Quick Start](docs/guides/ADAPTER_QUICK_START.md) | Imagery adapter training guide |
 | [docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md) | Full research plan with hypotheses H1-H3 |
 | [docs/research/PAPER_DRAFT_OUTLINE.md](docs/research/PAPER_DRAFT_OUTLINE.md) | Paper structure and narrative |
 | [docs/architecture/IMAGERY_EXTENSION.md](docs/architecture/IMAGERY_EXTENSION.md) | System design for imagery pipeline |

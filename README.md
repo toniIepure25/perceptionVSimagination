@@ -270,7 +270,7 @@ perceptionVSimagination/
 │       └── NSD_IMAGERY_DATASET_GUIDE.md
 │
 ├── START_HERE.md               # Step-by-step onboarding guide
-├── ADAPTER_QUICK_START.md      # Adapter training quick reference
+├── docs/guides/ADAPTER_QUICK_START.md  # Adapter training quick reference
 ├── pyproject.toml              # Package configuration
 └── environment.yml             # Conda environment
 ```
