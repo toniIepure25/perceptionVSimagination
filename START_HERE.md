@@ -340,7 +340,84 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 ---
 
-## 📚 Next Steps
+## � Perception vs. Imagery Track (NSD-Imagery)
+
+**NEW Research Extension**: Evaluate cross-domain transfer from visual perception to mental imagery.
+
+### Quick Start
+
+```bash
+# Step 1: Build NSD-Imagery index
+# Scans data_root for beta files and creates parquet index with train/val/test splits
+python scripts/build_nsd_imagery_index.py \
+  --subject subj01 \
+  --data-root data/nsd_imagery \
+  --cache-root cache/ \
+  --output cache/indices/imagery/subj01.parquet \
+  --verbose
+
+# Step 2: Evaluate perception-trained models on imagery data (cross-domain transfer)
+python scripts/eval_perception_to_imagery_transfer.py \
+  --index cache/indices/imagery/subj01.parquet \
+  --checkpoint checkpoints/two_stage/subj01/best.pt \
+  --mode imagery \
+  --split test \
+  --output-dir outputs/reports/imagery/perception_transfer
+
+# Step 3: Optional - Test with dry-run mode (no checkpoint loading)
+python scripts/eval_perception_to_imagery_transfer.py \
+  --index cache/indices/imagery/subj01.parquet \
+  --checkpoint dummy.pt \
+  --mode imagery \
+  --split test \
+  --output-dir outputs/reports/imagery/dry_run_test \
+  --dry-run
+
+# Step 4: Optional - Evaluate on perception data for baseline comparison
+python scripts/eval_perception_to_imagery_transfer.py \
+  --index cache/indices/imagery/subj01.parquet \
+  --checkpoint checkpoints/two_stage/subj01/best.pt \
+  --mode perception \
+  --split test \
+  --output-dir outputs/reports/imagery/perception_baseline
+```
+
+### Expected Outputs
+
+After running the evaluation, you'll get:
+
+```
+outputs/reports/imagery/perception_transfer/
+├── metrics.json          # Overall metrics (CLIP cosine, retrieval@K)
+├── per_trial.csv         # Per-trial results with stimulus_type breakdown
+└── README.md             # Human-readable summary report
+```
+
+### Config-Based Workflow
+
+You can also use the config files for reproducible experiments:
+
+```bash
+# Edit config
+vim configs/experiments/perception_to_imagery_eval.yaml
+
+# Run evaluation using config (coming soon)
+python scripts/run_experiment.py \
+  --config configs/experiments/perception_to_imagery_eval.yaml
+```
+
+### Documentation
+
+- **Research Roadmap**: [`docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md`](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md)
+- **Dataset Guide**: [`docs/technical/NSD_IMAGERY_DATASET_GUIDE.md`](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md)
+- **Architecture**: [`docs/architecture/IMAGERY_EXTENSION.md`](docs/architecture/IMAGERY_EXTENSION.md)
+
+**Status**: Phase 2 (Working Implementation) — Vertical slice complete ✅  
+**Next**: Integration testing with real NSD-Imagery data
+
+---
+
+## �📚 Next Steps
 
 ### For Researchers
 1. **Run ablations**: Test different hyperparameters (see [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md))

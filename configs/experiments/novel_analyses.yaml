@@ -1,0 +1,64 @@
+# Novel Perception-vs-Imagery Analysis Configuration
+#
+# Five research directions for neuroscience discovery.
+# See: scripts/run_novel_analyses.py
+
+experiment:
+  name: "novel_perception_vs_imagery"
+  description: >
+    Comprehensive analysis of perception-to-imagery transfer including
+    dimensionality gap, uncertainty-vividness, semantic survival,
+    topological RSA, and cross-subject imagery fingerprints.
+
+# Which analyses to run (all five directions)
+analyses:
+  - dimensionality   # Direction 1: The Dimensionality Gap
+  - uncertainty      # Direction 2: Uncertainty as Vividness
+  - semantic         # Direction 3: Semantic Survival
+  - topology         # Direction 4: Topological RSA
+  - cross_subject    # Direction 5: Cross-Subject Imagery Fingerprint
+
+# Model checkpoint (perception-trained encoder)
+model:
+  checkpoint: "checkpoints/two_stage/subj01/best.pt"
+  type: "two_stage"
+  device: "cuda"
+
+# Data
+data:
+  subjects:
+    - "subj01"
+    - "subj02"
+    - "subj05"
+    - "subj07"
+  perception_index_pattern: "cache/indices/nsd_index/{subject}.parquet"
+  imagery_index_pattern: "cache/indices/imagery/{subject}.parquet"
+  cache_root: "cache"
+  max_samples: null  # null = all samples
+
+# Direction-specific settings
+dimensionality:
+  variance_threshold: 0.95
+  k_nn: 10
+  max_pca_components: 200
+
+uncertainty:
+  n_mc_samples: 30
+  batch_size: 64
+
+semantic:
+  # Uses built-in concept lists (15 semantic + 15 visual)
+  device: "cpu"  # CLIP model device
+
+topology:
+  k_values: [5, 10, 20, 50]
+  max_ph_samples: 200  # subsample for persistent homology
+
+cross_subject:
+  adapter_checkpoint_pattern: "checkpoints/adapters/{subject}/best.pt"
+
+# Output
+output:
+  dir: "outputs/novel_analyses"
+  save_figures: true
+  figure_format: ["png", "pdf"]

@@ -8,6 +8,15 @@ Neural and linear models for mapping fMRI activity to image representations.
 from .ridge import RidgeEncoder
 from .mlp import MLPEncoder, save_mlp, load_mlp
 from .clip_adapter import CLIPAdapter, save_adapter, load_adapter
+from .adapters import (
+    LinearAdapter,
+    MLPAdapter,
+    ConditionEmbedding,
+    AdaptedModel,
+    create_adapter,
+    save_adapter as save_imagery_adapter,
+    load_adapter as load_imagery_adapter
+)
 from .encoders import (
     ResidualBlock,
     ResidualMLPEncoder,
@@ -49,6 +58,14 @@ __all__ = [
     "CLIPAdapter",
     "save_adapter",
     "load_adapter",
+    # Imagery adapters
+    "LinearAdapter",
+    "MLPAdapter",
+    "ConditionEmbedding",
+    "AdaptedModel",
+    "create_adapter",
+    "save_imagery_adapter",
+    "load_imagery_adapter",
     # Two-stage encoder
     "ResidualBlock",
     "ResidualMLPEncoder",

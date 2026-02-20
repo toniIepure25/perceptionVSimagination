@@ -51,6 +51,7 @@ This directory contains comprehensive documentation for the fMRI-to-Image recons
   - Data pipeline design
   - Preprocessing modules
   - Evaluation framework
+  - **[`IMAGERY_EXTENSION.md`](architecture/IMAGERY_EXTENSION.md)** - ⭐ **NEW**: Architecture for NSD-Imagery integration
 
 ### **3. Technical Documentation** (`technical/`)
 *Implementation details and troubleshooting*
@@ -61,6 +62,7 @@ This directory contains comprehensive documentation for the fMRI-to-Image recons
   
 - **Data Management**
   - `NSD_Dataset_Guide.md` - Natural Scenes Dataset structure
+  - **[`NSD_IMAGERY_DATASET_GUIDE.md`](technical/NSD_IMAGERY_DATASET_GUIDE.md)** - ⭐ **NEW**: NSD-Imagery dataset integration guide
   - `DATA_VALIDATION_REAL_VS_FALLBACK.md` - Data validation procedures
   - `UPGRADE_TO_30K_SAMPLES.md` - Scaling to full dataset
   - `GET_ALL_SAMPLES_GUIDE.md` - Complete sample retrieval
@@ -69,6 +71,12 @@ This directory contains comprehensive documentation for the fMRI-to-Image recons
   - `DIFFUSION_ROBUSTNESS.md` - Robustness techniques for diffusion models
   - `MANUAL_MODEL_DOWNLOAD.md` - Manual model weight management
   - `PREVENTING_MODEL_DOWNLOAD_BLOCKING.md` - Offline model usage
+
+### **4. Research Documentation** (`research/`)
+*Research-oriented guides and experimental protocols*
+
+- **Perception vs. Imagery Track**
+  - **[`PERCEPTION_VS_IMAGERY_ROADMAP.md`](research/PERCEPTION_VS_IMAGERY_ROADMAP.md)** - ⭐ **NEW**: Comprehensive research roadmap for perception-to-imagery transfer evaluation
 
 ---
 
@@ -88,6 +96,11 @@ This directory contains comprehensive documentation for the fMRI-to-Image recons
 1. Start with `MODULARIZATION_COMPLETE.md` for structure
 2. Review `DIFFUSION_DECODER.md` for reconstruction pipeline
 3. See component-specific docs in `architecture/`
+
+### **I want to work on perception vs. imagery research**
+1. Read `PERCEPTION_VS_IMAGERY_ROADMAP.md` for research plan
+2. Review `NSD_IMAGERY_DATASET_GUIDE.md` for data details
+3. Check `IMAGERY_EXTENSION.md` for architecture integration
 
 ### **I'm troubleshooting an issue**
 1. Check `NSD_Dataset_Guide.md` for data problems
