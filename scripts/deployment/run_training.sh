@@ -21,7 +21,7 @@ echo ""
 # Step 2: Preprocess - T1 Scaler
 echo "Step 2/4: Running T1 preprocessing (2 minutes)..."
 if [ ! -f "cache/preproc/${SUBJECT}_t1_scaler.pkl" ]; then
-    python scripts/preprocess_fmri.py \
+    python scripts/fit_preprocessing.py \
         --subject $SUBJECT \
         --method t1 \
         --output cache/preproc/${SUBJECT}_t1_scaler.pkl
@@ -34,7 +34,7 @@ echo ""
 # Step 3: Preprocess - T2 PCA
 echo "Step 3/4: Running T2 PCA preprocessing (10 minutes)..."
 if [ ! -f "cache/preproc/${SUBJECT}_t2_pca_k512.npz" ]; then
-    python scripts/preprocess_fmri.py \
+    python scripts/fit_preprocessing.py \
         --subject $SUBJECT \
         --method t2 \
         --pca-dim 512 \

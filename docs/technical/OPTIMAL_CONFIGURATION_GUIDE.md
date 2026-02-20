@@ -519,7 +519,7 @@ Mean Rank: ~200 (out of 9000)
 
 **1. Run Complete Pipeline**:
 ```bash
-cd /home/tonystark/Desktop/Bachelor\ V2
+cd /home/tonystark/Desktop/perceptionVSimagination
 source .venv/bin/activate
 bash scripts/run_production.sh
 ```

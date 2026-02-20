@@ -1,6 +1,6 @@
 # 🚀 Quick Start Guide
 
-> **Get up and running with the Brain-to-Image reconstruction system in minutes**
+> **Get up and running with the Perception vs. Imagination decoding pipeline in minutes**
 
 This guide provides a streamlined path to training and evaluating neural decoders for visual reconstruction from fMRI data. For detailed documentation, see the [main README](README.md).
 

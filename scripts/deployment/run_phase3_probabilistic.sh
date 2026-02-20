@@ -37,7 +37,7 @@ echo "Starting training..."
 echo ""
 
 # Run training with probabilistic mode enabled
-"/home/tonystark/Desktop/Bachelor V2/.venv/bin/python" scripts/train_two_stage.py \
+python scripts/train_two_stage.py \
   --subject "${SUBJECT}" \
   --use-preproc \
   --preproc-dir outputs/preproc \

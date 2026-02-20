@@ -14,8 +14,8 @@ from .adapters import (
     ConditionEmbedding,
     AdaptedModel,
     create_adapter,
-    save_adapter as save_imagery_adapter,
-    load_adapter as load_imagery_adapter
+    save_imagery_adapter,
+    load_imagery_adapter,
 )
 from .encoders import (
     ResidualBlock,
@@ -44,6 +44,7 @@ from .encoding_model import (
 from .losses import (
     cosine_loss,
     mse_loss,
+    info_nce_loss,
     infonce_loss,
     compose_loss,
     ComposedLoss
@@ -87,9 +88,10 @@ __all__ = [
     "EncodingModel",
     "save_encoding_model",
     "load_encoding_model",
-    # Loss functions (novel)
+    # Loss functions
     "cosine_loss",
     "mse_loss",
+    "info_nce_loss",
     "infonce_loss",
     "compose_loss",
     "ComposedLoss"

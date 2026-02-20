@@ -23,7 +23,7 @@ Usage:
     # Resume from specific step
     python scripts/run_full_pipeline.py --subject subj01 --mode novel --resume-from train
 
-Author: Generated for Bachelor Thesis V2
+Author: Perception vs. Imagination Project
 Date: December 2025
 """
 

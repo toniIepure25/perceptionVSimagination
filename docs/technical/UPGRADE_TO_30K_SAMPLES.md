@@ -41,7 +41,7 @@
 ### Quick Start (One Command)
 
 ```bash
-cd /home/tonystark/Desktop/Bachelor\ V2
+cd /home/tonystark/Desktop/perceptionVSimagination
 source .venv/bin/activate
 bash scripts/run_production.sh
 ```
@@ -277,7 +277,7 @@ done
 If you want to go back to 750 samples:
 
 ```bash
-cd /home/tonystark/Desktop/Bachelor\ V2
+cd /home/tonystark/Desktop/perceptionVSimagination
 
 # Restore old index
 mv data/indices/nsd_index/subject=subj01/index.parquet data/indices/nsd_index/subject=subj01/index_30k.parquet

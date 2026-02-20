@@ -133,10 +133,10 @@ def load_adapter_model(
     device: str
 ):
     """Load adapter and wrap with base model."""
-    from fmri2img.models.adapters import load_adapter, AdaptedModel
+    from fmri2img.models.adapters import load_imagery_adapter, AdaptedModel
     
     logger.info(f"Loading adapter from {adapter_checkpoint}")
-    adapter, adapter_meta = load_adapter(
+    adapter, adapter_meta = load_imagery_adapter(
         adapter_checkpoint,
         adapter_type=adapter_type,
         embed_dim=512,

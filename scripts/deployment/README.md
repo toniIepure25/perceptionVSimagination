@@ -364,7 +364,7 @@ For deployment issues:
 
 Maintainers
 -----------
-Bachelor Thesis Project
+Perception vs. Imagination Project
 Last Updated: December 7, 2025
 Status: Production-Ready
 """

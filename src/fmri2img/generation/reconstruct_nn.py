@@ -138,13 +138,13 @@ def extract_features_and_targets(
         clip_cache: CLIP cache
     
     Returns:
-        X (n_samples, n_features), Y (n_samples, 512), nsdIds (n_samples,)
+        X (n_samples, n_features), Y (n_samples, 512), nsd_ids (n_samples,)
     """
     logger.info(f"Extracting features from {len(df)} samples...")
     
     X_list = []
     Y_list = []
-    nsdIds = []
+    nsd_ids = []
     
     for idx, row in df.iterrows():
         try:
@@ -165,7 +165,7 @@ def extract_features_and_targets(
             if x is not None and y is not None:
                 X_list.append(x)
                 Y_list.append(y)
-                nsdIds.append(nsd_id)
+                nsd_ids.append(nsd_id)
         
         except Exception as e:
             logger.warning(f"Failed to process row {idx}: {e}")
@@ -173,12 +173,12 @@ def extract_features_and_targets(
     
     X = np.array(X_list)
     Y = np.array(Y_list)
-    nsdIds = np.array(nsdIds)
+    nsd_ids = np.array(nsd_ids)
     
     logger.info(f"✅ Extracted {len(X)} valid samples")
     logger.info(f"   Features: {X.shape}, Targets: {Y.shape}")
     
-    return X, Y, nsdIds
+    return X, Y, nsd_ids
 
 
 def build_gallery(

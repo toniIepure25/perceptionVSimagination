@@ -5,7 +5,7 @@
 # This file contains shared defaults across all configurations.
 # Specific experiment configs can override these values.
 #
-# Author: Bachelor Thesis - fMRI to Image Reconstruction
+# Author: Perception vs. Imagination - Cross-Domain Neural Decoding
 # Date: December 2025
 # Version: 3.0
 # =============================================================================
@@ -161,5 +161,5 @@ logging:
 metadata:
   config_version: "3.0"
   description: "Base configuration with sensible defaults"
-  paper_reference: "Bachelor Thesis 2025"
+  paper_reference: "Perception vs. Imagination, 2026"
   dataset_reference: "Allen et al., 2022, Nature Neuroscience"

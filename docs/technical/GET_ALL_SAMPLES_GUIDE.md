@@ -104,7 +104,7 @@ Evidence: Ozcelik et al. (2023) - 0.71 with 9000+ samples
 
 **1. Replace index**:
 ```bash
-cd /home/tonystark/Desktop/Bachelor\ V2
+cd /home/tonystark/Desktop/perceptionVSimagination
 mv data/indices/nsd_index/subject=subj01/index.parquet data/indices/nsd_index/subject=subj01/index_old_750.parquet
 mv data/indices/nsd_index/subject=subj01/index_full.parquet data/indices/nsd_index/subject=subj01/index.parquet
 ```
@@ -363,7 +363,7 @@ python scripts/nsd_fit_preproc.py \
 
 **1. Activate new index**:
 ```bash
-cd /home/tonystark/Desktop/Bachelor\ V2
+cd /home/tonystark/Desktop/perceptionVSimagination
 mv data/indices/nsd_index/subject=subj01/index.parquet data/indices/nsd_index/subject=subj01/index_old_750.parquet
 mv data/indices/nsd_index/subject=subj01/index_full.parquet data/indices/nsd_index/subject=subj01/index.parquet
 ```

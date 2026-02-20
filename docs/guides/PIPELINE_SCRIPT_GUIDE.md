@@ -130,7 +130,7 @@ The script **intelligently caches** every step to avoid redundant computation:
 After running the pipeline, you'll have:
 
 ```
-Bachelor V2/
+perceptionVSimagination/
 ├── data/
 │   └── indices/
 │       └── nsd_index/

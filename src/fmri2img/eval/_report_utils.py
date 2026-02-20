@@ -98,53 +98,12 @@ def bootstrap_ci(
     alpha: float = 0.05,
     seed: int = 42
 ) -> Tuple[float, float]:
+    """Thin wrapper around ``stats.inference.bootstrap_ci`` for backward compatibility.
+
+    The ``boots`` parameter maps to ``n_boot`` in the canonical implementation.
     """
-    Compute bootstrap confidence interval for mean.
-    
-    Uses nonparametric bootstrap with replacement.
-    
-    Args:
-        values: Array of per-sample values
-        boots: Number of bootstrap resamples (default: 1000)
-        alpha: Significance level (default: 0.05 for 95% CI)
-        seed: Random seed for reproducibility (default: 42)
-        
-    Returns:
-        Tuple of (lower_bound, upper_bound) for (1-alpha) CI
-        
-    Example:
-        >>> values = np.array([0.5, 0.6, 0.7, 0.8])
-        >>> low, high = bootstrap_ci(values, boots=1000)
-        >>> print(f"95% CI: [{low:.3f}, {high:.3f}]")
-    """
-    if len(values) == 0:
-        return (np.nan, np.nan)
-    
-    if len(values) == 1:
-        # Can't bootstrap single value
-        return (values[0], values[0])
-    
-    # Set seed for reproducibility
-    rng = np.random.RandomState(seed)
-    
-    # Generate bootstrap samples
-    n = len(values)
-    boot_means = np.zeros(boots)
-    
-    for i in range(boots):
-        # Resample with replacement
-        indices = rng.choice(n, size=n, replace=True)
-        boot_sample = values[indices]
-        boot_means[i] = np.mean(boot_sample)
-    
-    # Compute percentile-based CI
-    lower_percentile = (alpha / 2) * 100
-    upper_percentile = (1 - alpha / 2) * 100
-    
-    low = np.percentile(boot_means, lower_percentile)
-    high = np.percentile(boot_means, upper_percentile)
-    
-    return (low, high)
+    from fmri2img.stats.inference import bootstrap_ci as _bootstrap_ci
+    return _bootstrap_ci(values, n_boot=boots, alpha=alpha, seed=seed)
 
 
 def format_mean_ci(

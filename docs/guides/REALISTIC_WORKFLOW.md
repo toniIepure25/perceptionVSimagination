@@ -15,7 +15,7 @@ The "3 simple commands" version was **oversimplified**. Here's what you **actual
 ### 1. Environment Setup
 
 ```bash
-cd "/home/tonystark/Desktop/Bachelor V2"
+cd "/home/tonystark/Desktop/perceptionVSimagination"
 
 # Activate conda environment
 conda activate fmri2img

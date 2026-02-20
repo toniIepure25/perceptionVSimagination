@@ -513,8 +513,8 @@ def main():
             best_val_cosine = val_metrics['cosine_mean']
             patience_counter = 0
             
-            from fmri2img.models.adapters import save_adapter
-            save_adapter(
+            from fmri2img.models.adapters import save_imagery_adapter
+            save_imagery_adapter(
                 adapter,
                 str(output_dir / 'checkpoints' / 'adapter_best.pt'),
                 meta={
@@ -536,7 +536,7 @@ def main():
             break
     
     # Save last model
-    from fmri2img.models.adapters import save_adapter
+    from fmri2img.models.adapters import save_imagery_adapter
     save_adapter(
         adapter,
         str(output_dir / 'checkpoints' / 'adapter_last.pt'),

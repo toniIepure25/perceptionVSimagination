@@ -5,7 +5,7 @@ PREPROC_DIR_FLAG := $(if $(PREPROC_DIR),--preproc-dir $(PREPROC_DIR),)
 .PHONY: setup index test demo sanity read-index check-index clean build-clip-cache check-headers clip-cache-small smoke-tests clean-logs help ridge repair-adapter
 
 help:
-	@echo "Bachelor V2 - fMRI to Image Pipeline"
+	@echo "Perception vs. Imagination - Cross-Domain Neural Decoding Pipeline"
 	@echo ""
 	@echo "Smoke Tests & Quick Sanity Checks:"
 	@echo "  make check-headers      - Validate beta_index bounds in index files"
@@ -31,6 +31,13 @@ help:
 	@echo "  make recon-eval         - Generate + evaluate (512-D, one-click)"
 	@echo "  make recon-eval-adapter - Generate + evaluate (768/1024-D, one-click)"
 	@echo "  make compare-evals      - Aggregate multiple evaluations with bootstrap CIs"
+	@echo ""
+	@echo "Perception vs. Imagery:"
+	@echo "  make imagery-index      - Build NSD-Imagery data index"
+	@echo "  make imagery-eval       - Evaluate perception→imagery transfer"
+	@echo "  make imagery-adapter    - Train imagery adapter on frozen encoder"
+	@echo "  make novel-analyses     - Run all 6 novel neuroscience analyses"
+	@echo "  make novel-figures      - Generate publication-quality figures"
 	@echo ""
 	@echo "Paper-Grade Shared1000 Evaluation:"
 	@echo "  make eval-shared1000    - Run comprehensive Shared1000 evaluation"
@@ -73,7 +80,7 @@ build-clip-cache:
 
 # Run comprehensive tests
 test:
-	$(PY) -m pytest src/fmri2img/scripts/test_*.py -v
+	$(PY) -m pytest tests/ -v
 
 # Run IO layer demo with unified API
 demo:
@@ -177,6 +184,58 @@ clip-adapter:
 		--epochs 30 --batch-size 256 --limit $${LIMIT:-4096} \
 		--out checkpoints/clip_adapter/subj01/adapter.pt
 	@echo "✅ CLIP adapter training complete"
+
+# ════════════════════════════════════════════════════════════════════════════
+# PERCEPTION VS. IMAGERY
+# ════════════════════════════════════════════════════════════════════════════
+
+.PHONY: imagery-index imagery-eval imagery-adapter novel-analyses novel-figures
+
+# Build NSD-Imagery index
+imagery-index:
+	@echo "=== Building NSD-Imagery Index ==="
+	@$(PY) scripts/build_nsd_imagery_index.py \
+		--subject $${SUBJECT:-subj01} \
+		--data-root $${DATA_ROOT:-data/nsd_imagery} \
+		--cache-root $${CACHE_ROOT:-cache/} \
+		--output cache/indices/imagery/$${SUBJECT:-subj01}.parquet \
+		--verbose
+	@echo "✅ NSD-Imagery index built"
+
+# Evaluate perception-trained model on imagery data
+imagery-eval:
+	@echo "=== Evaluating Perception→Imagery Transfer ==="
+	@$(PY) scripts/eval_perception_to_imagery_transfer.py \
+		--index cache/indices/imagery/$${SUBJECT:-subj01}.parquet \
+		--checkpoint $${CKPT:-checkpoints/two_stage/$${SUBJECT:-subj01}/best.pt} \
+		--mode imagery --split test \
+		--output-dir outputs/reports/imagery/$${SUBJECT:-subj01}
+	@echo "✅ Imagery transfer evaluation complete"
+
+# Train imagery adapter on frozen perception encoder
+imagery-adapter:
+	@echo "=== Training Imagery Adapter ==="
+	@$(PY) scripts/train_imagery_adapter.py \
+		--perception-checkpoint $${CKPT:-checkpoints/two_stage/$${SUBJECT:-subj01}/best.pt} \
+		--imagery-index cache/indices/imagery/$${SUBJECT:-subj01}.parquet \
+		--adapter-type $${ADAPTER_TYPE:-mlp} \
+		--output-dir checkpoints/adapters/$${SUBJECT:-subj01}
+	@echo "✅ Imagery adapter training complete"
+
+# Run all six novel neuroscience analyses
+novel-analyses:
+	@echo "=== Running Novel Analyses ==="
+	@$(PY) scripts/run_novel_analyses.py \
+		--config configs/experiments/novel_analyses.yaml \
+		$${DRY_RUN:+--dry-run}
+	@echo "✅ Novel analyses complete"
+
+# Generate publication-quality figures
+novel-figures:
+	@echo "=== Generating Novel Analysis Figures ==="
+	@$(PY) scripts/make_novel_figures.py \
+		--results-dir outputs/novel_analyses/
+	@echo "✅ Figures generated"
 
 # Evaluate reconstructed images (512-D ViT-B/32 space)
 eval-recon:

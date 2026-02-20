@@ -56,7 +56,7 @@ def mse_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return F.mse_loss(pred, target)
 
 
-def infonce_loss(
+def info_nce_loss(
     pred: torch.Tensor,
     target: torch.Tensor,
     temperature: float = 0.07
@@ -103,6 +103,10 @@ def infonce_loss(
     loss = (loss_i2t + loss_t2i) / 2.0
     
     return loss
+
+
+# Backward-compatible alias
+infonce_loss = info_nce_loss
 
 
 def compose_loss(
@@ -165,7 +169,7 @@ def compose_loss(
     if infonce_weight > 0:
         # Only compute if batch size > 1 (need negatives)
         if pred.size(0) > 1:
-            info_loss = infonce_loss(pred, target, temperature)
+            info_loss = info_nce_loss(pred, target, temperature)
             components['infonce'] = info_loss.item()
             total_loss = total_loss + infonce_weight * info_loss
         else:

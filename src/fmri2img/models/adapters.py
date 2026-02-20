@@ -498,14 +498,14 @@ def create_adapter(
         raise ValueError(f"Unknown adapter type: {adapter_type}. Use 'linear', 'mlp', or 'multi_target'")
 
 
-def save_adapter(
+def save_imagery_adapter(
     adapter: nn.Module,
     path: str,
     meta: Dict[str, Any],
     full_model: Optional[nn.Module] = None
 ) -> None:
     """
-    Save adapter checkpoint with metadata.
+    Save imagery adapter checkpoint with metadata.
     
     Args:
         adapter: Trained adapter module
@@ -527,14 +527,14 @@ def save_adapter(
     logger.info(f"Saved adapter checkpoint to {path}")
 
 
-def load_adapter(
+def load_imagery_adapter(
     path: str,
     adapter_type: str = None,
     embed_dim: int = 512,
     map_location: str = 'cpu'
 ) -> tuple[nn.Module, Dict[str, Any]]:
     """
-    Load adapter checkpoint.
+    Load imagery adapter checkpoint.
     
     Args:
         path: Checkpoint path

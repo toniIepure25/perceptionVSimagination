@@ -64,36 +64,12 @@ def load_data_config(config_path="configs/data.yaml"):
 
 
 def split_dataframe(df, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, random_seed=42):
-    """Split dataframe into train/val/test."""
-    if abs(train_ratio + val_ratio + test_ratio - 1.0) > 1e-6:
-        raise ValueError("Split ratios must sum to 1.0")
-    
-    # Shuffle with fixed seed
-    df_shuffled = df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
-    
-    n_total = len(df_shuffled)
-    
-    # Ensure minimum samples for each split (at least 1 for val/test if n >= 3)
-    if n_total < 3:
-        raise ValueError(f"Need at least 3 samples for train/val/test split, got {n_total}")
-    
-    n_train = max(1, int(n_total * train_ratio))
-    n_val = max(1, int(n_total * val_ratio))
-    n_test = n_total - n_train - n_val
-    
-    if n_test < 1:
-        # Adjust to ensure at least 1 test sample
-        n_test = 1
-        n_val = max(1, n_total - n_train - n_test)
-        n_train = n_total - n_val - n_test
-    
-    train_df = df_shuffled[:n_train]
-    val_df = df_shuffled[n_train:n_train + n_val]
-    test_df = df_shuffled[n_train + n_val:]
-    
-    logger.info(f"Split {n_total} trials: train={len(train_df)}, val={len(val_df)}, test={len(test_df)}")
-    
-    return train_df, val_df, test_df
+    """Thin wrapper delegating to :func:`fmri2img.models.train_utils.train_val_test_split`."""
+    from fmri2img.models.train_utils import train_val_test_split
+    return train_val_test_split(
+        df, train_ratio=train_ratio, val_ratio=val_ratio,
+        test_ratio=test_ratio, random_seed=random_seed,
+    )
 
 
 def extract_features_and_targets(

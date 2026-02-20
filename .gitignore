@@ -75,9 +75,10 @@ venv.bak/
 # ============================================================================
 
 # Large dataset directories (should be managed separately)
-data/
-cache/
-outputs/
+# Leading slash ensures only project-root dirs are ignored, not src/fmri2img/data/
+/data/
+/cache/
+/outputs/
 
 # Specific large file types
 *.npy
@@ -149,6 +150,9 @@ codebase.md
 # Test artifacts
 test_redirect_index/
 pq
+
+# Pipeline runtime state
+.pipeline_state*.json
 
 # OS-specific
 .DS_Store

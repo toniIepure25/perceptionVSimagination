@@ -93,7 +93,7 @@ model = Blip2ForConditionalGeneration.from_pretrained(
 Test that the model loads:
 
 ```bash
-cd ~/Desktop/Bachelor\ V2
+cd ~/Desktop/perceptionVSimagination
 source .venv/bin/activate
 
 python -c "
