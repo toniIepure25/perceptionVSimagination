@@ -289,7 +289,7 @@ python scripts/train_imagery_adapter.py ... --device cpu
 
 ## 📚 See Also
 
-- **Full Documentation**: `IMAGERY_ADAPTER_COMPLETE.md`
+- **Paper Draft Outline**: `docs/research/PAPER_DRAFT_OUTLINE.md`
 - **Research Roadmap**: `docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md`
 - **Architecture Details**: `src/fmri2img/models/adapters.py` (docstrings)
 - **Test Suite**: `tests/test_imagery_adapter.py`
@@ -339,4 +339,4 @@ And the original NSD papers:
 **Questions?** Open an issue or see the full documentation!
 
 **Status**: Ready for production use ✅  
-**Last Updated**: January 10, 2026
+**Last Updated**: February 20, 2026

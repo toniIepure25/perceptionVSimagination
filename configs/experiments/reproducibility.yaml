@@ -1,0 +1,208 @@
+# ============================================================================
+# Experiment Reproducibility Protocol
+# ============================================================================
+# This file defines the full experimental protocol for reproducing all results
+# in the perception-vs-imagination study. Anyone cloning the repo should be
+# able to replicate experiments by following this specification.
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# Global settings
+# ---------------------------------------------------------------------------
+random_seed: 42
+deterministic_mode: true    # Sets torch.backends.cudnn.deterministic = true
+float_precision: float32    # Use float32 for reproducibility (float16 for speed)
+
+# ---------------------------------------------------------------------------
+# Hardware requirements
+# ---------------------------------------------------------------------------
+hardware:
+  gpu:
+    minimum_vram_gb: 6
+    recommended_vram_gb: 24
+    tested_gpus:
+      - "NVIDIA RTX 3090 (24 GB)"
+      - "NVIDIA RTX 4090 (24 GB)"
+      - "NVIDIA A100 (40 GB)"
+  ram:
+    minimum_gb: 16
+    recommended_gb: 32
+  storage:
+    minimum_free_gb: 50
+    recommended_free_gb: 200
+    note: "NSD full dataset is ~150 GB; CLIP cache ~2 GB; checkpoints ~5 GB"
+
+  expected_runtimes:
+    ridge_baseline: "5-10 minutes (CPU)"
+    mlp_encoder: "2-4 hours (single GPU)"
+    two_stage_full: "6-8 hours (single GPU)"
+    imagery_adapter: "30-60 minutes (single GPU)"
+    novel_analyses: "1-2 hours (single GPU, after models trained)"
+    figure_generation: "5-10 minutes (CPU)"
+
+# ---------------------------------------------------------------------------
+# Data versioning
+# ---------------------------------------------------------------------------
+data:
+  nsd:
+    version: "1.0"
+    source: "https://natural-scenes-dataset.s3.amazonaws.com/"
+    citation: "Allen et al. (2022) Nature Neuroscience"
+    subjects: ["subj01", "subj02", "subj03", "subj04",
+               "subj05", "subj06", "subj07", "subj08"]
+    primary_subjects: ["subj01", "subj05"]  # Full experiment run on these
+    sessions_per_subject: 37
+    trials_per_session: 750
+    unique_images: 10000
+    repetitions_per_image: 3
+    resolution: "1.8mm isotropic (7T)"
+
+  nsd_imagery:
+    version: "beta"
+    source: "local (see docs/technical/NSD_IMAGERY_DATASET_GUIDE.md)"
+    note: "Imagery extension; subset of NSD stimuli recalled from memory"
+    expected_columns:
+      - "subject"
+      - "nsd_id"
+      - "coco_id"
+      - "stimulus_type"   # perception | imagery
+      - "split"           # train | val | test
+      - "fmri_path"
+      - "clip_target"
+
+  clip_cache:
+    model: "ViT-L-14"
+    pretrained: "openai"
+    embedding_dim: 768
+    format: "parquet"
+
+# ---------------------------------------------------------------------------
+# Data splits
+# ---------------------------------------------------------------------------
+splits:
+  perception:
+    train: 0.80
+    val: 0.10
+    test: 0.10
+    stratify_by: null   # Random split
+    note: "Standard NSD split; shared 1000 images held for test"
+
+  imagery:
+    train: 0.60
+    val: 0.20
+    test: 0.20
+    stratify_by: "stimulus_type"
+    note: "Smaller dataset, larger val/test for reliable estimates"
+
+# ---------------------------------------------------------------------------
+# Model checkpoint conventions
+# ---------------------------------------------------------------------------
+checkpoints:
+  naming: "{model_type}/{subject}/{timestamp}_{run_name}"
+  examples:
+    - "checkpoints/two_stage/subj01/20260220_baseline/best.pt"
+    - "checkpoints/adapters/subj01/20260220_mlp_adapter/best.pt"
+  save_frequency: "every epoch + best validation"
+  contents:
+    - "model_state_dict"
+    - "optimizer_state_dict"
+    - "epoch"
+    - "best_val_metric"
+    - "config"           # Full training config embedded in checkpoint
+    - "git_hash"         # Git commit hash at training time
+
+# ---------------------------------------------------------------------------
+# Evaluation protocol
+# ---------------------------------------------------------------------------
+evaluation:
+  # Metrics to report for all experiments
+  primary_metrics:
+    - name: "clip_cosine"
+      description: "Cosine similarity between predicted and ground-truth CLIP embeddings"
+      higher_is_better: true
+    - name: "retrieval_at_1"
+      description: "Top-1 retrieval accuracy in the test gallery"
+      higher_is_better: true
+    - name: "retrieval_at_5"
+      description: "Top-5 retrieval accuracy in the test gallery"
+      higher_is_better: true
+
+  secondary_metrics:
+    - name: "clip_mse"
+      description: "MSE between predicted and ground-truth CLIP embeddings"
+      higher_is_better: false
+    - name: "ssim"
+      description: "Structural similarity of reconstructed images (requires generation)"
+      higher_is_better: true
+    - name: "fid"
+      description: "Frechet Inception Distance over reconstructed gallery"
+      higher_is_better: false
+
+  gallery:
+    test_gallery_size: 300
+    retrieval_gallery_source: "test split images"
+    note: "All retrieval metrics computed against the full test gallery"
+
+  confidence_intervals:
+    method: "bootstrap"
+    n_bootstrap: 1000
+    confidence_level: 0.95
+
+  statistical_tests:
+    paired_comparison: "Wilcoxon signed-rank test"
+    correction: "Bonferroni for multiple comparisons"
+    significance_level: 0.05
+
+# ---------------------------------------------------------------------------
+# Novel analysis protocol
+# ---------------------------------------------------------------------------
+novel_analyses:
+  dimensionality:
+    pca_components: 50
+    participation_ratio: true
+    intrinsic_dim_method: "MLE"       # Maximum Likelihood Estimation
+    n_bootstrap: 500
+
+  uncertainty:
+    mc_dropout_samples: 30
+    dropout_rate: 0.1
+    correlation_metric: "spearman"
+
+  semantic_survival:
+    concept_axes:
+      - "animate_vs_inanimate"
+      - "indoor_vs_outdoor"
+      - "natural_vs_manmade"
+    projection_method: "linear"
+    n_permutations: 1000
+
+  topological_rsa:
+    homology_dimensions: [0, 1]
+    max_edge_length: "auto"
+    distance_metric: "cosine"
+    persistence_threshold: 0.01
+
+  cross_subject:
+    subjects: ["subj01", "subj02", "subj03", "subj04",
+               "subj05", "subj06", "subj07", "subj08"]
+    second_order_rsa: true
+    adapter_weight_comparison: true
+
+  dissociation:
+    targets: ["clip", "ip_adapter", "sd_vae"]
+    ssi_formula: "clip_preservation / sd_vae_preservation"
+    significance_test: "permutation (10000 shuffles)"
+
+# ---------------------------------------------------------------------------
+# Output conventions
+# ---------------------------------------------------------------------------
+outputs:
+  reports_dir: "outputs/reports/"
+  novel_analyses_dir: "outputs/novel_analyses/"
+  figures_dir: "outputs/figures/"
+  format:
+    tables: "csv"
+    metrics: "json"
+    figures: ["png", "pdf"]
+    figure_dpi: 300
+    figure_style: "seaborn-v0_8-paper"

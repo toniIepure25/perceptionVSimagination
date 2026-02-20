@@ -206,9 +206,9 @@ Loaded adapter (target_dim=1024) with metadata: {...}
 
 Manual loading:
 ```python
-from fmri2img.models.clip_adapter import load_adapter
+from fmri2img.models.adapters import load_imagery_adapter
 
-adapter, metadata = load_adapter("path/to/adapter.pt", map_location="cuda")
+adapter, metadata = load_imagery_adapter("path/to/adapter.pt", map_location="cuda")
 print(f"Model: {metadata['model_id']}")
 print(f"Dims: {metadata['input_dim']}D → {metadata['target_dim']}D")
 ```

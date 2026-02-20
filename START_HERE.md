@@ -1,482 +1,229 @@
-# 🚀 Quick Start Guide
+# Quick Start Guide
 
-> **Get up and running with the Perception vs. Imagination decoding pipeline in minutes**
+> **Onboarding for the Perception vs. Imagination neural decoding project.**
 
-This guide provides a streamlined path to training and evaluating neural decoders for visual reconstruction from fMRI data. For detailed documentation, see the [main README](README.md).
+For a project overview, hypotheses, and architecture details, see the [main README](README.md).
 
 ---
 
-## 📋 Prerequisites
-
-### System Requirements
+## Prerequisites
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
 | **Python** | 3.10+ | 3.11+ |
-| **GPU** | 6GB VRAM (GTX 1060) | 24GB VRAM (RTX 3090/4090) |
-| **RAM** | 16GB | 32GB+ |
-| **Storage** | 50GB free | 200GB+ free |
-| **OS** | Linux/macOS | Linux (Ubuntu 20.04+) |
+| **GPU** | 6 GB VRAM | 24 GB VRAM (RTX 3090/4090) |
+| **RAM** | 16 GB | 32 GB+ |
+| **Storage** | 50 GB free | 200 GB+ |
+| **OS** | Linux / macOS | Ubuntu 20.04+ |
 
 ### Environment Setup
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/fmri2img.git
-cd fmri2img
+git clone https://github.com/yourusername/perceptionVSimagination.git
+cd perceptionVSimagination
 
-# Create and activate conda environment
+# Option A: Conda (recommended)
 conda env create -f environment.yml
 conda activate fmri2img
 
-# Verify installation
-python scripts/test_full_workflow.py  # Should complete in ~2 seconds
+# Option B: pip
+pip install -e ".[all]"
+
+# Verify
+python -c "import fmri2img; print(fmri2img.__version__)"
 ```
 
 ---
 
-## 🎯 Choose Your Path
+## Choose Your Path
 
-### Path 1: Quick Test (15 minutes)
-**Recommended for first-time users**
+### Path 1: Perception Baseline (start here)
 
-Test the complete pipeline with a small dataset before committing to full training:
-
-```bash
-# 1. Run automated tests
-python scripts/test_full_workflow.py && \
-python scripts/test_e2e_integration.py && \
-python scripts/test_extended_components.py --test-real-data
-
-# 2. Train on 100 samples (5 minutes)
-python scripts/train_mlp.py \
-  --subject subj01 \
-  --limit 100 \
-  --epochs 10 \
-  --output-dir checkpoints/test
-
-# 3. Verify outputs
-ls -lh checkpoints/test/
-```
-
-### Path 2: Full Pipeline (10-15 hours)
-**For production training and evaluation**
-
-Complete end-to-end workflow with full NSD dataset:
+Train an encoder on perception fMRI, then evaluate within-domain.
 
 ```bash
-# Use the automated Makefile
-make pipeline
-
-# Or run step-by-step (see Section below)
-```
-
-### Path 3: Use Pre-trained Models
-**Coming soon - skip training entirely**
-
-```bash
-# Download pre-trained checkpoints
-python scripts/download_pretrained.py --subject subj01 --model two_stage
-
-# Run evaluation immediately
-python scripts/eval_comprehensive.py \
-  --subject subj01 \
-  --encoder-checkpoint checkpoints/pretrained/subj01_two_stage.pt \
-  --encoder-type two_stage
-```
-
----
-
-## 📦 Step-by-Step Workflow
-
-### Step 1: Data Preparation (2-3 hours, one-time)
-
-#### Download NSD Data
-
-```bash
-# Option A: Automated download (recommended)
-python scripts/download_nsd_data.py --output cache/
-
-# Option B: Manual download from NSD website
-# Visit: http://naturalscenesdataset.org/
-# Download: nsd_stimuli.hdf5 (39GB) → cache/nsd_hdf5/
-```
-
-#### Build Subject Index
-
-```bash
-# Create trial indices with train/val/test splits
+# 1. Build NSD perception index
 python scripts/build_full_index.py \
-  --cache-root cache \
-  --subject subj01 \
+  --cache-root cache --subject subj01 \
   --output data/indices/nsd_index/
 
-# Verify output
-ls -lh data/indices/nsd_index/
-# Should contain: subject=subj01/trial_*.parquet
-```
-
-#### Build CLIP Cache
-
-```bash
-# Extract CLIP embeddings for all 73K NSD images
+# 2. Build CLIP embedding cache (~2-3 hours, one-time)
 python scripts/build_clip_cache.py \
-  --cache-root cache \
-  --output outputs/clip_cache/clip.parquet \
+  --cache-root cache --output outputs/clip_cache/clip.parquet \
   --batch-size 256
 
-# Time: ~2-3 hours on GPU
-# Output: ~500MB parquet file with 73,000 embeddings
-```
-
-**Resumable:** If interrupted, simply rerun the same command - it will skip already-processed images.
-
-**Progress monitoring:**
-```bash
-# Watch cache grow
-watch -n 10 "python -c 'import pandas as pd; print(len(pd.read_parquet(\"outputs/clip_cache/clip.parquet\")))"
-```
-
-### Step 2: Training (2-8 hours depending on model)
-
-#### Train Ridge Baseline (Fast)
-
-```bash
-python scripts/train_ridge.py \
-  --subject subj01 \
-  --config configs/ridge_baseline.yaml \
-  --output-dir checkpoints/ridge/subj01
-
-# Time: ~5 minutes
-# Use: Quick baseline for comparison
-```
-
-#### Train MLP Encoder (Standard)
-
-```bash
-python scripts/train_mlp.py \
-  --subject subj01 \
-  --config configs/mlp_standard.yaml \
-  --output-dir checkpoints/mlp/subj01
-
-# Time: ~2 hours
-# Use: Strong baseline, good speed/performance trade-off
-```
-
-#### Train Two-Stage Encoder (SOTA)
-
-```bash
+# 3. Train Two-Stage encoder (~6-8 hours)
 python scripts/train_two_stage.py \
-  --subject subj01 \
   --config configs/two_stage_sota.yaml \
+  --subject subj01 \
   --output-dir checkpoints/two_stage/subj01
 
-# Time: ~6-8 hours
-# Use: Best performance, recommended for research
+# Or use the Makefile shortcuts:
+make ridge          # Fast baseline (~5 min)
+make mlp            # MLP encoder (~2 hours)
 ```
 
-**Monitor training:**
-```bash
-# Watch logs in real-time
-tail -f logs/train_two_stage_subj01.log
+### Path 2: Cross-Domain Transfer Evaluation
 
-# Check GPU usage
-nvidia-smi -l 1
-```
-
-### Step 3: Evaluation (10-30 minutes)
+Test whether perception-trained models generalize to mental imagery.
 
 ```bash
-# Comprehensive evaluation with multiple galleries
-python scripts/eval_comprehensive.py \
-  --subject subj01 \
-  --encoder-checkpoint checkpoints/two_stage/subj01/two_stage_best.pt \
-  --encoder-type two_stage \
-  --output-dir outputs/eval/subj01
-
-# Quick evaluation (test set only)
-python scripts/eval_comprehensive.py \
-  --subject subj01 \
-  --encoder-checkpoint checkpoints/two_stage/subj01/two_stage_best.pt \
-  --encoder-type two_stage \
-  --max-samples 100 \
-  --output-dir outputs/eval/test
-```
-
-**Output metrics:**
-- Retrieval: R@1, R@5, R@10, R@20, R@50, R@100
-- Ranking: Mean/median rank, MRR
-- Similarity: CLIP-I score (cosine similarity)
-
-### Step 4: Image Reconstruction (Optional, 5-60 minutes)
-
-```bash
-# Generate reconstructions with Stable Diffusion
-python scripts/generate_comparison_gallery.py \
-  --subject subj01 \
-  --encoder-checkpoint checkpoints/two_stage/subj01/two_stage_best.pt \
-  --encoder-type two_stage \
-  --output-dir outputs/galleries/subj01 \
-  --num-samples 16 \
-  --strategies single best_of_8 \
-  --num-inference-steps 50
-
-# Time: ~5 min (single) or ~40 min (best-of-8)
-```
-
-**Note:** Requires Stable Diffusion model (~5GB). First run will download automatically.
-
----
-
-## 🔧 Configuration
-
-### Using Config Files (Recommended)
-
-```bash
-# Use predefined configurations
-python scripts/train_two_stage.py \
-  --config configs/two_stage_sota.yaml \
-  --subject subj01
-```
-
-### Runtime Overrides
-
-```bash
-# Override specific parameters
-python scripts/train_two_stage.py \
-  --config configs/two_stage_sota.yaml \
-  --override "training.learning_rate=5e-5" \
-  --override "encoder.n_blocks=6"
-```
-
-### Key Configuration Parameters
-
-```yaml
-# configs/two_stage_sota.yaml
-dataset:
-  subject: subj01
-  train_ratio: 0.80    # 80% train, 10% val, 10% test
-
-preprocessing:
-  pca_k: 512           # PCA dimensions (100-1024)
-  reliability_threshold: 0.1
-
-encoder:
-  latent_dim: 768      # Latent representation size
-  n_blocks: 4          # Residual blocks (2-8)
-  dropout: 0.3         # Regularization
-
-training:
-  batch_size: 128      # Adjust based on GPU memory
-  learning_rate: 1e-4
-  epochs: 100
-  early_stopping_patience: 10
-```
-
----
-
-## 📊 Expected Performance
-
-### Retrieval Metrics (subj01, Test Set)
-
-| Encoder | R@1 | R@5 | R@10 | Median Rank | CLIP-I |
-|---------|-----|-----|------|-------------|--------|
-| Ridge | 12.3% | 38.7% | 56.2% | 187 | 0.524 |
-| MLP | 18.9% | 47.3% | 64.1% | 92 | 0.612 |
-| Two-Stage | 23.7% | 54.8% | 71.4% | 47 | 0.658 |
-
-*Gallery: 3,000 test images*
-
-### Training Convergence
-
-- **Ridge**: Instant (closed-form solution)
-- **MLP**: 30-50 epochs (~2 hours)
-- **Two-Stage**: 50-80 epochs (~6-8 hours)
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### 1. "CLIP embedding missing for nsdId=XXX"
-**Cause:** CLIP cache not built or incomplete  
-**Solution:**
-```bash
-python scripts/build_clip_cache.py --output outputs/clip_cache/clip.parquet
-```
-
-#### 2. "CUDA out of memory"
-**Cause:** Batch size too large for GPU  
-**Solution:**
-```bash
-# Reduce batch size in config or via override
---override "training.batch_size=64"
-```
-
-#### 3. "FileNotFoundError: nsd_stimuli.hdf5"
-**Cause:** NSD data not downloaded  
-**Solution:**
-```bash
-python scripts/download_nsd_data.py --output cache/
-```
-
-#### 4. Slow training on CPU
-**Cause:** No GPU detected  
-**Solution:**
-```bash
-# Verify CUDA
-python -c "import torch; print(torch.cuda.is_available())"
-
-# Force GPU device
---device cuda
-```
-
-### Getting Help
-
-- **Documentation**: See [docs/](docs/) for detailed guides
-- **Issues**: [GitHub Issues](https://github.com/yourusername/fmri2img/issues)
-- **Tests**: Run `python scripts/test_full_workflow.py` to verify installation
-
----
-
-## � Perception vs. Imagery Track (NSD-Imagery)
-
-**NEW Research Extension**: Evaluate cross-domain transfer from visual perception to mental imagery.
-
-### Quick Start
-
-```bash
-# Step 1: Build NSD-Imagery index
-# Scans data_root for beta files and creates parquet index with train/val/test splits
+# 1. Build NSD-Imagery index
 python scripts/build_nsd_imagery_index.py \
-  --subject subj01 \
-  --data-root data/nsd_imagery \
+  --subject subj01 --data-root data/nsd_imagery \
   --cache-root cache/ \
-  --output cache/indices/imagery/subj01.parquet \
-  --verbose
+  --output cache/indices/imagery/subj01.parquet --verbose
 
-# Step 2: Evaluate perception-trained models on imagery data (cross-domain transfer)
+# 2. Evaluate perception model on imagery data
 python scripts/eval_perception_to_imagery_transfer.py \
   --index cache/indices/imagery/subj01.parquet \
   --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode imagery \
-  --split test \
+  --mode imagery --split test \
   --output-dir outputs/reports/imagery/perception_transfer
 
-# Step 3: Optional - Test with dry-run mode (no checkpoint loading)
-python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint dummy.pt \
-  --mode imagery \
-  --split test \
-  --output-dir outputs/reports/imagery/dry_run_test \
-  --dry-run
-
-# Step 4: Optional - Evaluate on perception data for baseline comparison
+# 3. Compare against within-domain baseline
 python scripts/eval_perception_to_imagery_transfer.py \
   --index cache/indices/imagery/subj01.parquet \
   --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode perception \
-  --split test \
+  --mode perception --split test \
   --output-dir outputs/reports/imagery/perception_baseline
+
+# Or use Makefile:
+make imagery-index
+make imagery-eval
 ```
 
-### Expected Outputs
+### Path 3: Imagery Adapter Training
 
-After running the evaluation, you'll get:
+Train a lightweight adapter to bridge the perception-imagery gap (Hypothesis H3).
+
+```bash
+python scripts/train_imagery_adapter.py \
+  --perception-checkpoint checkpoints/two_stage/subj01/best.pt \
+  --imagery-index cache/indices/imagery/subj01.parquet \
+  --adapter-type mlp \
+  --output-dir checkpoints/adapters/subj01
+
+# Or: make imagery-adapter
+```
+
+See [ADAPTER_QUICK_START.md](ADAPTER_QUICK_START.md) for the full adapter guide.
+
+### Path 4: Novel Neuroscience Analyses
+
+Run all six research directions that go beyond standard transfer evaluation.
+
+```bash
+# Dry-run (validates everything works without real data)
+python scripts/run_novel_analyses.py \
+  --config configs/experiments/novel_analyses.yaml --dry-run
+
+# Full run with trained models and real data
+python scripts/run_novel_analyses.py \
+  --config configs/experiments/novel_analyses.yaml
+
+# Generate publication-quality figures
+python scripts/make_novel_figures.py --results-dir outputs/novel_analyses/
+
+# Or: make novel-analyses && make novel-figures
+```
+
+---
+
+## Novel Analysis Directions
+
+| # | Direction | What It Reveals | Key Metric |
+|---|-----------|----------------|-----------|
+| 1 | **Dimensionality Gap** | Imagery compresses perceptual space into a lower-dimensional manifold | PCA participation ratio |
+| 2 | **Uncertainty as Vividness** | MC Dropout variance correlates with imagery quality | Spearman rho (uncertainty vs. accuracy) |
+| 3 | **Semantic Survival** | High-level concepts survive imagery; low-level features degrade | Per-concept preservation ratio |
+| 4 | **Topological Signatures** | Persistent homology reveals structural reorganization in imagery | Wasserstein distance between persistence diagrams |
+| 5 | **Individual Fingerprints** | The perception-imagery gap has a subject-specific, stable pattern | Second-order RSA across subjects |
+| 6 | **Semantic-Structural Dissociation** | CLIP (semantics) transfers better than SD-latents (structure) | Semantic-Structural Index |
+
+Each direction has a dedicated module in `src/fmri2img/analysis/` and is configured via `configs/experiments/novel_analyses.yaml`.
+
+---
+
+## Evaluation Outputs
+
+After running cross-domain evaluation, outputs land in:
 
 ```
 outputs/reports/imagery/perception_transfer/
-├── metrics.json          # Overall metrics (CLIP cosine, retrieval@K)
-├── per_trial.csv         # Per-trial results with stimulus_type breakdown
-└── README.md             # Human-readable summary report
+  metrics.json        # CLIP cosine similarity, retrieval@K
+  per_trial.csv       # Per-trial results with stimulus_type breakdown
+  README.md           # Human-readable summary
 ```
 
-### Config-Based Workflow
+After running novel analyses:
 
-You can also use the config files for reproducible experiments:
+```
+outputs/novel_analyses/
+  dimensionality/     # PCA curves, participation ratios
+  uncertainty/        # MC Dropout distributions
+  semantic_survival/  # Per-concept preservation profiles
+  topological_rsa/    # Persistence diagrams, RDMs
+  cross_subject/      # Degradation profiles, weight similarity
+  dissociation/       # SSI index, three-target comparison
+```
+
+---
+
+## Configuration
+
+All experiments are driven by YAML configs in `configs/`:
 
 ```bash
-# Edit config
-vim configs/experiments/perception_to_imagery_eval.yaml
+# View the main experiment config
+cat configs/experiments/novel_analyses.yaml
 
-# Run evaluation using config (coming soon)
-python scripts/run_experiment.py \
-  --config configs/experiments/perception_to_imagery_eval.yaml
+# Override parameters at runtime
+python scripts/train_two_stage.py \
+  --config configs/two_stage_sota.yaml \
+  --override "training.learning_rate=5e-5"
 ```
 
-### Documentation
-
-- **Research Roadmap**: [`docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md`](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md)
-- **Dataset Guide**: [`docs/technical/NSD_IMAGERY_DATASET_GUIDE.md`](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md)
-- **Architecture**: [`docs/architecture/IMAGERY_EXTENSION.md`](docs/architecture/IMAGERY_EXTENSION.md)
-
-**Status**: Phase 2 (Working Implementation) — Vertical slice complete ✅  
-**Next**: Integration testing with real NSD-Imagery data
+See `configs/experiments/reproducibility.yaml` for the full experimental protocol (seeds, splits, metrics).
 
 ---
 
-## �📚 Next Steps
+## Key Documentation
 
-### For Researchers
-1. **Run ablations**: Test different hyperparameters (see [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md))
-2. **Multi-subject analysis**: Train on all 8 NSD subjects
-3. **Custom architectures**: Extend `src/fmri2img/models/`
-
-### For Developers
-1. **Read architecture docs**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-2. **Review test suite**: [docs/COMPLETE_TEST_SUITE.md](docs/COMPLETE_TEST_SUITE.md)
-3. **Contributing guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
-
-### For Quick Results
-1. **Use Makefile**: `make pipeline` for full automation
-2. **Download pretrained**: Skip training entirely (coming soon)
-3. **Try examples**: [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) for ready-to-run commands
+| Document | Purpose |
+|----------|---------|
+| [README.md](README.md) | Project overview, architecture, hypotheses |
+| [ADAPTER_QUICK_START.md](ADAPTER_QUICK_START.md) | Imagery adapter training guide |
+| [docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md) | Full research plan with hypotheses H1-H3 |
+| [docs/research/PAPER_DRAFT_OUTLINE.md](docs/research/PAPER_DRAFT_OUTLINE.md) | Paper structure and narrative |
+| [docs/architecture/IMAGERY_EXTENSION.md](docs/architecture/IMAGERY_EXTENSION.md) | System design for imagery pipeline |
+| [docs/technical/NSD_IMAGERY_DATASET_GUIDE.md](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md) | NSD-Imagery data format and access |
 
 ---
 
-## 🎓 Learning Resources
+## Troubleshooting
 
-- **NSD Dataset**: [Official Documentation](http://naturalscenesdataset.org/)
-- **CLIP Paper**: [Radford et al., 2021](https://arxiv.org/abs/2103.00020)
-- **Stable Diffusion**: [Rombach et al., 2022](https://arxiv.org/abs/2112.10752)
-- **Our Technical Docs**: [docs/](docs/)
+**"CLIP embedding missing for nsdId=XXX"** -- CLIP cache not built. Run `make build-clip-cache`.
+
+**"CUDA out of memory"** -- Reduce batch size: `--override "training.batch_size=64"`.
+
+**Slow training on CPU** -- Verify GPU: `python -c "import torch; print(torch.cuda.is_available())"`.
 
 ---
 
-## ⚡ Quick Commands Reference
+## Quick Commands
 
 ```bash
-# Installation check
-python scripts/test_full_workflow.py
+# Full Makefile reference
+make help
 
-# Build CLIP cache (one-time, 2-3 hours)
-python scripts/build_clip_cache.py --output outputs/clip_cache/clip.parquet
-
-# Train SOTA model (6-8 hours)
-python scripts/train_two_stage.py --config configs/two_stage_sota.yaml --subject subj01
-
-# Evaluate (10 minutes)
-python scripts/eval_comprehensive.py --subject subj01 \
-  --encoder-checkpoint checkpoints/two_stage/subj01/two_stage_best.pt \
-  --encoder-type two_stage
-
-# Generate images (5-40 minutes)
-python scripts/generate_comparison_gallery.py --subject subj01 \
-  --encoder-checkpoint checkpoints/two_stage/subj01/two_stage_best.pt \
-  --encoder-type two_stage --num-samples 16
-
-# Full automated pipeline
-make pipeline
+# Core workflow
+make ridge                # Train Ridge baseline (~5 min)
+make mlp                  # Train MLP encoder (~2 hours)
+make imagery-index        # Build NSD-Imagery index
+make imagery-eval         # Evaluate perception -> imagery transfer
+make imagery-adapter      # Train imagery adapter
+make novel-analyses       # Run all 6 novel analyses
+make novel-figures        # Generate publication figures
+make test                 # Run test suite
 ```
-
----
-
-<div align="center">
-
-**Ready to reconstruct the brain? Let's go! 🧠→🖼️**
-
-[Full Documentation](README.md) • [Usage Examples](USAGE_EXAMPLES.md) • [API Reference](docs/API.md)
-
-</div>
