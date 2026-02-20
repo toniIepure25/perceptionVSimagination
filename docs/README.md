@@ -1,224 +1,102 @@
-# Documentation Structure
+# Documentation
 
-**fMRI-to-Image Reconstruction Project**  
-*Research-Level Neural Decoding Documentation*
+**Perception vs. Imagination: Cross-Domain Neural Decoding**
+*Research-Level Documentation*
 
 ---
 
-## 📚 Documentation Organization
-
-This directory contains comprehensive documentation for the fMRI-to-Image reconstruction pipeline, organized by purpose and audience.
-
-### **Quick Navigation**
+## Quick Navigation
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| **[Quick Start Guide](../START_HERE.md)** | Get started in <5 minutes | New users, researchers |
-| **[Usage Examples](../USAGE_EXAMPLES.md)** | Comprehensive command reference | All users |
-| **[README](../README.md)** | Project overview & setup | GitHub visitors |
+| **[Quick Start Guide](../START_HERE.md)** | Get started in <5 minutes | New users |
+| **[Adapter Quick Start](../ADAPTER_QUICK_START.md)** | Imagery adapter training | Researchers |
+| **[Project README](../README.md)** | Project overview & setup | Everyone |
 
 ---
 
-## 📖 Documentation Categories
+## Documentation Categories
 
-### **1. User Guides** (`guides/`)
-*Step-by-step tutorials for common tasks*
+### 1. Research Documentation (`research/`)
 
-- **Getting Started**
-  - `GETTING_STARTED_DIFFUSION.md` - Introduction to diffusion-based reconstruction
-  - `QUICK_START.md` - Rapid setup and first experiments
-  
-- **Training Guides**
-  - `ADAPTER_TRAINING_GUIDE.md` - CLIP adapter training workflow
-  - `RIDGE_BASELINE.md` - Ridge regression baseline setup
-  - `MLP_IMPLEMENTATION.md` - MLP encoder implementation
-  
-- **Evaluation & Analysis**
-  - `EVALUATION_SUITE_GUIDE.md` - Comprehensive evaluation tools
-  - **[`PAPER_GRADE_EVALUATION.md`](PAPER_GRADE_EVALUATION.md)** - ⭐ **NEW**: Publication-quality evaluation suite
-  - `REPORTING_RECONSTRUCTION.md` - Generating reports and visualizations
-  - `GALLERY_SUPPORT.md` - Creating image galleries
+Core research design and experimental protocols for the perception-vs-imagery investigation.
 
-### **2. Architecture Documentation** (`architecture/`)
-*System design and component specifications*
+- **[Perception vs. Imagery Roadmap](research/PERCEPTION_VS_IMAGERY_ROADMAP.md)** — Comprehensive research plan: hypotheses (H1–H3), experimental matrix, evaluation metrics, and timeline.
 
-- **Overview Documents**
-  - `MODULARIZATION_COMPLETE.md` - Module organization and structure
-  - `DIFFUSION_DECODER.md` - Diffusion model integration architecture
-  
-- **Component Specifications**
-  - Model architectures (Ridge, MLP, Two-Stage, Adapter)
-  - Data pipeline design
-  - Preprocessing modules
-  - Evaluation framework
-  - **[`IMAGERY_EXTENSION.md`](architecture/IMAGERY_EXTENSION.md)** - ⭐ **NEW**: Architecture for NSD-Imagery integration
+### 2. Architecture Documentation (`architecture/`)
 
-### **3. Technical Documentation** (`technical/`)
-*Implementation details and troubleshooting*
+System design and component specifications.
 
-- **Configuration**
-  - `OPTIMAL_CONFIGURATION_GUIDE.md` - Best practices for hyperparameters
-  - `ADAPTER_METADATA_SUMMARY.md` - Adapter configuration reference
-  
-- **Data Management**
-  - `NSD_Dataset_Guide.md` - Natural Scenes Dataset structure
-  - **[`NSD_IMAGERY_DATASET_GUIDE.md`](technical/NSD_IMAGERY_DATASET_GUIDE.md)** - ⭐ **NEW**: NSD-Imagery dataset integration guide
-  - `DATA_VALIDATION_REAL_VS_FALLBACK.md` - Data validation procedures
-  - `UPGRADE_TO_30K_SAMPLES.md` - Scaling to full dataset
-  - `GET_ALL_SAMPLES_GUIDE.md` - Complete sample retrieval
-  
-- **Advanced Topics**
-  - `DIFFUSION_ROBUSTNESS.md` - Robustness techniques for diffusion models
-  - `MANUAL_MODEL_DOWNLOAD.md` - Manual model weight management
-  - `PREVENTING_MODEL_DOWNLOAD_BLOCKING.md` - Offline model usage
+- **[Imagery Extension Architecture](architecture/IMAGERY_EXTENSION.md)** — How the NSD-Imagery data pipeline, adapter framework, and cross-domain evaluation integrate with the base encoding system.
+- Model architectures (Ridge, MLP, Two-Stage, Adapters, MultiTargetDecoder)
+- Data pipeline design and preprocessing modules
 
-### **4. Research Documentation** (`research/`)
-*Research-oriented guides and experimental protocols*
+### 3. Technical Documentation (`technical/`)
 
-- **Perception vs. Imagery Track**
-  - **[`PERCEPTION_VS_IMAGERY_ROADMAP.md`](research/PERCEPTION_VS_IMAGERY_ROADMAP.md)** - ⭐ **NEW**: Comprehensive research roadmap for perception-to-imagery transfer evaluation
+Implementation details, data formats, and troubleshooting.
+
+- **[NSD-Imagery Dataset Guide](technical/NSD_IMAGERY_DATASET_GUIDE.md)** — Data structure, index format, train/val/test splits, and CLIP cache integration for the imagery domain.
+- Configuration best practices
+- Data validation procedures
+
+### 4. User Guides (in project root)
+
+Step-by-step onboarding and usage instructions.
+
+- **[START_HERE.md](../START_HERE.md)** — Full walkthrough: installation, data preparation, training, evaluation, and the perception-vs-imagery track.
+- **[ADAPTER_QUICK_START.md](../ADAPTER_QUICK_START.md)** — Quick reference for training imagery adapters on top of frozen perception-trained encoders.
 
 ---
 
-## 🎯 Documentation by Task
+## Documentation by Task
 
-### **I want to train a model**
-1. Start with `RIDGE_BASELINE.md` for simplest approach
-2. Progress to `MLP_IMPLEMENTATION.md` for neural encoders
-3. See `ADAPTER_TRAINING_GUIDE.md` for diffusion integration
+### I want to understand the research
 
-### **I want to evaluate my models**
-1. Read `EVALUATION_SUITE_GUIDE.md` for overview
-2. Use `REPORTING_RECONSTRUCTION.md` for generating reports
-3. Check `GALLERY_SUPPORT.md` for visual comparisons
+1. Read [PERCEPTION_VS_IMAGERY_ROADMAP.md](research/PERCEPTION_VS_IMAGERY_ROADMAP.md) for hypotheses and experimental design
+2. Review the [Project README](../README.md) for the six novel analysis directions
+3. Check [IMAGERY_EXTENSION.md](architecture/IMAGERY_EXTENSION.md) for how the analysis modules are structured
 
-### **I want to understand the architecture**
-1. Start with `MODULARIZATION_COMPLETE.md` for structure
-2. Review `DIFFUSION_DECODER.md` for reconstruction pipeline
-3. See component-specific docs in `architecture/`
+### I want to train a model
 
-### **I want to work on perception vs. imagery research**
-1. Read `PERCEPTION_VS_IMAGERY_ROADMAP.md` for research plan
-2. Review `NSD_IMAGERY_DATASET_GUIDE.md` for data details
-3. Check `IMAGERY_EXTENSION.md` for architecture integration
+1. Start with [START_HERE.md](../START_HERE.md) for environment setup and data preparation
+2. Train a perception encoder (Ridge → MLP → Two-Stage)
+3. Train an imagery adapter using [ADAPTER_QUICK_START.md](../ADAPTER_QUICK_START.md)
 
-### **I'm troubleshooting an issue**
-1. Check `NSD_Dataset_Guide.md` for data problems
-2. See `OPTIMAL_CONFIGURATION_GUIDE.md` for config issues
-3. Review `DATA_VALIDATION_REAL_VS_FALLBACK.md` for validation
+### I want to evaluate cross-domain transfer
 
----
+1. Read the evaluation section in [START_HERE.md](../START_HERE.md)
+2. Run `scripts/eval_perception_to_imagery_transfer.py` for transfer metrics
+3. Run `scripts/run_novel_analyses.py` for the six neuroscience analyses
 
-## 📊 Documentation Standards
+### I want to work with NSD-Imagery data
 
-### **Style Guide**
-- Use clear, concise language appropriate for research audience
-- Include code examples with expected outputs
-- Provide performance benchmarks where applicable
-- Cross-reference related documentation
+1. Read [NSD_IMAGERY_DATASET_GUIDE.md](technical/NSD_IMAGERY_DATASET_GUIDE.md) for data format and structure
+2. Use `scripts/build_nsd_imagery_index.py` to create the data index
+3. See `src/fmri2img/data/nsd_imagery.py` for the dataset API
 
-### **Structure Template**
-```markdown
-# Title
+### I want to run the novel analyses
 
-**Brief description (1-2 sentences)**
-
-## Overview
-[High-level explanation]
-
-## Prerequisites
-[Required knowledge/setup]
-
-## Detailed Guide
-[Step-by-step instructions]
-
-## Examples
-[Concrete usage examples]
-
-## Troubleshooting
-[Common issues and solutions]
-
-## References
-[Related docs and citations]
-```
-
-### **Code Examples**
-- Use syntax highlighting
-- Include expected outputs
-- Provide performance metrics (runtime, memory)
-- Show both minimal and production examples
+1. Configure `configs/experiments/novel_analyses.yaml`
+2. Run `scripts/run_novel_analyses.py` (supports `--dry-run` for validation)
+3. Generate figures with `scripts/make_novel_figures.py`
 
 ---
 
-## 🔄 Documentation Maintenance
+## External References
 
-### **Versioning**
-- Major changes: Increment version in doc header
-- Keep deprecated sections with deprecation notices
-- Archive outdated docs in `docs/archive/`
-
-### **Review Process**
-- Technical accuracy: Test all code examples
-- Clarity: Ensure understandability by target audience
-- Completeness: Cover prerequisites, steps, and troubleshooting
-- Currency: Update with API/implementation changes
-
----
-
-## 📚 Related Resources
-
-### **External Documentation**
 - [Natural Scenes Dataset (NSD)](http://naturalscenesdataset.org/)
 - [CLIP by OpenAI](https://github.com/openai/CLIP)
 - [Stable Diffusion](https://github.com/CompVis/stable-diffusion)
 - [PyTorch Documentation](https://pytorch.org/docs/)
 
-### **Academic Papers**
-- Allen et al. (2022) - Natural Scenes Dataset (NSD)
-- Radford et al. (2021) - CLIP: Learning Transferable Visual Models
-- Rombach et al. (2022) - High-Resolution Image Synthesis with Latent Diffusion
+### Key Papers
 
-### **Internal Resources**
-- [Project README](../README.md)
-- [Configuration Guide](../configs/README.md)
-- [Source Code](../src/fmri2img/)
+- Allen et al. (2022) — Natural Scenes Dataset
+- Radford et al. (2021) — CLIP: Learning Transferable Visual Models
+- Rombach et al. (2022) — High-Resolution Image Synthesis with Latent Diffusion
+- Pearson (2019) — The Human Imagination: Cognitive Neuroscience of Visual Mental Imagery
 
 ---
 
-## 💡 Contributing to Documentation
-
-### **Adding New Documentation**
-1. Choose appropriate category (`guides/`, `architecture/`, `technical/`)
-2. Follow the structure template above
-3. Add entry to this README
-4. Cross-reference in related documents
-5. Test all code examples
-
-### **Updating Existing Documentation**
-1. Maintain backward compatibility notes
-2. Update cross-references
-3. Increment version number
-4. Note changes in commit message
-
-### **Quality Checklist**
-- [ ] Code examples tested and working
-- [ ] Cross-references verified
-- [ ] Follows style guide
-- [ ] Appropriate for target audience
-- [ ] Performance metrics included (if applicable)
-- [ ] Troubleshooting section complete
-
----
-
-## 📞 Support
-
-For questions not covered in documentation:
-1. Check [GitHub Issues](https://github.com/toniIepure25/FMRI2images/issues)
-2. Review [Usage Examples](../USAGE_EXAMPLES.md)
-3. Open a new issue with reproducible example
-
----
-
-**Last Updated**: December 7, 2025  
-**Maintainer**: Bachelor Thesis Project  
+**Last Updated**: February 2026
 **Status**: Active Development
