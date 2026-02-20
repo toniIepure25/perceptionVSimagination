@@ -350,7 +350,6 @@ Security Considerations
 Related Documentation
 ---------------------
 - Quick Start: ../../START_HERE.md
-- Usage Examples: ../../USAGE_EXAMPLES.md
 - Training Guides: ../../docs/guides/
 - Configuration: ../../configs/README.md
 
@@ -359,7 +358,7 @@ Support
 For deployment issues:
 1. Check logs in logs/ directory
 2. Review error handling section above
-3. Consult USAGE_EXAMPLES.md
+3. Consult START_HERE.md
 4. Open GitHub issue with details
 
 Maintainers

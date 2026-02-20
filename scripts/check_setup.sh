@@ -163,7 +163,6 @@ fi
 
 echo ""
 echo "For complete documentation, see:"
-echo "  - USAGE_EXAMPLES.md (ready-to-run commands)"
-echo "  - SOTA_QUICK_START.md (detailed guide)"
-echo "  - docs/EVALUATION_SUITE_GUIDE.md (evaluation docs)"
+echo "  - START_HERE.md (quick start guide)"
+echo "  - README.md (project overview)"
 echo ""

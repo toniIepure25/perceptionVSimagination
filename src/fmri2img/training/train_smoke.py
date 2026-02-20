@@ -19,7 +19,7 @@ except ImportError:
     PREPROC_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("train_smoke")
+logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description="Smoke test for NSD data loading")
@@ -49,23 +49,23 @@ def main():
         preprocessor = None
         if args.use_preproc:
             if not PREPROC_AVAILABLE:
-                log.error("Preprocessing requested but dependencies not available")
+                logger.error("Preprocessing requested but dependencies not available")
                 return 1
                 
             preprocessor = NSDPreprocessor(args.subject, args.preproc_dir, roi_mode=args.roi_mode)
             
             # Try to load artifacts
             if not preprocessor.load_artifacts():
-                log.warning("No preprocessing artifacts found. Run nsd_fit_preproc.py first!")
-                log.info("Continuing with T0 (online z-score) only...")
+                logger.warning("No preprocessing artifacts found. Run nsd_fit_preproc.py first!")
+                logger.info("Continuing with T0 (online z-score) only...")
             else:
                 summary = preprocessor.summary()
-                log.info(f"Loaded preprocessing for {summary['subject']}")
+                logger.info(f"Loaded preprocessing for {summary['subject']}")
                 if summary.get('pca_fitted'):
-                    log.info(f"PCA: {summary['pca_components']} components, "
+                    logger.info(f"PCA: {summary['pca_components']} components, "
                            f"{summary['explained_variance_ratio']:.1%} variance explained")
                 if summary.get('roi_fitted'):
-                    log.info(f"ROI pooling: {summary['n_rois']} regions")
+                    logger.info(f"ROI pooling: {summary['n_rois']} regions")
         
         # Create dataset
         ds = NSDIterableDataset(
@@ -87,13 +87,13 @@ def main():
             try:
                 batch = next(it)
                 x = batch["fmri"]  # (B,1,H,W,D) or (B,k) if PCA
-                log.info(f"Step {step}: fmri batch {tuple(x.shape)} dtype={x.dtype}, nsdIds={batch['nsdId'].tolist()}")
+                logger.info(f"Step {step}: fmri batch {tuple(x.shape)} dtype={x.dtype}, nsdIds={batch['nsdId'].tolist()}")
                 batches_loaded += 1
             except StopIteration:
-                log.info(f"Iterator exhausted after {batches_loaded} batches")
+                logger.info(f"Iterator exhausted after {batches_loaded} batches")
                 break
             except Exception as e:
-                log.warning(f"Step {step} failed (expected for S3 download in CI): {e}")
+                logger.warning(f"Step {step} failed (expected for S3 download in CI): {e}")
                 # Create mock data to test the collation
                 if args.use_preproc and preprocessor and preprocessor.pca_fitted_ and args.pca_k:
                     # Mock PCA features
@@ -110,18 +110,18 @@ def main():
                         "nsdId": torch.tensor(list(range(args.batch_size)), dtype=torch.long)
                     }
                     
-                log.info(f"Mock Step {step}: fmri batch {tuple(mock_batch['fmri'].shape)} dtype={mock_batch['fmri'].dtype}")
+                logger.info(f"Mock Step {step}: fmri batch {tuple(mock_batch['fmri'].shape)} dtype={mock_batch['fmri'].dtype}")
                 batches_loaded += 1
 
         if batches_loaded > 0:
-            log.info("✅ train_smoke finished (I/O + collation OK)")
+            logger.info("✅ train_smoke finished (I/O + collation OK)")
         else:
-            log.info("⚠ train_smoke completed with mock data (S3 not accessible)")
+            logger.info("⚠ train_smoke completed with mock data (S3 not accessible)")
             
     except Exception as e:
-        log.error(f"❌ train_smoke failed: {e}")
+        logger.error(f"❌ train_smoke failed: {e}")
         # Test basic PyTorch functionality
-        log.info("Testing basic PyTorch collation...")
+        logger.info("Testing basic PyTorch collation...")
         from fmri2img.data.torch_utils import fmri_collate
         
         if args.use_preproc and args.pca_k:
@@ -140,8 +140,8 @@ def main():
             expected_shape = (args.batch_size, 1, 81, 104, 83)
             
         batch = fmri_collate(mock_samples)
-        log.info(f"Mock collation: {tuple(batch['fmri'].shape)} (expected: {expected_shape})")
-        log.info("✅ Basic collation test passed")
+        logger.info(f"Mock collation: {tuple(batch['fmri'].shape)} (expected: {expected_shape})")
+        logger.info("✅ Basic collation test passed")
 
 
 if __name__ == "__main__":

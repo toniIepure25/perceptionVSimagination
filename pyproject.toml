@@ -61,6 +61,23 @@ all = [
     "fmri2img[analysis]",
 ]
 
+[project.scripts]
+fmri2img-train-ridge = "fmri2img.training.train_ridge:main"
+fmri2img-train-mlp = "fmri2img.training.train_mlp:main"
+fmri2img-train-two-stage = "fmri2img.training.train_two_stage:main"
+fmri2img-train-adapter = "fmri2img.training.train_clip_adapter:main"
+fmri2img-train-smoke = "fmri2img.training.train_smoke:main"
+fmri2img-decode = "fmri2img.generation.decode_diffusion:main"
+fmri2img-eval = "fmri2img.eval.run_reconstruct_and_eval:main"
+fmri2img-compare-evals = "fmri2img.eval.compare_evals:main"
+fmri2img-ablate = "fmri2img.eval.ablate_preproc_and_ridge:main"
+fmri2img-build-index = "fmri2img.data.build_full_index:main"
+fmri2img-build-clip-cache = "fmri2img.data.build_clip_cache:main"
+fmri2img-build-target-cache = "fmri2img.data.build_target_clip_cache_robust:main"
+fmri2img-check-headers = "fmri2img.data.check_index_headers:main"
+fmri2img-download-sd = "fmri2img.generation.download_sd_model:main"
+fmri2img-status = "fmri2img.utils.quick_status:main"
+
 [tool.black]
 line-length = 100
 target-version = ['py310']

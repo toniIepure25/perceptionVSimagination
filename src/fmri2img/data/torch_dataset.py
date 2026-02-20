@@ -1,5 +1,5 @@
 from __future__ import annotations
-import io, math, random
+import io, logging, math, random
 import numpy as np
 import pandas as pd
 from typing import Dict, Iterator, Optional, Sequence, Union
@@ -19,6 +19,8 @@ try:
     from fmri2img.data.clip_cache import CLIPCache
 except ImportError:
     CLIPCache = None
+
+logger = logging.getLogger(__name__)
 
 class NSDIterableDataset(IterableDataset):
     """
@@ -103,7 +105,6 @@ class NSDIterableDataset(IterableDataset):
         nifti = NIfTILoader(s3_fs)
         
         # Log preprocessing status once using summary() API (no sklearn access)
-        logger = __import__('logging').getLogger(__name__)
         if self.preprocessor is not None and not self._preproc_logged:
             if self.preprocessor.is_fitted_:
                 summary = self.preprocessor.summary()
@@ -153,7 +154,6 @@ class NSDIterableDataset(IterableDataset):
                     if nsd_id in clip_embeddings:
                         out["clip"] = clip_embeddings[nsd_id]
                     elif not clip_missing_logged:
-                        logger = __import__('logging').getLogger(__name__)
                         logger.warning(f"CLIP embedding missing for nsdId={nsd_id} (further warnings suppressed)")
                         clip_missing_logged = True
                 
@@ -164,6 +164,5 @@ class NSDIterableDataset(IterableDataset):
                 yield out
             except Exception as e:
                 # Skip failed loads (this is a smoke test)
-                logger = __import__('logging').getLogger(__name__)
                 logger.warning(f"Skipping trial {i} due to load error: {e}")
                 continue

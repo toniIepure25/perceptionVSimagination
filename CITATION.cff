@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+
+title: "Perception vs. Imagination: Cross-Domain Neural Decoding from fMRI"
+version: 0.2.0
+date-released: 2026-02-20
+license: MIT
+
+authors:
+  - name: "NSD Research Team"
+
+repository-code: "https://github.com/yourusername/perceptionVSimagination"
+
+keywords:
+  - fMRI
+  - neural decoding
+  - mental imagery
+  - perception
+  - CLIP
+  - brain-computer interface
+  - neuroscience
+  - deep learning
+
+abstract: >-
+  A framework for decoding visual content from brain activity
+  (Natural Scenes Dataset) and investigating cross-domain transfer
+  between visual perception and mental imagery. Implements six novel
+  analysis directions including dimensionality gap analysis,
+  uncertainty-as-vividness, semantic survival, topological RSA,
+  cross-subject fingerprints, and semantic-structural dissociation.
+
+preferred-citation:
+  type: article
+  title: "The Semantic Skeleton of Imagination: Cross-Domain Neural Decoding Reveals Hierarchical Information Loss in Mental Imagery"
+  authors:
+    - name: "NSD Research Team"
+  year: 2026
+  journal: "In preparation"
+
+references:
+  - type: article
+    title: "A massive 7T fMRI dataset to bridge cognitive neuroscience and artificial intelligence"
+    authors:
+      - family-names: Allen
+        given-names: Emily J.
+    year: 2022
+    journal: "Nature Neuroscience"
+    volume: 25
+    start: 116
+    end: 126

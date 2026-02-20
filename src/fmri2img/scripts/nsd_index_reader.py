@@ -3,7 +3,7 @@ import argparse, logging, pandas as pd
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("nsd_index_reader")
+logger = logging.getLogger(__name__)
 
 def main():
     ap = argparse.ArgumentParser("NSD Index Reader")
@@ -26,7 +26,7 @@ def main():
         "nsdId","beta_path","beta_index"
     ]
     cols = [c for c in cols if c in df.columns]
-    log.info("Showing %d rows", min(args.n, len(df)))
+    logger.info("Showing %d rows", min(args.n, len(df)))
     print(df[cols].head(args.n).to_string(index=False))
 
 if __name__ == "__main__":

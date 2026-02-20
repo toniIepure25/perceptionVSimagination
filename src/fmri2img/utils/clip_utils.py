@@ -13,7 +13,7 @@ from typing import Tuple, Any
 import numpy as np
 import yaml
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Import CLIP
 try:
@@ -95,7 +95,7 @@ def load_clip_model(
     model_name = config['model_name']
     pretrained = config.get('pretrained', 'openai')
     
-    log.info(f"Loading CLIP model: {model_name} (pretrained={pretrained})")
+    logger.info(f"Loading CLIP model: {model_name} (pretrained={pretrained})")
     
     # Load model and preprocessing
     try:
@@ -104,7 +104,7 @@ def load_clip_model(
         )
         model = model.to(device).eval()
         
-        log.info(f"✓ CLIP model loaded on {device}")
+        logger.info(f"✓ CLIP model loaded on {device}")
         
     except Exception as e:
         raise RuntimeError(

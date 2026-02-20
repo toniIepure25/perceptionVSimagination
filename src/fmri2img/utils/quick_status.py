@@ -155,9 +155,8 @@ def main():
     print("=" * 70)
     print()
     print("📚 Documentation:")
-    print("  - SETUP_GUIDE.md (complete setup steps)")
-    print("  - USAGE_EXAMPLES.md (ready-to-run commands)")
-    print("  - SOTA_QUICK_START.md (detailed guide)")
+    print("  - START_HERE.md (quick start guide)")
+    print("  - README.md (project overview)")
     print()
 
 if __name__ == "__main__":

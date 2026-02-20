@@ -421,12 +421,12 @@ def main():
                     logger.info(f"Saved {len(subject_df)} trials for {subject} to {subject_path}")
         
         # Print summary with canonical API
-        print(f"\n=== NSD Index Build Summary ===")
-        print(f"Subjects processed: {list(index_df['subject'].unique())}")
-        print(f"Total trials: {builder.get_trial_count(index_df)}")
-        print(f"Unique stimuli: {len(builder.get_unique_stimuli(index_df))}")
-        print(f"Repeat trials: {len(builder.get_repeat_trials(index_df))}")
-        print(f"Canonical columns: {list(index_df.columns)}")
+        logger.info("=== NSD Index Build Summary ===")
+        logger.info("Subjects processed: %s", list(index_df['subject'].unique()))
+        logger.info("Total trials: %d", builder.get_trial_count(index_df))
+        logger.info("Unique stimuli: %d", len(builder.get_unique_stimuli(index_df)))
+        logger.info("Repeat trials: %d", len(builder.get_repeat_trials(index_df)))
+        logger.info("Canonical columns: %s", list(index_df.columns))
         
     except Exception as e:
         logger.error(f"Failed to build index: {e}")

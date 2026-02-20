@@ -111,7 +111,7 @@ A lightweight adapter head (e.g., single-layer MLP) trained on small amounts of 
 - [ ] CLIP embeddings pre-computed and cached
 
 ### Execution
-- [ ] Exact command-line invocations documented in this file and `USAGE_EXAMPLES.md`
+- [ ] Exact command-line invocations documented in this file and `START_HERE.md`
 - [ ] Conda environment pinned (`environment.yml` includes all dependencies)
 - [ ] GPU requirements documented (minimum: 16GB VRAM for two-stage model)
 

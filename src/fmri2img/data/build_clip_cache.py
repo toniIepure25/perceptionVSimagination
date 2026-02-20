@@ -56,13 +56,13 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 
-# Setup logging early (before any log.info() calls)
-log = logging.getLogger("build_clip_cache")
-log.setLevel(logging.INFO)
-if not log.handlers:
+# Setup logging early (before any logger.info() calls)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if not logger.handlers:
     _sh = logging.StreamHandler(sys.stdout)
     _sh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    log.addHandler(_sh)
+    logger.addHandler(_sh)
 
 
 def configure_file_logging(log_file: Optional[str] = None) -> None:
@@ -77,10 +77,10 @@ def configure_file_logging(log_file: Optional[str] = None) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(log_path)
         file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-        log.addHandler(file_handler)
-        log.info(f"Log file: {log_file}")
+        logger.addHandler(file_handler)
+        logger.info(f"Log file: {log_file}")
     else:
-        log.info("Log file: none (stdout only)")
+        logger.info("Log file: none (stdout only)")
 
 
 def setup_logging(log_file: Optional[str] = None) -> logging.Logger:
@@ -117,21 +117,21 @@ def load_index(
         DataFrame with at least nsdId column, plus cocoId/cocoSplit if present
     """
     if index_file:
-        log.info(f"Loading index from file: {index_file}")
+        logger.info(f"Loading index from file: {index_file}")
         df = pd.read_parquet(index_file)
     elif index_root:
-        log.info(f"Loading index from partitioned root: {index_root}")
+        logger.info(f"Loading index from partitioned root: {index_root}")
         root_path = Path(index_root)
         
         # Try subject-specific partition first if subject is provided
         if subject:
             subject_partition = root_path / f"subject={subject}" / "index.parquet"
             if subject_partition.exists():
-                log.info(f"Loading subject partition: {subject_partition}")
+                logger.info(f"Loading subject partition: {subject_partition}")
                 df = pd.read_parquet(subject_partition)
             else:
                 # Fall back to globbing
-                log.info(f"Subject partition not found, globbing all parquets under {index_root}")
+                logger.info(f"Subject partition not found, globbing all parquets under {index_root}")
                 parquet_files = glob(str(root_path / "**/*.parquet"), recursive=True)
                 if not parquet_files:
                     raise FileNotFoundError(f"No parquet files found under {index_root}")
@@ -142,7 +142,7 @@ def load_index(
             parquet_files = glob(str(root_path / "**/*.parquet"), recursive=True)
             if not parquet_files:
                 raise FileNotFoundError(f"No parquet files found under {index_root}")
-            log.info(f"Found {len(parquet_files)} parquet files, concatenating...")
+            logger.info(f"Found {len(parquet_files)} parquet files, concatenating...")
             dfs = [pd.read_parquet(pf) for pf in parquet_files]
             df = pd.concat(dfs, ignore_index=True)
     else:
@@ -164,14 +164,14 @@ def load_index(
     initial_count = len(df)
     df = df.drop_duplicates(subset=["nsdId"]).reset_index(drop=True)
     if len(df) < initial_count:
-        log.info(f"Dropped {initial_count - len(df)} duplicate nsdIds")
+        logger.info(f"Dropped {initial_count - len(df)} duplicate nsdIds")
     
     # Filter by subject if requested and column exists
     if subject and "subject" in df.columns:
         df = df[df["subject"] == subject].reset_index(drop=True)
-        log.info(f"Filtered to subject={subject}: {len(df)} rows")
+        logger.info(f"Filtered to subject={subject}: {len(df)} rows")
     
-    log.info(f"Loaded index with {len(df)} rows")
+    logger.info(f"Loaded index with {len(df)} rows")
     return df
 
 
@@ -198,7 +198,7 @@ def load_image_from_hdf5(
     try:
         with hdf5_loader.open(hdf5_path) as hf:
             if "imgBrick" not in hf:
-                log.debug(f"'imgBrick' dataset not found in HDF5")
+                logger.debug(f"'imgBrick' dataset not found in HDF5")
                 return None
             
             # Load single image slice
@@ -210,21 +210,21 @@ def load_image_from_hdf5(
             elif img_arr.ndim == 3:
                 img = Image.fromarray(img_arr.astype(np.uint8), mode='RGB')
             else:
-                log.debug(f"Unexpected image shape for nsdId={nsd_id}: {img_arr.shape}")
+                logger.debug(f"Unexpected image shape for nsdId={nsd_id}: {img_arr.shape}")
                 return None
             
-            log.debug(f"✓ Loaded nsdId={nsd_id} from HDF5")
+            logger.debug(f"✓ Loaded nsdId={nsd_id} from HDF5")
             return img
     except OSError as e:
         # Truncated file or other HDF5 error (common with S3)
-        log.debug(f"HDF5 OSError for nsdId={nsd_id}: {e}")
+        logger.debug(f"HDF5 OSError for nsdId={nsd_id}: {e}")
         return None
     except KeyError as e:
         # Missing key in HDF5
-        log.debug(f"HDF5 KeyError for nsdId={nsd_id}: {e}")
+        logger.debug(f"HDF5 KeyError for nsdId={nsd_id}: {e}")
         return None
     except Exception as e:
-        log.debug(f"HDF5 load failed for nsdId={nsd_id}: {e}")
+        logger.debug(f"HDF5 load failed for nsdId={nsd_id}: {e}")
         return None
 
 
@@ -249,16 +249,16 @@ def load_image_from_coco(
     
     try:
         url = layout.coco_http_url(coco_id, coco_split)
-        log.debug(f"Fetching COCO image from {url}")
+        logger.debug(f"Fetching COCO image from {url}")
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         
         from io import BytesIO
         img = Image.open(BytesIO(response.content)).convert('RGB')
-        log.debug(f"✓ Loaded cocoId={coco_id} from COCO HTTP")
+        logger.debug(f"✓ Loaded cocoId={coco_id} from COCO HTTP")
         return img
     except Exception as e:
-        log.debug(f"COCO HTTP load failed for cocoId={coco_id}: {e}")
+        logger.debug(f"COCO HTTP load failed for cocoId={coco_id}: {e}")
         return None
 
 
@@ -301,7 +301,7 @@ def load_image(
             coco_split = "train2017"
         
         # Single WARNING per nsdId
-        log.warning(f"HDF5 failed for nsdId={nsd_id}, falling back to COCO HTTP (cocoId={coco_id})")
+        logger.warning(f"HDF5 failed for nsdId={nsd_id}, falling back to COCO HTTP (cocoId={coco_id})")
         img = load_image_from_coco(layout, coco_id, coco_split)
         if img is not None:
             load_stats['coco_http'] = load_stats.get('coco_http', 0) + 1
@@ -469,25 +469,25 @@ Examples:
     else:
         cache_path = args.cache
     
-    # Configure file logging first (before any other log.info calls)
+    # Configure file logging first (before any other logger.info calls)
     configure_file_logging(log_file=args.log_file)
     
     # Log --out alias usage
     if args.out:
         if args.cache != "outputs/clip_cache/clip.parquet":
-            log.info(f"Note: Both --out and --cache provided; using --cache={cache_path}")
+            logger.info(f"Note: Both --out and --cache provided; using --cache={cache_path}")
         else:
-            log.info(f"Note: --out is an alias for --cache; writing to {cache_path}")
+            logger.info(f"Note: --out is an alias for --cache; writing to {cache_path}")
     
     # Handle legacy --index flag
     if args.index:
-        log.warning("⚠️  --index is deprecated. Use --index-file instead.")
+        logger.warning("⚠️  --index is deprecated. Use --index-file instead.")
         if not args.index_file:
             args.index_file = args.index
     
     # Handle legacy --use-hdf5 flag
     if args.use_hdf5:
-        log.warning("⚠️  --use-hdf5 is deprecated (HDF5 is now the default path)")
+        logger.warning("⚠️  --use-hdf5 is deprecated (HDF5 is now the default path)")
     
     # Resolve index source with improved default handling
     if not args.index_file and not args.index_root:
@@ -496,25 +496,25 @@ Examples:
         default_index = Path("data/indices/nsd_index") / f"subject={subject}" / "index.parquet"
         
         if default_index.exists():
-            log.info(f"No index specified, using default: {default_index}")
+            logger.info(f"No index specified, using default: {default_index}")
             args.index_file = str(default_index)
         else:
-            log.error(f"NSD index not found at: {default_index}")
-            log.error(f"Hint: pass --index-file <.../index.parquet> or --index-root <data/indices/nsd_index>,")
-            log.error(f"      or generate the index first (e.g., make nsd-index SUBJECT={subject}).")
+            logger.error(f"NSD index not found at: {default_index}")
+            logger.error(f"Hint: pass --index-file <.../index.parquet> or --index-root <data/indices/nsd_index>,")
+            logger.error(f"      or generate the index first (e.g., make nsd-index SUBJECT={subject}).")
             sys.exit(1)
     
     # Log configuration
-    log.info("=" * 60)
-    log.info("CLIP Cache Build Configuration")
-    log.info("=" * 60)
-    log.info(f"Subject:     {args.subject or 'all'}")
-    log.info(f"Device:      {args.device}")
-    log.info(f"Cache path:  {cache_path}")
-    log.info(f"Batch size:  {args.batch_size}")
-    log.info(f"Limit:       {args.max_items or 'none'}")
-    log.info(f"Include IDs: {args.include_ids}")
-    log.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("CLIP Cache Build Configuration")
+    logger.info("=" * 60)
+    logger.info(f"Subject:     {args.subject or 'all'}")
+    logger.info(f"Device:      {args.device}")
+    logger.info(f"Cache path:  {cache_path}")
+    logger.info(f"Batch size:  {args.batch_size}")
+    logger.info(f"Limit:       {args.max_items or 'none'}")
+    logger.info(f"Include IDs: {args.include_ids}")
+    logger.info("=" * 60)
     
     # Load index
     try:
@@ -524,41 +524,41 @@ Examples:
             subject=args.subject
         )
     except Exception as e:
-        log.error(f"Failed to load index: {e}")
+        logger.error(f"Failed to load index: {e}")
         sys.exit(1)
     
     # Check if index is empty
     if len(df) == 0:
-        log.warning("Index is empty after filtering. Nothing to process.")
+        logger.warning("Index is empty after filtering. Nothing to process.")
         sys.exit(1)
     
     # Get unique nsdIds
     all_nsd_ids = df["nsdId"].unique().tolist()
-    log.info(f"Found {len(all_nsd_ids)} unique nsdIds in index")
+    logger.info(f"Found {len(all_nsd_ids)} unique nsdIds in index")
     
     # Initialize CLIP cache
-    log.info(f"Loading CLIP cache from {cache_path}")
+    logger.info(f"Loading CLIP cache from {cache_path}")
     clip_cache = CLIPCache(cache_path=cache_path)
     clip_cache.load()
     
     # Compute todo list (resume logic)
     cached_ids = set(clip_cache.list_cached_ids())
-    log.info(f"Already cached: {len(cached_ids)} nsdIds")
+    logger.info(f"Already cached: {len(cached_ids)} nsdIds")
     
     todo_ids = [nid for nid in all_nsd_ids if nid not in cached_ids]
     if args.max_items:
         todo_ids = todo_ids[:args.max_items]
     
-    log.info(f"Need to compute: {len(todo_ids)} nsdIds")
+    logger.info(f"Need to compute: {len(todo_ids)} nsdIds")
     
     if len(todo_ids) == 0:
-        log.info("✓ All embeddings already cached!")
+        logger.info("✓ All embeddings already cached!")
         return
     
     # Load CLIP model from config
-    log.info("Loading CLIP model from configs/clip.yaml")
+    logger.info("Loading CLIP model from configs/clip.yaml")
     model, preprocess, clip_config = load_clip_model(device=args.device)
-    log.info(f"CLIP model: {clip_config['model_name']} → {clip_config['embedding_dim']}-dim embeddings")
+    logger.info(f"CLIP model: {clip_config['model_name']} → {clip_config['embedding_dim']}-dim embeddings")
     
     # Initialize robust image loader with fallback chain
     layout = NSDLayout()
@@ -572,7 +572,7 @@ Examples:
         enable_warnings=True
     )
     
-    log.info(f"Image load order: Local HDF5 → S3 HDF5 → COCO HTTP (with caching)")
+    logger.info(f"Image load order: Local HDF5 → S3 HDF5 → COCO HTTP (with caching)")
     
     # Create lookup for rows by nsdId (handle multiple rows per nsdId)
     nsd_to_row = {}
@@ -585,7 +585,7 @@ Examples:
     batch_size = args.batch_size
     num_batches = (len(todo_ids) + batch_size - 1) // batch_size
     
-    log.info(f"Processing {len(todo_ids)} images in {num_batches} batches of size {batch_size}")
+    logger.info(f"Processing {len(todo_ids)} images in {num_batches} batches of size {batch_size}")
     
     total_processed = 0
     total_failed = 0
@@ -602,7 +602,7 @@ Examples:
         for nsd_id in batch_nsd_ids:
             try:
                 if nsd_id not in nsd_to_row:
-                    log.warning(f"nsdId={nsd_id} not found in index")
+                    logger.warning(f"nsdId={nsd_id} not found in index")
                     total_failed += 1
                     continue
                 
@@ -615,7 +615,7 @@ Examples:
                 else:
                     total_failed += 1
             except Exception as e:
-                log.warning(f"Error loading nsdId={nsd_id}: {e}")
+                logger.warning(f"Error loading nsdId={nsd_id}: {e}")
                 total_failed += 1
                 continue
         
@@ -651,9 +651,9 @@ Examples:
             clip_cache.save_rows(rows)
             
             total_processed += len(valid_nsd_ids)
-            log.debug(f"Batch {batch_idx+1}/{num_batches}: Processed {len(valid_nsd_ids)} images")
+            logger.debug(f"Batch {batch_idx+1}/{num_batches}: Processed {len(valid_nsd_ids)} images")
         except Exception as e:
-            log.error(f"Failed to process batch {batch_idx}: {e}")
+            logger.error(f"Failed to process batch {batch_idx}: {e}")
             continue
     
     # Get final loading stats
@@ -661,19 +661,19 @@ Examples:
     
     # Final stats
     stats = clip_cache.stats()
-    log.info("=" * 60)
-    log.info(f"✓ CLIP cache build complete!")
-    log.info(f"  Total in cache: {stats['cache_size']} embeddings")
-    log.info(f"  Newly processed: {total_processed} images")
-    log.info(f"  Failed: {total_failed} images")
-    log.info(f"  Image loading sources:")
-    log.info(f"    - Local HDF5: {load_stats.get('local_hdf5', 0)} images")
-    log.info(f"    - S3 HDF5: {load_stats.get('s3_hdf5', 0)} images")
-    log.info(f"    - COCO (cached): {load_stats.get('coco_cached', 0)} images")
-    log.info(f"    - COCO (HTTP): {load_stats.get('coco_http', 0)} images")
-    log.info(f"    - Failed: {load_stats.get('failed', 0)} images")
-    log.info(f"  Cache location: {stats['path']}")
-    log.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"✓ CLIP cache build complete!")
+    logger.info(f"  Total in cache: {stats['cache_size']} embeddings")
+    logger.info(f"  Newly processed: {total_processed} images")
+    logger.info(f"  Failed: {total_failed} images")
+    logger.info(f"  Image loading sources:")
+    logger.info(f"    - Local HDF5: {load_stats.get('local_hdf5', 0)} images")
+    logger.info(f"    - S3 HDF5: {load_stats.get('s3_hdf5', 0)} images")
+    logger.info(f"    - COCO (cached): {load_stats.get('coco_cached', 0)} images")
+    logger.info(f"    - COCO (HTTP): {load_stats.get('coco_http', 0)} images")
+    logger.info(f"    - Failed: {load_stats.get('failed', 0)} images")
+    logger.info(f"  Cache location: {stats['path']}")
+    logger.info("=" * 60)
     
     # Assert cache is not empty
     if stats['cache_size'] == 0 and len(todo_ids) > 0:
@@ -684,35 +684,35 @@ Examples:
     
     # Validate final schema
     final_df = pd.read_parquet(cache_path)
-    log.info(f"Validating final schema at {cache_path}")
+    logger.info(f"Validating final schema at {cache_path}")
     
     # Ensure nsd_id exists (create alias from image_id if needed)
     if "nsd_id" not in final_df.columns:
         if "nsdId" in final_df.columns:
             final_df["nsd_id"] = final_df["nsdId"]
         elif "image_id" in final_df.columns:
-            log.info("Creating nsd_id alias from image_id column")
+            logger.info("Creating nsd_id alias from image_id column")
             final_df["nsd_id"] = final_df["image_id"]
         else:
-            log.warning("⚠️  Cache missing nsd_id column (compatibility issue)")
+            logger.warning("⚠️  Cache missing nsd_id column (compatibility issue)")
     
     # Ensure embedding exists
     if "embedding" not in final_df.columns:
         if "clip512" in final_df.columns:
-            log.info("Creating embedding alias from clip512 column")
+            logger.info("Creating embedding alias from clip512 column")
             final_df["embedding"] = final_df["clip512"]
         else:
-            log.warning("⚠️  Cache missing embedding column")
+            logger.warning("⚠️  Cache missing embedding column")
     
     # Save if we added aliases
     if "nsd_id" in final_df.columns or "embedding" in final_df.columns:
         final_df.to_parquet(cache_path, index=False)
     
-    log.info(f"✓ Wrote {len(final_df)} rows to {cache_path}")
+    logger.info(f"✓ Wrote {len(final_df)} rows to {cache_path}")
     if "nsd_id" in final_df.columns and "embedding" in final_df.columns:
-        log.info(f"  Schema: nsd_id (int), embedding (512-D float32 list)")
+        logger.info(f"  Schema: nsd_id (int), embedding (512-D float32 list)")
     else:
-        log.info(f"  Columns: {list(final_df.columns)}")
+        logger.info(f"  Columns: {list(final_df.columns)}")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ try:
 except ImportError:
     PYARROW_AVAILABLE = False
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CLIPCache:
@@ -81,7 +81,7 @@ class CLIPCache:
         with open(path, "w") as f:
             json.dump(meta, f, indent=2)
         self._meta = meta
-        log.info(f"Wrote CLIP cache metadata to {path}")
+        logger.info(f"Wrote CLIP cache metadata to {path}")
         return path
 
     def load(self) -> "CLIPCache":
@@ -96,10 +96,10 @@ class CLIPCache:
             
         if self.cache_path.exists():
             self._df = pd.read_parquet(self.cache_path)
-            log.debug(f"Loaded CLIP cache with {len(self._df)} entries")
+            logger.debug(f"Loaded CLIP cache with {len(self._df)} entries")
         else:
             self._df = pd.DataFrame(columns=["nsdId", "clip512"])
-            log.debug("Initialized empty CLIP cache")
+            logger.debug("Initialized empty CLIP cache")
         
         self._is_loaded = True
         return self
@@ -185,7 +185,7 @@ class CLIPCache:
         pq.write_table(table, self.cache_path, compression="snappy")
         
         self._df = df
-        log.info(f"CLIP cache now has {len(self._df)} items at {self.cache_path}")
+        logger.info(f"CLIP cache now has {len(self._df)} items at {self.cache_path}")
 
     def stats(self) -> dict:
         """

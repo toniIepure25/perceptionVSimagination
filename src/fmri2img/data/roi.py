@@ -6,7 +6,7 @@ from fmri2img.io.s3 import NIfTILoader, get_s3_filesystem
 from fmri2img.io.nsd_layout import NSDLayout
 import re
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ROIDef:
@@ -65,13 +65,13 @@ class ROIPooler:
             
             if files:
                 roi_files = files
-                log.info(f"Found {len(roi_files)} ROI masks at {pattern}")
+                logger.info(f"Found {len(roi_files)} ROI masks at {pattern}")
                 break
         
         if not roi_files:
             # Graceful fallback: warn once and continue without ROI
             subj_path = self.subject if not self.subject.startswith("subj") else self.subject[4:]
-            log.warning(
+            logger.warning(
                 f"ROI masks not found for {self.subject} → using whole-brain fallback. "
                 f"To use ROI pooling, provide masks under ppdata/subj{subj_path}/anat/*roi*.nii.gz"
             )
@@ -93,7 +93,7 @@ class ROIPooler:
                     mimg = nifti.load(f"s3://{p}" if not str(p).startswith("s3://") else str(p), validate=False)
                 mdata = mimg.get_fdata()  # masks are usually tiny; OK to load
                 if mdata.shape[:3] != self.shape:
-                    log.warning(f"ROI {p} shape {mdata.shape[:3]} != func shape {self.shape}, skipping")
+                    logger.warning(f"ROI {p} shape {mdata.shape[:3]} != func shape {self.shape}, skipping")
                     continue
                 mask = (mdata > 0).astype(np.bool_)
                 count = int(mask.sum())
@@ -105,7 +105,7 @@ class ROIPooler:
                 idx = np.flatnonzero(mask.ravel())
                 rois.append(ROIDef(name=name, mask_indices=idx))
             except Exception as e:
-                log.warning(f"Failed ROI load {p}: {e}")
+                logger.warning(f"Failed ROI load {p}: {e}")
 
         # de-duplicate by name
         seen = set()
@@ -117,11 +117,11 @@ class ROIPooler:
         self.rois = uniq
         
         if len(self.rois) == 0:
-            log.warning(
+            logger.warning(
                 f"No valid ROI masks loaded for {self.subject} → using whole-brain fallback"
             )
         else:
-            log.info(f"ROI pooler for {self.subject}: {len(self.rois)} masks ready")
+            logger.info(f"ROI pooler for {self.subject}: {len(self.rois)} masks ready")
         
         return self
 

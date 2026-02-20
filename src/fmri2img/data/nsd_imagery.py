@@ -11,6 +11,7 @@ Components:
 """
 
 from __future__ import annotations
+import logging
 from dataclasses import dataclass
 from typing import Dict, Iterator, Literal, Optional
 from pathlib import Path
@@ -18,6 +19,8 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from torch.utils.data import IterableDataset
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -295,8 +298,6 @@ class NSDImageryDataset(IterableDataset):
                 yield sample
                 
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to load trial {row.get('trial_id', idx)}: {e}")
                 continue
     
@@ -356,9 +357,9 @@ def build_nsd_imagery_index(
     output_path = Path(output_path)
     
     if verbose:
-        print(f"Building NSD-Imagery index for {subject}...")
-        print(f"  Data root: {data_root}")
-        print(f"  Cache root: {cache_root}")
+        logger.info("Building NSD-Imagery index for %s...", subject)
+        logger.info("  Data root: %s", data_root)
+        logger.info("  Cache root: %s", cache_root)
     
     # Discover fMRI files for this subject
     subject_data_dir = data_root / subject
@@ -378,7 +379,7 @@ def build_nsd_imagery_index(
         )
     
     if verbose:
-        print(f"  Found {len(beta_files)} beta files")
+        logger.info("  Found %d beta files", len(beta_files))
     
     # Parse metadata if available
     metadata_file = subject_data_dir / "metadata.json"
@@ -387,7 +388,7 @@ def build_nsd_imagery_index(
         with open(metadata_file) as f:
             metadata_dict = json.load(f)
         if verbose:
-            print(f"  Loaded metadata from {metadata_file}")
+            logger.info("  Loaded metadata from %s", metadata_file)
     
     # Build trial records
     trials = []
@@ -500,21 +501,21 @@ def build_nsd_imagery_index(
         df.loc[df['trial_id'].isin(test_ids), 'split'] = 'test'
     
     if verbose or dry_run:
-        print(f"\n=== Index Summary ===")
-        print(f"Total trials: {len(df)}")
-        print(f"\nBy stimulus type:")
+        logger.info("=== Index Summary ===")
+        logger.info("Total trials: %d", len(df))
+        logger.info("By stimulus type:")
         for stype, count in sorted(stimulus_stats.items()):
-            print(f"  {stype}: {count}")
-        print(f"\nBy split:")
+            logger.info("  %s: %d", stype, count)
+        logger.info("By split:")
         for split in ['train', 'val', 'test']:
             count = (df['split'] == split).sum()
-            print(f"  {split}: {count}")
-        print(f"\nWith images: {df['image_path'].notna().sum()}")
-        print(f"With text: {df['text_prompt'].notna().sum()}")
+            logger.info("  %s: %d", split, count)
+        logger.info("With images: %d", df['image_path'].notna().sum())
+        logger.info("With text: %d", df['text_prompt'].notna().sum())
     
     if dry_run:
         if verbose:
-            print(f"\n[DRY RUN] Would write to: {output_path}")
+            logger.info("[DRY RUN] Would write to: %s", output_path)
         return output_path
     
     # Write to parquet
@@ -522,7 +523,7 @@ def build_nsd_imagery_index(
     df.to_parquet(output_path, index=False)
     
     if verbose:
-        print(f"\n✓ Index saved to: {output_path}")
+        logger.info("Index saved to: %s", output_path)
     
     return output_path
 
