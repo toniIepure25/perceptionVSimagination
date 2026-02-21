@@ -433,6 +433,12 @@ MONITOR_COLOR = "#E91E63"
 THRESHOLD_COLOR = "#FF9800"
 GAN_GEN_COLOR = "#00BCD4"
 GAN_DISC_COLOR = "#795548"
+ALGEBRA_COLOR = "#3F51B5"
+FLOW_FWD_COLOR = "#4CAF50"
+FLOW_BWD_COLOR = "#F44336"
+MANIFOLD_COLOR = "#009688"
+CORE_COLOR = "#607D8B"
+DIVERGE_COLOR = "#E040FB"
 
 def plot_dissociation_summary(data: Dict, output_dir: Path):
     """Bar chart comparing the preservation ratio of CLIP, IP-Tokens, and SD-Latent."""
@@ -855,6 +861,469 @@ def plot_cascade_summary(data: Dict, output_dir: Path):
     plt.close(fig)
 
 
+# --- Direction 11: Compositional Imagination ---
+
+def plot_composition_success(data: Dict, output_dir: Path):
+    """Bar chart comparing composition success rate for perception vs imagery."""
+    comparison = data.get("comparison", {})
+    if not comparison:
+        return
+
+    perc_sr = comparison.get("perception_compositionality", {}).get("success_rate", 0)
+    imag_sr = comparison.get("imagery_compositionality", {}).get("success_rate", 0)
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    labels = ["Perception", "Imagery"]
+    vals = [perc_sr, imag_sr]
+    colors = [PERC_COLOR, IMAG_COLOR]
+
+    bars = ax.bar(labels, vals, color=colors, edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold")
+
+    gap = comparison.get("compositionality_gap", 0)
+    ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, label="Chance")
+    ax.set_ylabel("Composition Success Rate")
+    ax.set_title(f"Brain Algebra: Perception vs Imagery (gap={gap:.3f})")
+    ax.set_ylim(0, 1.05)
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig11a_composition_success.png")
+    fig.savefig(output_dir / "fig11a_composition_success.pdf")
+    plt.close(fig)
+
+
+def plot_concept_compositionality(data: Dict, output_dir: Path):
+    """Semantic vs visual concept compositionality comparison."""
+    fig, ax = plt.subplots(figsize=(6, 5))
+
+    sem_success = data.get("semantic_mean_success", 0)
+    vis_success = data.get("visual_mean_success", 0)
+    gap = data.get("semantic_vs_visual_gap", 0)
+
+    labels = ["Semantic\nConcepts", "Visual\nConcepts"]
+    vals = [sem_success, vis_success]
+    colors = [SEMANTIC_COLOR, VISUAL_COLOR]
+
+    bars = ax.bar(labels, vals, color=colors, edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold")
+
+    ax.set_ylabel("Per-Concept Success Rate")
+    ax.set_title(f"Compositional Fidelity by Concept Type (gap={gap:.3f})")
+    ax.set_ylim(0, 1.05)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig11b_concept_compositionality.png")
+    fig.savefig(output_dir / "fig11b_concept_compositionality.pdf")
+    plt.close(fig)
+
+
+# --- Direction 12: Predictive Coding ---
+
+def plot_directional_flow_index(data: Dict, output_dir: Path):
+    """DFI values at each layer transition for perception vs imagery."""
+    flow = data.get("flow_analysis", {})
+    transitions = flow.get("transitions", [])
+    if not transitions:
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    labels = [t["transition"].replace("->", " → ") for t in transitions]
+    perc_dfi = [t["perception_dfi"] for t in transitions]
+    imag_dfi = [t["imagery_dfi"] for t in transitions]
+
+    x = np.arange(len(labels))
+    w = 0.35
+
+    ax.bar(x - w / 2, perc_dfi, w, label="Perception", color=PERC_COLOR,
+           edgecolor="black", linewidth=1, alpha=0.85)
+    ax.bar(x + w / 2, imag_dfi, w, label="Imagery", color=IMAG_COLOR,
+           edgecolor="black", linewidth=1, alpha=0.85)
+
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_ylabel("Directional Flow Index")
+    ax.set_title("Information Flow Direction: Bottom-Up (+) vs Top-Down (−)")
+
+    n_rev = flow.get("any_reversal", False)
+    ax.text(0.97, 0.95, f"Flow reversal: {'Yes' if n_rev else 'No'}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", alpha=0.9))
+
+    ax.legend(framealpha=0.9)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig12a_directional_flow_index.png")
+    fig.savefig(output_dir / "fig12a_directional_flow_index.pdf")
+    plt.close(fig)
+
+
+def plot_prediction_r2(data: Dict, output_dir: Path):
+    """Forward vs backward prediction R² at each transition."""
+    transitions = data.get("flow_analysis", {}).get("transitions", [])
+    if not transitions:
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
+
+    for ax, condition, color_main in [
+        (axes[0], "perception", PERC_COLOR),
+        (axes[1], "imagery", IMAG_COLOR),
+    ]:
+        labels = [t["transition"].replace("->", "→") for t in transitions]
+        fwd_r2 = [t[f"{condition}_fwd_r2"] for t in transitions]
+        bwd_r2 = [t[f"{condition}_bwd_r2"] for t in transitions]
+
+        x = np.arange(len(labels))
+        w = 0.35
+
+        ax.bar(x - w / 2, fwd_r2, w, label="Forward (↑)", color=FLOW_FWD_COLOR,
+               edgecolor="black", linewidth=1, alpha=0.85)
+        ax.bar(x + w / 2, bwd_r2, w, label="Backward (↓)", color=FLOW_BWD_COLOR,
+               edgecolor="black", linewidth=1, alpha=0.85)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=8)
+        ax.set_ylabel("Prediction R²")
+        ax.set_title(f"{condition.title()}")
+        ax.legend(fontsize=9)
+        ax.grid(axis="y", alpha=0.2)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Predictive Coding: Forward vs Backward Prediction Accuracy",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig12b_prediction_r2.png")
+    fig.savefig(output_dir / "fig12b_prediction_r2.pdf")
+    plt.close(fig)
+
+
+# --- Direction 13: Imagination Manifold Geometry ---
+
+def plot_manifold_comparison(data: Dict, output_dir: Path):
+    """Compare manifold metrics between perception and imagery."""
+    perc = data.get("perception_manifold", {})
+    imag = data.get("imagery_manifold", {})
+    if not perc or not imag:
+        return
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+
+    # Isotropy
+    ax = axes[0]
+    vals = [perc.get("isotropy", 0), imag.get("isotropy", 0)]
+    bars = ax.bar(["Perception", "Imagery"], vals, color=[PERC_COLOR, IMAG_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.002,
+                f"{val:.4f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Isotropy Score")
+    ax.set_title("Representational Isotropy")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Hull volume
+    ax = axes[1]
+    vals = [perc.get("hull_volume_estimate", 0), imag.get("hull_volume_estimate", 0)]
+    bars = ax.bar(["Perception", "Imagery"], vals, color=[PERC_COLOR, IMAG_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Convex Hull Volume (2D proj.)")
+    ax.set_title("Manifold Volume")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Pairwise distances
+    ax = axes[2]
+    vals = [perc.get("mean_pairwise_distance", 0), imag.get("mean_pairwise_distance", 0)]
+    bars = ax.bar(["Perception", "Imagery"], vals, color=[PERC_COLOR, IMAG_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                f"{val:.3f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Mean Pairwise Distance")
+    ax.set_title("Representational Spread")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Imagination Manifold Geometry", fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig13a_manifold_comparison.png")
+    fig.savefig(output_dir / "fig13a_manifold_comparison.pdf")
+    plt.close(fig)
+
+
+def plot_centrality_and_structure(data: Dict, output_dir: Path):
+    """Centrality bias and position preservation summary."""
+    centrality = data.get("centrality_bias", {})
+    positions = data.get("position_preservation", {})
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
+
+    # Centrality bias
+    ax = axes[0]
+    if "error" not in centrality:
+        bias = centrality.get("mean_centrality_bias", 0)
+        frac = centrality.get("fraction_imagery_closer_to_centroid", 0)
+        p_val = centrality.get("p_value", 1)
+
+        ax.bar(["Centrality\nBias"], [bias], color=MANIFOLD_COLOR,
+               edgecolor="black", linewidth=1.2, alpha=0.85)
+        ax.axhline(0, color="black", linewidth=0.8)
+        confirmed = centrality.get("schema_bias_confirmed", False)
+        ax.text(0, bias + 0.005, f"p={p_val:.4f}\n{frac:.0%} closer",
+                ha="center", va="bottom", fontweight="bold", fontsize=9)
+        ax.set_ylabel("Mean Distance Bias")
+        ax.set_title(f"Schema Bias: {'Confirmed' if confirmed else 'Not Confirmed'}")
+    else:
+        ax.text(0.5, 0.5, "No shared stimuli", transform=ax.transAxes,
+                ha="center", va="center")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Position preservation
+    ax = axes[1]
+    if "error" not in positions:
+        rho = positions.get("rank_order_spearman", 0)
+        proc_d = positions.get("procrustes_distance", 0)
+        preserved = positions.get("structure_preserved", False)
+
+        x_pos = np.arange(2)
+        vals = [rho, 1 - proc_d]
+        bars = ax.bar(["Spearman ρ\n(rank order)", "1 − Procrustes\nDistance"],
+                       vals, color=[MANIFOLD_COLOR, ALGEBRA_COLOR],
+                       edgecolor="black", linewidth=1.2, alpha=0.85)
+        for bar, val in zip(bars, vals):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                    f"{val:.3f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+        ax.set_ylabel("Preservation Score")
+        ax.set_title(f"Relative Position Preservation: {'Yes' if preserved else 'No'}")
+    else:
+        ax.text(0.5, 0.5, "No shared stimuli", transform=ax.transAxes,
+                ha="center", va="center")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig13b_centrality_structure.png")
+    fig.savefig(output_dir / "fig13b_centrality_structure.pdf")
+    plt.close(fig)
+
+
+# --- Direction 14: Modality-Invariant Decomposition ---
+
+def plot_decomposition_norms(data: Dict, output_dir: Path):
+    """Norm analysis: core vs perception residual vs imagery residual."""
+    norms = data.get("norm_analysis", {})
+    if not norms:
+        return
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    labels = ["Invariant\nCore", "Perception\nResidual", "Imagery\nResidual"]
+    vals = [norms.get("core_mean_norm", 0),
+            norms.get("perc_residual_mean_norm", 0),
+            norms.get("imag_residual_mean_norm", 0)]
+    colors = [CORE_COLOR, PERC_COLOR, IMAG_COLOR]
+
+    bars = ax.bar(labels, vals, color=colors, edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
+                f"{val:.4f}", ha="center", va="bottom", fontweight="bold")
+
+    ax.set_ylabel("Mean L2 Norm")
+    ax.set_title("Modality Decomposition: Component Magnitudes")
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.savefig(output_dir / "fig14a_decomposition_norms.png")
+    fig.savefig(output_dir / "fig14a_decomposition_norms.pdf")
+    plt.close(fig)
+
+
+def plot_core_vs_residual_content(data: Dict, output_dir: Path):
+    """Semantic vs visual strength in core and residual components."""
+    core = data.get("core_content", {})
+    resid = data.get("residual_content", {})
+    if not core or not resid:
+        return
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+
+    # Core content
+    ax = axes[0]
+    vals = [core.get("semantic_strength", 0), core.get("visual_strength", 0)]
+    bars = ax.bar(["Semantic", "Visual"], vals, color=[SEMANTIC_COLOR, VISUAL_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.002,
+                f"{val:.4f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Mean |Projection|")
+    ax.set_title("Invariant Core")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Perception residual
+    ax = axes[1]
+    p_res = resid.get("perception_residual", {})
+    vals = [p_res.get("semantic_strength", 0), p_res.get("visual_strength", 0)]
+    bars = ax.bar(["Semantic", "Visual"], vals, color=[SEMANTIC_COLOR, VISUAL_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.002,
+                f"{val:.4f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Mean |Projection|")
+    ax.set_title("Perception Residual")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Imagery residual
+    ax = axes[2]
+    i_res = resid.get("imagery_residual", {})
+    vals = [i_res.get("semantic_strength", 0), i_res.get("visual_strength", 0)]
+    bars = ax.bar(["Semantic", "Visual"], vals, color=[SEMANTIC_COLOR, VISUAL_COLOR],
+                   edgecolor="black", linewidth=1.2, alpha=0.85)
+    for bar, val in zip(bars, vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.002,
+                f"{val:.4f}", ha="center", va="bottom", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Mean |Projection|")
+    ax.set_title("Imagery Residual")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Modality Decomposition: What Each Component Encodes",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig14b_core_vs_residual.png")
+    fig.savefig(output_dir / "fig14b_core_vs_residual.pdf")
+    plt.close(fig)
+
+
+# --- Direction 15: Creative Divergence Mapping ---
+
+def plot_concept_divergence_profile(data: Dict, output_dir: Path):
+    """Bar chart of per-concept amplification/suppression in divergence."""
+    decomp = data.get("concept_decomposition", {})
+    per_concept = decomp.get("per_concept", [])
+    if not per_concept:
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+
+    names = [c["concept"].replace("a photo of ", "").replace("a ", "").replace("an ", "")
+             for c in per_concept]
+    projections = [c["mean_projection"] for c in per_concept]
+    significant = [c.get("significant", False) for c in per_concept]
+    types = [c["type"] for c in per_concept]
+
+    colors = [SEMANTIC_COLOR if t == "semantic" else VISUAL_COLOR for t in types]
+    edge_colors = ["black" if sig else "gray" for sig in significant]
+    linewidths = [1.5 if sig else 0.5 for sig in significant]
+
+    y = np.arange(len(names))
+    bars = ax.barh(y, projections, color=colors, edgecolor=edge_colors,
+                    linewidth=linewidths, alpha=0.85)
+
+    ax.axvline(0, color="black", linewidth=0.8)
+    ax.set_yticks(y)
+    ax.set_yticklabels(names, fontsize=8)
+    ax.set_xlabel("Mean Divergence Projection (+ = amplified, − = suppressed)")
+    ax.set_title("Creative Divergence: Concept Amplification & Suppression")
+    ax.grid(axis="x", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor=SEMANTIC_COLOR, label="Semantic"),
+        Patch(facecolor=VISUAL_COLOR, label="Visual"),
+        Patch(facecolor="white", edgecolor="black", linewidth=1.5, label="Significant (p<0.05)"),
+    ]
+    ax.legend(handles=legend_elements, fontsize=9, loc="lower right")
+
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig15a_concept_divergence.png")
+    fig.savefig(output_dir / "fig15a_concept_divergence.pdf")
+    plt.close(fig)
+
+
+def plot_creativity_and_archetypes(data: Dict, output_dir: Path):
+    """Creativity index distribution and archetype summary."""
+    creativity = data.get("creativity", {})
+    archetypes = data.get("archetypes", {})
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Creativity index
+    ax = axes[0]
+    mean_c = creativity.get("mean_creativity", 0)
+    std_c = creativity.get("std_creativity", 0)
+    high_frac = creativity.get("high_creativity_fraction", 0)
+
+    ax.bar(["Mean\nCreativity", "Scaling\nComponent", "Orthogonal\nComponent"],
+           [mean_c,
+            creativity.get("mean_scaling_component", 0),
+            creativity.get("mean_orthogonal_component", 0)],
+           color=[DIVERGE_COLOR, PERC_COLOR, IMAG_COLOR],
+           edgecolor="black", linewidth=1.2, alpha=0.85)
+    ax.set_ylabel("Mean Magnitude")
+    ax.set_title(f"Creativity Index: {mean_c:.3f} ({high_frac:.0%} highly creative)")
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Archetypes
+    ax = axes[1]
+    if "error" not in archetypes:
+        arch_list = archetypes.get("archetypes", [])
+        if arch_list:
+            a_labels = [f"Archetype {a['cluster_id']}" for a in arch_list]
+            a_fracs = [a["fraction"] for a in arch_list]
+            a_norms = [a["mean_divergence_norm"] for a in arch_list]
+
+            x_a = np.arange(len(a_labels))
+            bars = ax.bar(x_a, a_fracs, color=DIVERGE_COLOR, edgecolor="black",
+                           linewidth=1, alpha=0.7)
+            for bar, frac, norm in zip(bars, a_fracs, a_norms):
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                        f"{frac:.0%}\n(‖d‖={norm:.2f})", ha="center", va="bottom", fontsize=8)
+            ax.set_xticks(x_a)
+            ax.set_xticklabels(a_labels, fontsize=9)
+            ax.set_ylabel("Fraction of Trials")
+            sil = archetypes.get("best_silhouette", 0)
+            ax.set_title(f"Imagination Archetypes (k={archetypes.get('best_k', 0)}, "
+                         f"sil={sil:.3f})")
+    else:
+        ax.text(0.5, 0.5, "Too few samples", transform=ax.transAxes,
+                ha="center", va="center")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("Creative Divergence: How Imagination Transforms Perception",
+                 fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig15b_creativity_archetypes.png")
+    fig.savefig(output_dir / "fig15b_creativity_archetypes.pdf")
+    plt.close(fig)
+
+
 # --- Main ---
 
 def generate_all_figures(results_dir: Path, output_dir: Path):
@@ -928,6 +1397,41 @@ def generate_all_figures(results_dir: Path, output_dir: Path):
         plot_layer_discriminability(hierarchical_data, output_dir)
         plot_cascade_summary(hierarchical_data, output_dir)
         generated.extend(["fig10a", "fig10b"])
+
+    # Direction 11: Compositional Imagination
+    comp_data = load_json(results_dir / "compositional_imagination.json")
+    if comp_data:
+        plot_composition_success(comp_data, output_dir)
+        plot_concept_compositionality(comp_data, output_dir)
+        generated.extend(["fig11a", "fig11b"])
+
+    # Direction 12: Predictive Coding
+    pc_data = load_json(results_dir / "predictive_coding.json")
+    if pc_data:
+        plot_directional_flow_index(pc_data, output_dir)
+        plot_prediction_r2(pc_data, output_dir)
+        generated.extend(["fig12a", "fig12b"])
+
+    # Direction 13: Manifold Geometry
+    manifold_data = load_json(results_dir / "manifold_geometry.json")
+    if manifold_data:
+        plot_manifold_comparison(manifold_data, output_dir)
+        plot_centrality_and_structure(manifold_data, output_dir)
+        generated.extend(["fig13a", "fig13b"])
+
+    # Direction 14: Modality Decomposition
+    decomp_data = load_json(results_dir / "modality_decomposition.json")
+    if decomp_data:
+        plot_decomposition_norms(decomp_data, output_dir)
+        plot_core_vs_residual_content(decomp_data, output_dir)
+        generated.extend(["fig14a", "fig14b"])
+
+    # Direction 15: Creative Divergence
+    diverge_data = load_json(results_dir / "creative_divergence.json")
+    if diverge_data:
+        plot_concept_divergence_profile(diverge_data, output_dir)
+        plot_creativity_and_archetypes(diverge_data, output_dir)
+        generated.extend(["fig15a", "fig15b"])
 
     print(f"Generated {len(generated)} figures in {output_dir}")
     return generated

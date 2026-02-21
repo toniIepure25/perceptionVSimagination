@@ -12,18 +12,23 @@ experiment:
     dimensionality gap, uncertainty-vividness, semantic survival,
     topological RSA, and cross-subject imagery fingerprints.
 
-# Which analyses to run (all ten directions)
+# Which analyses to run (all fifteen directions)
 analyses:
-  - dimensionality       # Direction 1: The Dimensionality Gap
-  - uncertainty          # Direction 2: Uncertainty as Vividness
-  - semantic             # Direction 3: Semantic Survival
-  - topology             # Direction 4: Topological RSA
-  - cross_subject        # Direction 5: Cross-Subject Imagery Fingerprint
-  - dissociation         # Direction 6: Semantic-Structural Dissociation
-  - reality_monitor      # Direction 7: Computational Reality Monitor
-  - confusion_mapping    # Direction 8: Reality Confusion Mapping
-  - adversarial_reality  # Direction 9: Adversarial Reality Probing
-  - hierarchical_reality # Direction 10: Hierarchical Reality Gradient
+  - dimensionality         # Direction 1: The Dimensionality Gap
+  - uncertainty            # Direction 2: Uncertainty as Vividness
+  - semantic               # Direction 3: Semantic Survival
+  - topology               # Direction 4: Topological RSA
+  - cross_subject          # Direction 5: Cross-Subject Imagery Fingerprint
+  - dissociation           # Direction 6: Semantic-Structural Dissociation
+  - reality_monitor        # Direction 7: Computational Reality Monitor
+  - confusion_mapping      # Direction 8: Reality Confusion Mapping
+  - adversarial_reality    # Direction 9: Adversarial Reality Probing
+  - hierarchical_reality   # Direction 10: Hierarchical Reality Gradient
+  - compositional          # Direction 11: Compositional Imagination (Brain Algebra)
+  - predictive_coding      # Direction 12: Predictive Coding Residual Analysis
+  - manifold_geometry      # Direction 13: Imagination Manifold Geometry
+  - modality_decomposition # Direction 14: Modality-Invariant Decomposition
+  - creative_divergence    # Direction 15: Creative Divergence Mapping
 
 # Model checkpoint (perception-trained encoder)
 model:
@@ -90,6 +95,32 @@ adversarial_reality:
 hierarchical_reality:
   layers: ["layer_4", "layer_8", "layer_12", "final"]
   n_folds: 5
+
+# Direction 11: Compositional Imagination (Brain Algebra)
+compositional:
+  n_trials: 200
+  top_fraction: 0.25
+  perturbation_scale: 0.5
+
+# Direction 12: Predictive Coding Residual Analysis
+predictive_coding:
+  alpha: 1.0  # Ridge regression regularization
+  layers: ["layer_4", "layer_8", "layer_12", "final"]
+
+# Direction 13: Imagination Manifold Geometry
+manifold_geometry:
+  n_hull_projections: 20
+  n_pca_components: 50
+
+# Direction 14: Modality-Invariant Decomposition
+modality_decomposition:
+  retrieval_k_values: [1, 5, 10]
+  classifier_cv_folds: 5
+
+# Direction 15: Creative Divergence Mapping
+creative_divergence:
+  n_archetype_clusters: [2, 6]  # min and max k for archetype search
+  n_pca_components: 20
 
 # Output
 output:

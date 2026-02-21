@@ -47,6 +47,8 @@ logger = logging.getLogger("novel_analyses")
 ALL_ANALYSES = [
     "dimensionality", "uncertainty", "semantic", "topology", "cross_subject", "dissociation",
     "reality_monitor", "confusion_mapping", "adversarial_reality", "hierarchical_reality",
+    "compositional", "predictive_coding", "manifold_geometry", "modality_decomposition",
+    "creative_divergence",
 ]
 
 
@@ -149,6 +151,51 @@ def run_hierarchical_reality(bundle, output_dir, model=None, perception_dataset=
         device=device, max_samples=max_samples,
     )
     out = output_dir / "hierarchical_reality.json"
+    _save_json(results, out)
+    return results
+
+
+def run_compositional(bundle, output_dir, device="cpu", n_trials=200):
+    from fmri2img.analysis.compositional_imagination import analyze_compositional_imagination
+
+    results = analyze_compositional_imagination(bundle, device=device, n_trials=n_trials)
+    out = output_dir / "compositional_imagination.json"
+    _save_json(results, out)
+    return results
+
+
+def run_predictive_coding(bundle, output_dir, alpha=1.0):
+    from fmri2img.analysis.predictive_coding import analyze_predictive_coding
+
+    results = analyze_predictive_coding(bundle, alpha=alpha)
+    out = output_dir / "predictive_coding.json"
+    _save_json(results, out)
+    return results
+
+
+def run_manifold_geometry(bundle, output_dir):
+    from fmri2img.analysis.manifold_geometry import analyze_manifold_geometry
+
+    results = analyze_manifold_geometry(bundle)
+    out = output_dir / "manifold_geometry.json"
+    _save_json(results, out)
+    return results
+
+
+def run_modality_decomposition(bundle, output_dir, device="cpu"):
+    from fmri2img.analysis.modality_decomposition import analyze_modality_decomposition
+
+    results = analyze_modality_decomposition(bundle, device=device)
+    out = output_dir / "modality_decomposition.json"
+    _save_json(results, out)
+    return results
+
+
+def run_creative_divergence(bundle, output_dir, device="cpu"):
+    from fmri2img.analysis.creative_divergence import analyze_creative_divergence
+
+    results = analyze_creative_divergence(bundle, device=device)
+    out = output_dir / "creative_divergence.json"
     _save_json(results, out)
     return results
 
@@ -423,6 +470,60 @@ def main():
                 device=args.device,
                 max_samples=args.max_samples,
             )
+        logger.info("")
+
+    if "compositional" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 11: Compositional Imagination (Brain Algebra)")
+        logger.info("-" * 60)
+        all_results["compositional"] = run_compositional(
+            bundle, output_dir, device=args.device,
+        )
+        logger.info("")
+
+    if "predictive_coding" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 12: Predictive Coding Residual Analysis")
+        logger.info("-" * 60)
+        if args.dry_run:
+            bundle_ml = generate_synthetic_embeddings(
+                n_perception=args.n_perception,
+                n_imagery=args.n_imagery,
+                embed_dim=args.embed_dim,
+                include_multilayer=True,
+            )
+            all_results["predictive_coding"] = run_predictive_coding(
+                bundle_ml, output_dir,
+            )
+        else:
+            all_results["predictive_coding"] = run_predictive_coding(
+                bundle, output_dir,
+            )
+        logger.info("")
+
+    if "manifold_geometry" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 13: Imagination Manifold Geometry")
+        logger.info("-" * 60)
+        all_results["manifold_geometry"] = run_manifold_geometry(bundle, output_dir)
+        logger.info("")
+
+    if "modality_decomposition" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 14: Modality-Invariant Decomposition")
+        logger.info("-" * 60)
+        all_results["modality_decomposition"] = run_modality_decomposition(
+            bundle, output_dir, device=args.device,
+        )
+        logger.info("")
+
+    if "creative_divergence" in analyses:
+        logger.info("-" * 60)
+        logger.info("DIRECTION 15: Creative Divergence Mapping")
+        logger.info("-" * 60)
+        all_results["creative_divergence"] = run_creative_divergence(
+            bundle, output_dir, device=args.device,
+        )
         logger.info("")
 
     # Save combined results
