@@ -374,12 +374,11 @@ def train_two_stage(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     model = TwoStageEncoder(
         input_dim=input_dim,
         latent_dim=latent_dim,
-        output_dim=output_dim,
         n_blocks=n_blocks,
-        block_hidden=latent_dim,
         head_type="mlp",
-        head_hidden=head_hidden,
+        head_hidden_dim=head_hidden,
         dropout=0.3,
+        output_dim=output_dim,
     ).to(device)
     
     criterion = MultiLoss(
@@ -456,9 +455,9 @@ def train_two_stage(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     tv_loader = DataLoader(tv_ds, batch_size=batch_size, shuffle=True, num_workers=0)
     
     final_model = TwoStageEncoder(
-        input_dim=input_dim, latent_dim=latent_dim, output_dim=output_dim,
-        n_blocks=n_blocks, block_hidden=latent_dim,
-        head_type="mlp", head_hidden=head_hidden, dropout=0.3,
+        input_dim=input_dim, latent_dim=latent_dim,
+        n_blocks=n_blocks, head_type="mlp", head_hidden_dim=head_hidden,
+        dropout=0.3, output_dim=output_dim,
     ).to(device)
     final_opt = AdamW(final_model.parameters(), lr=lr, weight_decay=wd)
     final_sched = CosineAnnealingLR(final_opt, T_max=best_epoch)

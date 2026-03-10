@@ -177,17 +177,19 @@ class CLIPMappingHead(nn.Module):
         latent_dim: int,
         head_type: Literal["linear", "mlp"] = "linear",
         hidden_dim: int = 512,
-        dropout: float = 0.2
+        dropout: float = 0.2,
+        output_dim: int = 512
     ):
         super().__init__()
         self.latent_dim = latent_dim
         self.head_type = head_type
         self.hidden_dim = hidden_dim
         self.dropout = dropout
+        self.output_dim = output_dim
         
         if head_type == "linear":
             # Simple linear projection
-            self.head = nn.Linear(latent_dim, 512)
+            self.head = nn.Linear(latent_dim, output_dim)
         
         elif head_type == "mlp":
             # Two-layer MLP
@@ -195,7 +197,7 @@ class CLIPMappingHead(nn.Module):
                 nn.Linear(latent_dim, hidden_dim),
                 nn.GELU(),
                 nn.Dropout(dropout),
-                nn.Linear(hidden_dim, 512)
+                nn.Linear(hidden_dim, output_dim)
             )
         
         else:
@@ -253,7 +255,8 @@ class TwoStageEncoder(nn.Module):
         n_blocks: int = 4,
         dropout: float = 0.3,
         head_type: Literal["linear", "mlp"] = "linear",
-        head_hidden_dim: int = 512
+        head_hidden_dim: int = 512,
+        output_dim: int = 512
     ):
         super().__init__()
         self.input_dim = input_dim
@@ -272,7 +275,8 @@ class TwoStageEncoder(nn.Module):
             latent_dim=latent_dim,
             head_type=head_type,
             hidden_dim=head_hidden_dim,
-            dropout=dropout * 0.7  # Lower dropout for head
+            dropout=dropout * 0.7,  # Lower dropout for head
+            output_dim=output_dim
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
