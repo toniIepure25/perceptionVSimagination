@@ -151,7 +151,7 @@ def train_ridge(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     rank = compute_ranking_metrics(Y_pred, Y_test, gt_indices)
     
     logger.info(f"TEST: cosine={test_metrics['cosine']:.4f}, "
-                f"R@1={ret.get('recall@1', 0):.4f}, R@5={ret.get('recall@5', 0):.4f}")
+                f"R@1={ret.get('R@1', 0):.4f}, R@5={ret.get('R@5', 0):.4f}")
     
     # Save
     ckpt = Path(checkpoint_dir) / subject / "ridge.pkl"
@@ -313,7 +313,7 @@ def train_mlp(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     rank = compute_ranking_metrics(Y_test_pred, Y_test, gt_indices)
     
     logger.info(f"TEST: cosine={test_metrics['cosine']:.4f}, "
-                f"R@1={ret.get('recall@1', 0):.4f}, R@5={ret.get('recall@5', 0):.4f}")
+                f"R@1={ret.get('R@1', 0):.4f}, R@5={ret.get('R@5', 0):.4f}")
     
     # Save
     ckpt = Path(checkpoint_dir) / subject / "mlp.pt"
@@ -489,7 +489,7 @@ def train_two_stage(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     rank = compute_ranking_metrics(Y_test_pred, Y_test, gt_indices)
     
     logger.info(f"TEST: cosine={test_metrics['cosine']:.4f}, "
-                f"R@1={ret.get('recall@1', 0):.4f}, R@5={ret.get('recall@5', 0):.4f}")
+                f"R@1={ret.get('R@1', 0):.4f}, R@5={ret.get('R@5', 0):.4f}")
     
     # Save
     ckpt = Path(checkpoint_dir) / subject / "two_stage_best.pt"

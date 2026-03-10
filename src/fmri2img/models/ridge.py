@@ -66,7 +66,7 @@ class RidgeEncoder:
         self.alpha = alpha
         self.model = None
         self.input_dim = None
-        self.output_dim = 512  # CLIP ViT-B/32 embedding dimension
+        self.output_dim = None  # Set during fit based on Y dimension
         
     def fit(self, X: np.ndarray, Y: np.ndarray) -> None:
         """
@@ -85,8 +85,10 @@ class RidgeEncoder:
         if X.shape[0] != Y.shape[0]:
             raise ValueError(f"Sample mismatch: X has {X.shape[0]} samples, Y has {Y.shape[0]}")
         
-        if Y.shape[1] != self.output_dim:
-            raise ValueError(f"Y must be shape (n_samples, 512), got {Y.shape}")
+        if Y.ndim != 2 or Y.shape[1] < 2:
+            raise ValueError(f"Y must be 2D with at least 2 columns, got {Y.shape}")
+        
+        self.output_dim = Y.shape[1]
         
         if np.any(np.isnan(X)) or np.any(np.isnan(Y)):
             raise ValueError("Input contains NaN values")
