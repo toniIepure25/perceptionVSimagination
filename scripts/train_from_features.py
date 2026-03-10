@@ -190,7 +190,8 @@ def train_mlp(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     torch_seed_all(42)
     
     input_dim = X_train.shape[1]
-    logger.info(f"Training MLP: {input_dim}D → {hidden}D → 512D, device={device}")
+    output_dim = Y_train.shape[1]
+    logger.info(f"Training MLP: {input_dim}D → {hidden}D → {output_dim}D, device={device}")
     
     # DataLoaders
     train_ds = TensorDataset(torch.from_numpy(X_train).float(), torch.from_numpy(Y_train).float())
@@ -201,7 +202,7 @@ def train_mlp(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     val_loader = DataLoader(val_ds, batch_size=batch_size*2, shuffle=False, num_workers=0)
     test_loader = DataLoader(test_ds, batch_size=batch_size*2, shuffle=False, num_workers=0)
     
-    model = MLPEncoder(input_dim=input_dim, hidden=hidden, dropout=dropout).to(device)
+    model = MLPEncoder(input_dim=input_dim, hidden=hidden, dropout=dropout, output_dim=output_dim).to(device)
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=wd)
     scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
     
@@ -276,7 +277,7 @@ def train_mlp(X_train, Y_train, X_val, Y_val, X_test, Y_test,
     tv_ds = TensorDataset(torch.from_numpy(X_tv).float(), torch.from_numpy(Y_tv).float())
     tv_loader = DataLoader(tv_ds, batch_size=batch_size, shuffle=True, num_workers=0)
     
-    final_model = MLPEncoder(input_dim=input_dim, hidden=hidden, dropout=dropout).to(device)
+    final_model = MLPEncoder(input_dim=input_dim, hidden=hidden, dropout=dropout, output_dim=output_dim).to(device)
     final_opt = AdamW(final_model.parameters(), lr=lr, weight_decay=wd)
     final_sched = CosineAnnealingLR(final_opt, T_max=best_epoch)
     

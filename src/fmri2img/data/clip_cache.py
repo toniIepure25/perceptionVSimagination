@@ -96,7 +96,10 @@ class CLIPCache:
             
         if self.cache_path.exists():
             self._df = pd.read_parquet(self.cache_path)
-            logger.debug(f"Loaded CLIP cache with {len(self._df)} entries")
+            # Normalize column names: support both 'clip512' and 'clip_embedding'
+            if "clip_embedding" in self._df.columns and "clip512" not in self._df.columns:
+                self._df = self._df.rename(columns={"clip_embedding": "clip512"})
+            logger.debug(f"Loaded CLIP cache with {len(self._df)} entries, cols={list(self._df.columns)}")
         else:
             self._df = pd.DataFrame(columns=["nsdId", "clip512"])
             logger.debug("Initialized empty CLIP cache")

@@ -31,17 +31,18 @@ class MLPEncoder(nn.Module):
         dropout: Dropout probability (default: 0.1)
     """
     
-    def __init__(self, input_dim: int, hidden: int = 1024, dropout: float = 0.1):
+    def __init__(self, input_dim: int, hidden: int = 1024, dropout: float = 0.1, output_dim: int = 512):
         super().__init__()
         self.input_dim = input_dim
         self.hidden = hidden
         self.dropout = dropout
+        self.output_dim = output_dim
         
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
-            nn.Linear(hidden, 512)  # CLIP ViT-B/32 embedding dimension
+            nn.Linear(hidden, output_dim)  # CLIP embedding dimension
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
