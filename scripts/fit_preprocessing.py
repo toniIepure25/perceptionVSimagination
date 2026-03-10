@@ -133,10 +133,24 @@ def main():
         )
         
         # Create loader factory
-        from fmri2img.io.s3 import NIfTILoader, get_s3_filesystem
+        import nibabel as nib
+        import os
+        
         def loader_factory():
-            s3_fs = get_s3_filesystem()
-            loader = NIfTILoader(s3_fs)
+            class LocalNIfTILoader:
+                """Simple local file loader for NIfTI files."""
+                _cache = {}
+                
+                def load(self, path):
+                    if path not in self._cache:
+                        self._cache[path] = nib.load(path)
+                    return self._cache[path]
+                
+                def clear_cache(self):
+                    self._cache.clear()
+            
+            loader = LocalNIfTILoader()
+            
             def get_volume(loader, row):
                 # Load the NIfTI file and extract the specific volume
                 img = loader.load(row['beta_path'])

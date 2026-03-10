@@ -212,10 +212,10 @@ class NIfTILoader:
         validate: bool = True
     ) -> FileBasedImage:
         """
-        Load NIfTI file from S3.
+        Load NIfTI file from S3 or local filesystem.
         
         Args:
-            s3_path: S3 path to NIfTI file
+            s3_path: S3 path or local file path to NIfTI file
             mmap: Use memory mapping (not recommended for S3)
             validate: Header-only validation by default (no data loading)
             
@@ -228,7 +228,23 @@ class NIfTILoader:
         logger.debug(f"Loading NIfTI from {s3_path}")
         
         try:
-            # Download to cache directory manually for stable access
+            # Detect local paths and load directly with nibabel
+            local_path = Path(s3_path)
+            if local_path.is_absolute() and local_path.exists():
+                logger.debug(f"Loading local NIfTI: {s3_path}")
+                img = nib.load(str(local_path), mmap=mmap)
+                
+                if validate:
+                    if img.header is None:
+                        raise ValueError("Invalid NIfTI header")
+                    if not hasattr(img, 'shape') or not img.shape:
+                        raise ValueError("Invalid NIfTI shape")
+                    _ = img.header.get_zooms()
+                
+                logger.debug(f"Loaded NIfTI shape: {img.shape}")
+                return img
+            
+            # S3 path: Download to cache directory manually for stable access
             cache_dir = Path(self.s3_fs.cache_storage)
             cache_dir.mkdir(parents=True, exist_ok=True)
             
