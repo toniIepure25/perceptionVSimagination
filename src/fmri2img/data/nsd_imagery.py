@@ -57,11 +57,13 @@ class ImageryTrial:
     # Condition and stimulus
     condition: Literal["perception", "imagery"]
     nsd_id: int
-    coco_id: Optional[int] = None
     
     # fMRI data
     beta_path: str
     beta_index: int
+    
+    # Optional fields (all have defaults)
+    coco_id: Optional[int] = None
     roi_mask_path: Optional[str] = None
     
     # Optional metadata
