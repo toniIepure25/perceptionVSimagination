@@ -80,69 +80,51 @@ def cosine_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 def info_nce_loss(
     pred: torch.Tensor,
     target: torch.Tensor,
-    temperature: float = 0.05
+    temperature: float = 0.07
 ) -> torch.Tensor:
     """
-    InfoNCE (Normalized Temperature-scaled Cross Entropy) contrastive loss.
+    Symmetric InfoNCE (CLIP-style) contrastive loss.
     
-    For each sample i in the batch:
-    - Positive pair: (pred[i], target[i])
-    - Negative pairs: (pred[i], target[j]) for all j ≠ i
-    
-    Encourages predicted embeddings to be close to their corresponding targets
-    and far from other targets in the batch. This provides a discriminative
-    learning signal that improves representation quality.
+    Computes bidirectional contrastive loss: averages pred→target and
+    target→pred cross-entropy directions. L2-normalizes inputs internally
+    for proper cosine similarity computation.
     
     Args:
-        pred: Predicted embeddings (B, D), L2-normalized
-        target: Target embeddings (B, D), L2-normalized
-        temperature: Temperature scaling parameter (default: 0.05)
+        pred: Predicted embeddings (B, D)
+        target: Target embeddings (B, D)
+        temperature: Temperature scaling parameter (default: 0.07)
                     Lower temperature = harder discrimination
-                    Typical range: [0.01, 0.1]
+                    Typical range: [0.05, 0.2]
     
     Returns:
-        Scalar loss (averaged over batch)
+        Scalar loss (averaged over batch and both directions)
     
     Scientific Context:
-    - InfoNCE from CPC (Oord et al. 2018), widely used in contrastive learning
-    - CLIP uses symmetric InfoNCE over image-text pairs (Radford et al. 2021)
-    - Temperature controls difficulty of negative discrimination
-    - Requires sufficient batch size (recommend B >= 32 for meaningful negatives)
-    
-    Mathematical Formulation:
-        L = -log(exp(sim(pred[i], target[i]) / τ) / Σ_j exp(sim(pred[i], target[j]) / τ))
-        where sim() is cosine similarity, τ is temperature
-    
-    Example:
-        >>> pred = torch.randn(64, 512)
-        >>> pred = F.normalize(pred, dim=-1)  # L2 normalize
-        >>> target = torch.randn(64, 512)
-        >>> target = F.normalize(target, dim=-1)
-        >>> loss = info_nce_loss(pred, target, temperature=0.05)
+    - Symmetric InfoNCE following CLIP (Radford et al. 2021)
+    - Averaging both directions provides stronger, more stable gradients
+    - Internal L2-normalization ensures proper cosine similarity
+    - Temperature 0.07 is CLIP's default; 0.05 can cause gradient collapse
     """
     batch_size = pred.shape[0]
     
     if batch_size < 2:
-        # InfoNCE requires at least 2 samples for negatives
         logger.warning(f"InfoNCE loss requires batch_size >= 2, got {batch_size}. Returning zero.")
         return torch.tensor(0.0, device=pred.device)
     
-    # Compute similarity matrix: pred[i] · target[j] for all i, j
-    # (B, D) @ (D, B) = (B, B)
-    similarity_matrix = torch.matmul(pred, target.T)  # (B, B)
+    # L2-normalize for proper cosine similarity
+    pred_norm = F.normalize(pred, p=2, dim=-1)
+    target_norm = F.normalize(target, p=2, dim=-1)
     
-    # Scale by temperature
-    similarity_matrix = similarity_matrix / temperature
+    # Cosine similarity matrix scaled by temperature
+    logits = torch.matmul(pred_norm, target_norm.T) / temperature  # (B, B)
     
-    # Labels: diagonal elements are positives
-    # For sample i, the positive is similarity_matrix[i, i]
     labels = torch.arange(batch_size, device=pred.device)
     
-    # InfoNCE loss = cross-entropy with positive pairs on diagonal
-    # For each row i: softmax over all columns, take log probability of column i
-    loss = F.cross_entropy(similarity_matrix, labels)
+    # Symmetric loss (CLIP-style): average both directions
+    loss_p2t = F.cross_entropy(logits, labels)      # pred → target
+    loss_t2p = F.cross_entropy(logits.T, labels)     # target → pred
     
-    return loss
+    return (loss_p2t + loss_t2p) / 2.0
 
 
 class MultiLoss(nn.Module):
@@ -195,7 +177,7 @@ class MultiLoss(nn.Module):
         cosine_weight: float = 0.3,
         info_nce_weight: float = 0.4,
         brain_consistency_weight: float = 0.0,
-        temperature: float = 0.05,
+        temperature: float = 0.07,
         log_components: bool = False,
         clip_to_fmri_encoder: Optional[nn.Module] = None
     ):
