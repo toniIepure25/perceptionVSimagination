@@ -494,12 +494,13 @@ class MultiLayerLoss(nn.Module):
     def __init__(
         self,
         layer_weights: Optional[Dict[str, float]] = None,
+        layer_names: Optional[list] = None,
         use_mse: bool = False,
         mse_weight: float = 0.1,
         use_learnable_weights: bool = False,
         use_multilayer_infonce: bool = False,
         infonce_weight: float = 0.2,
-        infonce_temperature: float = 0.05,
+        infonce_temperature: float = 0.07,
         infonce_combination: str = "weighted_pool",
         text_clip_weight: float = 0.3  # Phase 2: Weight for text-CLIP loss
     ):
@@ -518,8 +519,11 @@ class MultiLayerLoss(nn.Module):
         self.infonce_temperature = infonce_temperature
         self.infonce_combination = infonce_combination
         
-        # Determine layer order (consistent ordering for learnable weights)
-        self.layer_names = ['layer_4', 'layer_8', 'layer_12', 'final']
+        # Determine layer order (use provided layer_weights keys or defaults)
+        if layer_weights is not None:
+            self.layer_names = list(layer_weights.keys())
+        else:
+            self.layer_names = layer_names or ['layer_12', 'layer_18', 'final']
         
         if use_learnable_weights:
             # Initialize learnable weight parameters (raw logits)
@@ -536,16 +540,13 @@ class MultiLayerLoss(nn.Module):
             
             self.weight_logits = nn.Parameter(init_logits)
             self.layer_weights = None  # Will be computed dynamically
-            logger.info(f"MultiLayerLoss initialized with LEARNABLE weights (init logits: {init_logits.tolist()})")
+            logger.info(f"MultiLayerLoss initialized with LEARNABLE weights for layers {self.layer_names}")
         else:
             # Fixed weights (backward-compatible)
             if layer_weights is None:
-                self.layer_weights = {
-                    'layer_4': 0.2,
-                    'layer_8': 0.2,
-                    'layer_12': 0.3,
-                    'final': 0.3
-                }
+                # Uniform weights across enabled layers
+                n = len(self.layer_names)
+                self.layer_weights = {name: 1.0 / n for name in self.layer_names}
             else:
                 self.layer_weights = layer_weights
             

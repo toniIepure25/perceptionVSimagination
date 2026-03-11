@@ -94,15 +94,40 @@ def load_features_and_targets(features_dir, clip_cache_path, index_root, subject
 def load_multilayer_targets(nsd_ids, multilayer_cache_path):
     """Load multi-layer CLIP targets for given nsd_ids.
 
+    Uses projected representations from the actual CLIP cache:
+    - layer_12_proj → layer_12 (768-D): Mid-level semantic features
+    - layer_18_proj → layer_18 (768-D): Late semantic features
+    - final (768-D): Final CLIP embedding (ViT-L/14)
+
     Returns:
-        Y_dict: {layer_name: np.ndarray (N, D)} for layer_4/8/12 (768-D) and final (512-D)
+        Y_dict: {layer_name: np.ndarray (N, D)} for layer_12/layer_18/final (all 768-D)
         valid_mask: boolean mask of which nsd_ids had cache hits
     """
     df = pd.read_parquet(multilayer_cache_path)
     nsd_col = 'nsd_id' if 'nsd_id' in df.columns else 'nsdId'
     df = df.set_index(nsd_col)
 
-    layers = ['layer_4', 'layer_8', 'layer_12', 'final']
+    # Map cache column names to model layer names
+    # Use projected versions (768-dim) for consistency
+    column_map = {}
+    if 'layer_12_proj' in df.columns:
+        column_map['layer_12'] = 'layer_12_proj'
+    elif 'layer_12' in df.columns:
+        column_map['layer_12'] = 'layer_12'
+    
+    if 'layer_18_proj' in df.columns:
+        column_map['layer_18'] = 'layer_18_proj'
+    elif 'layer_18' in df.columns:
+        column_map['layer_18'] = 'layer_18'
+    
+    if 'final' in df.columns:
+        column_map['final'] = 'final'
+    elif 'fused' in df.columns:
+        column_map['final'] = 'fused'
+    
+    layers = list(column_map.keys())
+    logger.info(f"Multilayer: using layers {layers} from columns {column_map}")
+    
     Y_dict = {l: [] for l in layers}
     valid_mask = []
 
@@ -110,18 +135,18 @@ def load_multilayer_targets(nsd_ids, multilayer_cache_path):
         nid_int = int(nid)
         if nid_int in df.index:
             valid_mask.append(True)
-            for l in layers:
-                vec = np.array(df.loc[nid_int, l], dtype=np.float32)
+            for layer_name, col_name in column_map.items():
+                vec = np.array(df.loc[nid_int, col_name], dtype=np.float32)
                 norm = np.linalg.norm(vec)
                 if norm > 1e-6:
                     vec = vec / norm
-                Y_dict[l].append(vec)
+                Y_dict[layer_name].append(vec)
         else:
             valid_mask.append(False)
 
     valid_mask = np.array(valid_mask)
     for l in layers:
-        Y_dict[l] = np.stack(Y_dict[l]).astype(np.float32) if Y_dict[l] else np.empty((0, 768 if 'layer' in l else 512))
+        Y_dict[l] = np.stack(Y_dict[l]).astype(np.float32) if Y_dict[l] else np.empty((0, 768))
 
     logger.info(f"Multilayer cache: {valid_mask.sum()}/{len(valid_mask)} matched, "
                 f"dims: {', '.join(f'{l}={Y_dict[l].shape[1]}' for l in layers)}")
@@ -576,7 +601,9 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
     torch_seed_all(42)
 
     input_dim = X_train.shape[1]
+    layer_names = list(Y_train_dict.keys())
     logger.info(f"Training MultiLayer TwoStage [{config_name}]: {input_dim}D → {latent_dim}D ({n_blocks} blocks)")
+    logger.info(f"  layers: {layer_names}")
     logger.info(f"  shared_head_backbone=True, head_hidden={head_hidden}")
     logger.info(f"  learnable_weights={learnable_weights}, multilayer_infonce={multilayer_infonce}")
 
@@ -588,6 +615,9 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
     val_loader = DataLoader(val_ds, batch_size=batch_size * 2, shuffle=False,
                             num_workers=0, collate_fn=multilayer_collate_fn)
 
+    # Build layer_dims from actual data
+    layer_dims = {l: Y_train_dict[l].shape[1] for l in layer_names}
+
     model = MultiLayerTwoStageEncoder(
         input_dim=input_dim,
         latent_dim=latent_dim,
@@ -595,13 +625,17 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
         dropout=0.3,
         head_type="mlp",
         head_hidden_dim=head_hidden,
-        enabled_layers=['layer_4', 'layer_8', 'layer_12', 'final'],
+        enabled_layers=layer_names,
+        layer_dims=layer_dims,
         shared_head_backbone=True,
     ).to(device)
 
-    layer_weights = {'layer_4': 0.15, 'layer_8': 0.20, 'layer_12': 0.25, 'final': 0.40}
+    # Uniform initial weights across layers
+    n_layers = len(layer_names)
+    layer_weights = {l: 1.0 / n_layers for l in layer_names}
     criterion = MultiLayerLoss(
         layer_weights=layer_weights,
+        layer_names=layer_names,
         use_mse=mse_w > 0,
         mse_weight=mse_w,
         use_learnable_weights=learnable_weights,
@@ -664,7 +698,7 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
 
         if (epoch + 1) % 5 == 0 or epoch == 0:
             eff_w = criterion.get_effective_weights() if learnable_weights else layer_weights
-            w_str = ", ".join(f"{l}={eff_w[l]:.3f}" for l in ['layer_4', 'layer_8', 'layer_12', 'final'])
+            w_str = ", ".join(f"{l}={eff_w[l]:.3f}" for l in layer_names)
             logger.info(f"  Epoch {epoch+1}/{epochs}: loss={epoch_loss/max(n_batches,1):.4f}, "
                         f"val_cosine(final)={val_cosine:.4f}, weights=[{w_str}]")
 
@@ -692,12 +726,14 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
     final_model = MultiLayerTwoStageEncoder(
         input_dim=input_dim, latent_dim=latent_dim, n_blocks=n_blocks,
         dropout=0.3, head_type="mlp", head_hidden_dim=head_hidden,
-        enabled_layers=['layer_4', 'layer_8', 'layer_12', 'final'],
+        enabled_layers=layer_names,
+        layer_dims=layer_dims,
         shared_head_backbone=True,
     ).to(device)
 
     final_criterion = MultiLayerLoss(
-        layer_weights=layer_weights, use_mse=mse_w > 0, mse_weight=mse_w,
+        layer_weights=layer_weights, layer_names=layer_names,
+        use_mse=mse_w > 0, mse_weight=mse_w,
         use_learnable_weights=learnable_weights,
         use_multilayer_infonce=multilayer_infonce,
         infonce_weight=infonce_w if multilayer_infonce else 0.0,

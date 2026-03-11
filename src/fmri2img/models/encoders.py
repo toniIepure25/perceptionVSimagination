@@ -387,13 +387,18 @@ class MultiLayerTwoStageEncoder(nn.Module):
         head_type: Literal["linear", "mlp"] = "linear",
         head_hidden_dim: int = 512,
         enabled_layers: Optional[list] = None,
+        layer_dims: Optional[Dict[str, int]] = None,
         shared_head_backbone: bool = False,
         predict_text_clip: bool = False  # Phase 2: Text-CLIP prediction
     ):
         super().__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
-        self.enabled_layers = enabled_layers or ['layer_4', 'layer_8', 'layer_12', 'final']
+        self.enabled_layers = enabled_layers or ['layer_12', 'layer_18', 'final']
+        # Configurable output dimensions per layer (default: all 768 for ViT-L/14)
+        self.layer_dims = layer_dims or {
+            'layer_12': 768, 'layer_18': 768, 'final': 768
+        }
         self.shared_head_backbone = shared_head_backbone
         self.head_hidden_dim = head_hidden_dim
         self.predict_text_clip = predict_text_clip  # Phase 2
@@ -421,12 +426,9 @@ class MultiLayerTwoStageEncoder(nn.Module):
             # Lightweight per-layer projections
             self.heads = nn.ModuleDict()
             
-            for layer_name in ['layer_4', 'layer_8', 'layer_12']:
-                if layer_name in self.enabled_layers:
-                    self.heads[layer_name] = nn.Linear(head_hidden_dim, 768)
-            
-            if 'final' in self.enabled_layers:
-                self.heads['final'] = nn.Linear(head_hidden_dim, 512)
+            for layer_name in self.enabled_layers:
+                out_dim = self.layer_dims.get(layer_name, 768)
+                self.heads[layer_name] = nn.Linear(head_hidden_dim, out_dim)
             
             # Phase 2: Text-CLIP head (shares backbone)
             if predict_text_clip:
@@ -439,27 +441,18 @@ class MultiLayerTwoStageEncoder(nn.Module):
             self.head_backbone = None
             self.heads = nn.ModuleDict()
             
-            # ViT intermediate layer heads (768-D)
-            for layer_name in ['layer_4', 'layer_8', 'layer_12']:
-                if layer_name in self.enabled_layers:
-                    if head_type == "linear":
-                        self.heads[layer_name] = nn.Linear(latent_dim, 768)
-                    elif head_type == "mlp":
-                        self.heads[layer_name] = nn.Sequential(
-                            nn.Linear(latent_dim, head_hidden_dim),
-                            nn.GELU(),
-                            nn.Dropout(dropout * 0.7),
-                            nn.Linear(head_hidden_dim, 768)
-                        )
-            
-            # Final CLIP embedding head (512-D)
-            if 'final' in self.enabled_layers:
-                self.heads['final'] = CLIPMappingHead(
-                    latent_dim=latent_dim,
-                    head_type=head_type,
-                    hidden_dim=head_hidden_dim,
-                    dropout=dropout * 0.7
-                )
+            # Per-layer heads with configurable output dimensions
+            for layer_name in self.enabled_layers:
+                out_dim = self.layer_dims.get(layer_name, 768)
+                if head_type == "linear":
+                    self.heads[layer_name] = nn.Linear(latent_dim, out_dim)
+                elif head_type == "mlp":
+                    self.heads[layer_name] = nn.Sequential(
+                        nn.Linear(latent_dim, head_hidden_dim),
+                        nn.GELU(),
+                        nn.Dropout(dropout * 0.7),
+                        nn.Linear(head_hidden_dim, out_dim)
+                    )
             
             # Phase 2: Text-CLIP head (independent)
             if predict_text_clip:
@@ -515,101 +508,73 @@ class MultiLayerTwoStageEncoder(nn.Module):
         """
         Create a combined representation from all layers for InfoNCE contrastive learning.
         
-        Phase 3: Multi-layer InfoNCE combines information from all ViT layers
-        for a richer contrastive signal, rather than using only the final embedding.
-        
+        Dynamically handles whatever layers are present in the outputs.
+
         Args:
             layer_outputs: Dict of layer predictions from forward()
-                - layer_4, layer_8, layer_12: (B, 768) each
-                - final: (B, 512)
-            strategy: Combination strategy
-                - "weighted_pool": Weight by layer importances, project to 512-D
-                - "concat_project": Concatenate all, linear project to 512-D
-                - "average": Simple average of all layers projected to 512-D
+            strategy: "weighted_pool", "concat_project", or "average"
         
         Returns:
-            z_infonce: Combined representation (B, 512), L2-normalized
-        
-        Scientific Rationale:
-        - Multi-layer features capture different levels of abstraction
-        - Early layers (4/8): Low-level visual features (edges, textures)
-        - Mid layers (12): Mid-level semantic features (parts, patterns)
-        - Final: High-level semantic features (object categories)
-        - Combining all layers provides richer contrastive signal
-        
-        Expected Improvement: +2-3% from richer representation
+            z_infonce: Combined representation (B, D), L2-normalized
         """
-        batch_size = layer_outputs['final'].shape[0]
-        device = layer_outputs['final'].device
+        # Use 'final' as reference dimension
+        ref_layer = 'final' if 'final' in layer_outputs else list(layer_outputs.keys())[-1]
+        ref_dim = layer_outputs[ref_layer].shape[1]
+        batch_size = layer_outputs[ref_layer].shape[0]
+        device = layer_outputs[ref_layer].device
+        available_layers = list(layer_outputs.keys())
         
         if strategy == "weighted_pool":
-            # Project each layer to 512-D, then weighted average
-            # Use default layer weights as importances
-            layer_weights = {
-                'layer_4': 0.15,
-                'layer_8': 0.20,
-                'layer_12': 0.25,
-                'final': 0.40
-            }
+            # Project each layer to ref_dim, then uniform weighted average
+            n = len(available_layers)
+            weight = 1.0 / n
             
-            # Project 768-D layers to 512-D to match final
-            # We'll use simple linear projections (minimal params)
+            # Create projectors lazily for layers that don't match ref_dim
             if not hasattr(self, '_infonce_projectors'):
-                self._infonce_projectors = nn.ModuleDict({
-                    'layer_4': nn.Linear(768, 512, bias=False),
-                    'layer_8': nn.Linear(768, 512, bias=False),
-                    'layer_12': nn.Linear(768, 512, bias=False),
-                }).to(device)
+                self._infonce_projectors = nn.ModuleDict()
+            for ln in available_layers:
+                ld = layer_outputs[ln].shape[1]
+                if ld != ref_dim and ln not in self._infonce_projectors:
+                    self._infonce_projectors[ln] = nn.Linear(ld, ref_dim, bias=False).to(device)
             
-            # Weighted combination
-            z_combined = torch.zeros(batch_size, 512, device=device)
-            for layer_name in ['layer_4', 'layer_8', 'layer_12']:
-                if layer_name in layer_outputs:
-                    z_proj = self._infonce_projectors[layer_name](layer_outputs[layer_name])
-                    z_combined += layer_weights[layer_name] * z_proj
+            z_combined = torch.zeros(batch_size, ref_dim, device=device)
+            for ln in available_layers:
+                ld = layer_outputs[ln].shape[1]
+                if ld != ref_dim:
+                    z_proj = self._infonce_projectors[ln](layer_outputs[ln])
+                else:
+                    z_proj = layer_outputs[ln]
+                z_combined += weight * z_proj
             
-            # Add final layer (already 512-D)
-            z_combined += layer_weights['final'] * layer_outputs['final']
-            
-            # L2 normalize
             z_infonce = torch.nn.functional.normalize(z_combined, dim=-1)
             
         elif strategy == "concat_project":
-            # Concatenate all layers (768*3 + 512 = 2816-D) → project to 512-D
+            total_dim = sum(layer_outputs[ln].shape[1] for ln in available_layers)
             if not hasattr(self, '_infonce_concat_proj'):
-                total_dim = 768 * 3 + 512  # layer_4, layer_8, layer_12, final
-                self._infonce_concat_proj = nn.Linear(total_dim, 512, bias=False).to(device)
+                self._infonce_concat_proj = nn.Linear(total_dim, ref_dim, bias=False).to(device)
             
-            # Concatenate
-            z_concat = torch.cat([
-                layer_outputs['layer_4'],
-                layer_outputs['layer_8'],
-                layer_outputs['layer_12'],
-                layer_outputs['final']
-            ], dim=-1)  # (B, 2816)
-            
-            # Project and normalize
+            z_concat = torch.cat([layer_outputs[ln] for ln in available_layers], dim=-1)
             z_infonce = self._infonce_concat_proj(z_concat)
             z_infonce = torch.nn.functional.normalize(z_infonce, dim=-1)
             
         elif strategy == "average":
-            # Simple average: project all to 512-D, then mean
+            # Project all to ref_dim, then mean
             if not hasattr(self, '_infonce_projectors_avg'):
-                self._infonce_projectors_avg = nn.ModuleDict({
-                    'layer_4': nn.Linear(768, 512, bias=False),
-                    'layer_8': nn.Linear(768, 512, bias=False),
-                    'layer_12': nn.Linear(768, 512, bias=False),
-                }).to(device)
+                self._infonce_projectors_avg = nn.ModuleDict()
+            for ln in available_layers:
+                ld = layer_outputs[ln].shape[1]
+                if ld != ref_dim and ln not in self._infonce_projectors_avg:
+                    self._infonce_projectors_avg[ln] = nn.Linear(ld, ref_dim, bias=False).to(device)
             
             z_list = []
-            for layer_name in ['layer_4', 'layer_8', 'layer_12']:
-                if layer_name in layer_outputs:
-                    z_proj = self._infonce_projectors_avg[layer_name](layer_outputs[layer_name])
-                    z_list.append(z_proj)
-            z_list.append(layer_outputs['final'])
+            for ln in available_layers:
+                ld = layer_outputs[ln].shape[1]
+                if ld != ref_dim:
+                    z_list.append(self._infonce_projectors_avg[ln](layer_outputs[ln]))
+                else:
+                    z_list.append(layer_outputs[ln])
             
-            # Average
-            z_combined = torch.stack(z_list, dim=0).mean(dim=0)  # (B, 512)
+            z_combined = torch.stack(z_list, dim=0).mean(dim=0)
             z_infonce = torch.nn.functional.normalize(z_combined, dim=-1)
             
         else:
