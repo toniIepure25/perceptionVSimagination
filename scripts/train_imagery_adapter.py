@@ -537,7 +537,7 @@ def main():
     
     # Save last model
     from fmri2img.models.adapters import save_imagery_adapter
-    save_adapter(
+    save_imagery_adapter(
         adapter,
         str(output_dir / 'checkpoints' / 'adapter_last.pt'),
         meta={

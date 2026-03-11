@@ -57,9 +57,13 @@ def load_and_split(features_dir, clip_cache_path, index_root, subject, seed=42):
     Y = np.stack(Y_list).astype(np.float32)
 
     # Center features (removes PCA mean bias from soft-reliability weighting)
+    # Store both centered and raw versions — ridge models need raw features
+    # because they trained on uncentered data with fit_intercept=True
     feature_mean = X.mean(axis=0)
-    if np.linalg.norm(feature_mean) > 0.01:
-        logger.info(f"  Centering features (mean norm={np.linalg.norm(feature_mean):.4f})")
+    mean_norm = np.linalg.norm(feature_mean)
+    X_raw = X.copy()
+    if mean_norm > 0.01:
+        logger.info(f"  Centering features (mean norm={mean_norm:.4f})")
         X = X - feature_mean
 
     # Same split as training
@@ -70,7 +74,7 @@ def load_and_split(features_dir, clip_cache_path, index_root, subject, seed=42):
     n_val = int(n * 0.1)
     test_idx = perm[n_train + n_val:]
 
-    return X[test_idx], Y[test_idx], nsd_ids[test_idx]
+    return X[test_idx], Y[test_idx], nsd_ids[test_idx], X_raw[test_idx]
 
 
 def predict_with_model(model_type, checkpoint_path, X_test, device="cuda"):
@@ -194,8 +198,8 @@ def main():
         fd_path = Path(fd)
         config = fd_path.parent.name  # "baseline" or "novel"
         logger.info(f"Loading test data for config={config} from {fd}")
-        X_test, Y_test, nsd_ids = load_and_split(fd, args.clip_cache, args.index_root, args.subject)
-        test_data[config] = (X_test, Y_test, nsd_ids)
+        X_test, Y_test, nsd_ids, X_test_raw = load_and_split(fd, args.clip_cache, args.index_root, args.subject)
+        test_data[config] = (X_test, Y_test, nsd_ids, X_test_raw)
         logger.info(f"  {config}: {len(X_test)} test samples, X={X_test.shape}, Y={Y_test.shape}")
 
     # Discover all checkpoints
@@ -220,11 +224,15 @@ def main():
             logger.warning(f"  Skipping {config_name}: no test data for {feat_config}")
             continue
 
-        X_test, Y_test, nsd_ids = test_data[feat_config]
+        X_test, Y_test, nsd_ids, X_test_raw = test_data[feat_config]
+
+        # Ridge models trained on uncentered features with fit_intercept=True
+        # — they handle the mean internally, so use raw (uncentered) features
+        X_eval = X_test_raw if model_type == "ridge" else X_test
 
         logger.info(f"\nEvaluating: {config_name} ({model_type}) on {feat_config} features...")
         try:
-            Y_pred = predict_with_model(model_type, ckpt_path, X_test, args.device)
+            Y_pred = predict_with_model(model_type, ckpt_path, X_eval, args.device)
             metrics = compute_metrics(Y_pred, Y_test)
             metrics["config_name"] = config_name
             metrics["model_type"] = model_type
@@ -261,7 +269,7 @@ def main():
               f"{r['cosine_mean']:>8.4f} "
               f"{r.get('R@1', 0):>8.4f} {r.get('R@5', 0):>8.4f} "
               f"{r.get('R@10', 0):>8.4f} "
-              f"{r.get('median_rank', -1):>8.0f} {r.get('MRR', 0):>8.4f}")
+              f"{r.get('median_rank', -1):>8.0f} {r.get('mrr', 0):>8.4f}")
     print("=" * 110)
 
     # Save markdown table
@@ -275,7 +283,7 @@ def main():
                     f"| {r['cosine_mean']:.4f} "
                     f"| {r.get('R@1', 0):.4f} | {r.get('R@5', 0):.4f} "
                     f"| {r.get('R@10', 0):.4f} "
-                    f"| {r.get('median_rank', -1):.0f} | {r.get('MRR', 0):.4f} |\n")
+                    f"| {r.get('median_rank', -1):.0f} | {r.get('mrr', 0):.4f} |\n")
         f.write(f"\n_Generated {time.strftime('%Y-%m-%d %H:%M:%S')}_\n")
 
     logger.info(f"Markdown table: {md_path}")

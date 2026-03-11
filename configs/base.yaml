@@ -49,9 +49,9 @@ preprocessing:
 # CLIP Model Configuration
 # -----------------------------------------------------------------------------
 clip:
-  model_name: "ViT-B/32"            # CLIP architecture
+  model_name: "ViT-L/14"             # CLIP architecture
   pretrained: openai                # Pretrained weights source
-  embedding_dim: 512                # Output embedding dimension
+  embedding_dim: 768                # Output embedding dimension
   device: cuda                      # Device for CLIP model
   batch_size: 64                    # Batch size for CLIP encoding
   
@@ -61,7 +61,7 @@ clip:
     layer_4: 768                    # Dimension of layer 4
     layer_8: 768                    # Dimension of layer 8
     layer_12: 768                   # Dimension of layer 12
-    final: 512                      # Final embedding dimension
+    final: 768                      # Final embedding dimension
 
 # Training Configuration
 # -----------------------------------------------------------------------------

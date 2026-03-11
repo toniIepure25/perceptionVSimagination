@@ -19,6 +19,8 @@
 |----------|---------|
 | [PAPER_DRAFT_OUTLINE.md](research/PAPER_DRAFT_OUTLINE.md) | Paper structure: "The Semantic Skeleton of Imagination" |
 | [PERCEPTION_VS_IMAGERY_ROADMAP.md](research/PERCEPTION_VS_IMAGERY_ROADMAP.md) | Research plan with hypotheses H1--H3 |
+| [EXPERIMENT_RESULTS.md](research/EXPERIMENT_RESULTS.md) | Complete experiment results, architectures, and findings |
+| [EXPERIMENT_CONTEXT.md](research/EXPERIMENT_CONTEXT.md) | Living document: current state, known issues, session log |
 
 ## Architecture
 
