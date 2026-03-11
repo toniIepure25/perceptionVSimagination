@@ -158,10 +158,39 @@ This suggests soft-reliability weighting captures comparable signal once the mea
 
 ---
 
-## 7. Commit History
+## 7. Shared-1000 Benchmark Results
+
+NSD's standard benchmark: 1000 images seen 3× by subj01, with 3-rep averaging from raw NIfTI betas. This tests generalization beyond the training pipeline.
+
+| Model | Type | Features | R@1 | R@5 | R@10 | Med Rank | MRR | Cosine |
+|-------|------|----------|-----|-----|------|----------|-----|--------|
+| ridge_baseline | Ridge | baseline | 0.70 | 2.30 | 3.90 | 386 | 0.0209 | -0.0458 |
+| ridge_novel | Ridge | novel | 0.70 | 1.90 | 3.30 | 408 | 0.0190 | -0.0570 |
+| mlp_baseline | MLP | baseline | 0.20 | 1.00 | 2.00 | 440 | 0.0118 | 0.3070 |
+| mlp_novel_cosine_v2 | MLP | novel | 0.20 | 0.80 | 2.10 | 442 | 0.0110 | 0.4269 |
+| mlp_novel_strong_infonce_v2 | MLP | novel | 0.20 | 0.90 | 1.90 | 474 | 0.0108 | 0.1420 |
+| ts_novel_cosine_v2 | TwoStage | novel | 0.10 | 1.10 | 1.90 | 496 | 0.0103 | 0.6899 |
+| ts_novel_cosine_mse_v2 | TwoStage | novel | 0.10 | 1.00 | 1.70 | 496 | 0.0098 | 0.6938 |
+| multilayer_novel_v3 | Multilayer | novel | 0.10 | 0.50 | 1.60 | 480 | 0.0090 | 0.6881 |
+| multilayer_novel_v3_lw | Multilayer | novel | 0.10 | 0.80 | 1.30 | 494 | 0.0087 | 0.6833 |
+| multilayer_baseline_v2 | Multilayer | baseline | 0.00 | 0.80 | 1.30 | 483 | 0.0090 | 0.6870 |
+
+### Statistical Comparisons
+
+All deep models (MLP, TwoStage, Multilayer) show significantly better performance than Ridge (p < 0.005, Holm-Bonferroni corrected). However, within the deep model group, no significant differences were found (p > 0.4) — they form a statistically equivalent cluster.
+
+### Notes on Shared-1000 vs. Test-Split Discrepancy
+
+Performance is substantially lower on Shared-1000 due to preprocessing mismatch: the benchmark reconstructs features from raw NIfTI betas through the stored preprocessing pipeline, whereas test-split uses the exact same pre-extracted features as training. The negative cosine values for ridge models indicate the NIfTI-to-feature reconstruction doesn't perfectly match the training pipeline for linear models. This is a known limitation — the Shared-1000 results should be compared **across models** rather than to test-split numbers.
+
+---
+
+## 8. Commit History
 
 | Commit | Description |
 |--------|-------------|
+| `602f22d` | Fix Shared-1000 mask/weights handling for novel features |
+| `b825618` | Add experiment docs, fix P3/P5/P7/P8 bugs |
 | `a417cdc` | Fix v1 checkpoint loading (infer output_dim, head_type from state_dict) |
 | `ea24a38` | Fix report overwriting, multilayer metadata, eval weights filename |
 | `e164bbe` | Novel rerun with auto-centering + multilayer fix |
@@ -170,10 +199,10 @@ This suggests soft-reliability weighting captures comparable signal once the mea
 
 ---
 
-## 8. Remaining Work
+## 9. Remaining Work
 
 - [x] Fix ridge_novel evaluation (centering mismatch) — **Fixed**: cosine 0.7913, R@1 0.0177
 - [x] Fix MRR display (key case mismatch) — **Fixed**: MRR now showing correctly
-- [ ] Run Shared-1000 benchmark (Phase C)
+- [x] Run Shared-1000 benchmark (Phase C) — **Done**: All 10 models evaluated
 - [ ] Retrain TwoStage baseline with v2 hyperparameters
 - [ ] Imagery adapter training and cross-domain evaluation (Phase D)

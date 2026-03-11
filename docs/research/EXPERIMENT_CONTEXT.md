@@ -127,24 +127,23 @@ export VIRTUAL_ENV=/home/jovyan/local-data/venv
 ### P6: Shared-1000 Benchmark Not Run (High Priority)
 
 - **Symptom**: Phase C deliverable incomplete
-- **Cause**: Script exists (`eval_shared1000_benchmark.py`) but hasn't been executed yet
-- **Prerequisites**: All present (features, CLIP cache, checkpoints, beta-root path)
-- **Fix**: Run benchmark with `--beta-root /home/jovyan/work/data/nsd/nsddata_betas/ppdata/subj01/func1pt8mm/betas_fithrf_GLMdenoise_RR/`
-- **Status**: Ready to run
+- **Cause**: Script exists (`eval_shared1000_benchmark.py`) but hadn't been executed; also had 3D array indexing bugs
+- **Fix**: Rewrote `extract_shared1000_features()` to always use `reliability_mask.npy` for voxel selection (23097 voxels), with optional soft weights within mask. Fixed 3D→1D flattening for mask, scaler arrays.
+- **Status**: ✅ Resolved (commits 72e18ec, 063c33a, 602f22d). 10 models evaluated.
 
 ### P7: CLIP Dimension Mismatch in Configs (Low Priority)
 
 - **Symptom**: `base.yaml` says `model_name: "ViT-B/32"` and `embedding_dim: 512` but actual model used everywhere is ViT-L/14 (768-dim)
 - **Cause**: Config was set up early in the project before switching to ViT-L/14
 - **Fix**: Update `base.yaml` → `model_name: "ViT-L/14"`, `embedding_dim: 768`, `final: 768`
-- **Status**: Fix ready, pending deployment
+- **Status**: ✅ Resolved (commit b825618)
 
 ### P8: Imagery Adapter save_adapter NameError (High Priority)
 
 - **Symptom**: `train_imagery_adapter.py` line 540 would crash when saving final model
 - **Cause**: Calls `save_adapter()` but the imported function is `save_imagery_adapter()`
 - **Fix**: Change `save_adapter(` → `save_imagery_adapter(` on line 540
-- **Status**: Fix ready, pending deployment
+- **Status**: ✅ Resolved (commit b825618)
 
 ---
 
@@ -164,13 +163,14 @@ In MultiLayerTwoStageEncoder, learnable layer weights (softmax logits) interact 
 
 ## 6. Next Steps
 
-- [ ] **P3**: Deploy ridge centering fix → re-evaluate ridge_novel
-- [ ] **P5**: Deploy MRR key fix → re-run eval for correct MRR values
-- [ ] **P8**: Deploy imagery save fix
-- [ ] **P7**: Update config CLIP dimensions
-- [ ] **P6**: Run Shared-1000 benchmark (all working models)
+- [x] **P3**: Deploy ridge centering fix → re-evaluate ridge_novel ✅
+- [x] **P5**: Deploy MRR key fix → re-run eval for correct MRR values ✅
+- [x] **P8**: Deploy imagery save fix ✅
+- [x] **P7**: Update config CLIP dimensions ✅
+- [x] **P6**: Run Shared-1000 benchmark (10 models evaluated) ✅
 - [ ] **P1**: Retrain TwoStage baseline with v2 hyperparameters
 - [ ] **P2**: Retrain TwoStage strong_infonce with reduced weight
+- [ ] Investigate Shared-1000 preprocessing mismatch (negative cosine for ridge)
 - [ ] Begin imagery adapter experiments (Phase D)
 - [ ] Paper figures: bar charts comparing baseline vs. novel across architectures
 
@@ -205,7 +205,12 @@ In MultiLayerTwoStageEncoder, learnable layer weights (softmax logits) interact 
 - Best retrieval: mlp_novel_strong_infonce_v2 R@1=0.0573
 - Best cosine: ts_novel_cosine_mse_v2 cosine=0.8129
 
-### Session 5 — Documentation & Bug Fixes (Current)
+### Session 5 — Documentation, Bug Fixes & Shared-1000
 - Created EXPERIMENT_RESULTS.md and EXPERIMENT_CONTEXT.md
-- Fixing P3 (ridge centering), P5 (MRR key), P7 (config dim), P8 (imagery save)
-- Preparing Phase C (Shared-1000 benchmark)
+- Fixed P3 (ridge centering), P5 (MRR key), P7 (config dim), P8 (imagery save) — commit b825618
+- Ridge_novel corrected: cosine 0.7913, R@1 0.0177 (was -0.0036 / 0.0003)
+- Shared-1000 benchmark: 3 iterations fixing 3D array indexing in `extract_shared1000_features()`
+  - Root cause: must use `reliability_mask.npy` for voxel selection (23097), not `weights > 0` (268K for novel)
+- Shared-1000 results: Ridge R@1=0.70% best; deep models 0.10-0.20%; all much lower than test-split
+- Statistical finding: Ridge significantly outperforms NNs on Shared-1000 (opposite of test-split ranking)
+- Commits: b825618, 76a5294, 72e18ec, 063c33a, 602f22d
