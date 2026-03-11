@@ -764,7 +764,8 @@ def load_two_stage_encoder(
         n_blocks=meta.get("n_blocks", 4),
         dropout=meta.get("dropout", 0.3),
         head_type=meta.get("head_type", "linear"),
-        head_hidden_dim=meta.get("head_hidden_dim", 512)
+        head_hidden_dim=meta.get("head_hidden_dim", 512),
+        output_dim=meta.get("output_dim", 768)
     )
     
     model.load_state_dict(checkpoint["state_dict"], strict=True)
@@ -796,6 +797,10 @@ def load_multilayer_two_stage_encoder(
     meta = checkpoint.get("meta", {})
     
     # Reconstruct model from metadata
+    # Determine layer configuration from metadata or checkpoint keys
+    enabled_layers = meta.get("enabled_layers", ['layer_12', 'layer_18', 'final'])
+    layer_dims = meta.get("layer_dims", {l: 768 for l in enabled_layers})
+    
     model = MultiLayerTwoStageEncoder(
         input_dim=meta["input_dim"],
         latent_dim=meta.get("latent_dim", 512),
@@ -803,7 +808,9 @@ def load_multilayer_two_stage_encoder(
         dropout=meta.get("dropout", 0.3),
         head_type=meta.get("head_type", "linear"),
         head_hidden_dim=meta.get("head_hidden_dim", 512),
-        shared_head_backbone=meta.get("shared_head_backbone", False)
+        shared_head_backbone=meta.get("shared_head_backbone", False),
+        enabled_layers=enabled_layers,
+        layer_dims=layer_dims
     )
     
     # Load with strict=False to allow InfoNCE projectors (dynamically created during training)

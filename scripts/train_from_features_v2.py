@@ -269,7 +269,7 @@ def train_ridge(X_train, Y_train, X_val, Y_val, X_test, Y_test,
         "data": {"n_train": len(X_train), "n_val": len(X_val), "n_test": len(X_test)},
         "test_metrics": all_metrics,
     }
-    _write_report(report, report_dir, subject, "ridge_eval.json")
+    _write_report(report, report_dir, subject, "ridge_eval.json", config_name)
     return all_metrics
 
 
@@ -558,7 +558,7 @@ def train_two_stage(X_train, Y_train, X_val, Y_val, X_test, Y_test,
         "data": {"n_train": len(X_train), "n_val": len(X_val), "n_test": len(X_test)},
         "test_metrics": all_metrics,
     }
-    _write_report(report, report_dir, subject, "two_stage_eval.json")
+    _write_report(report, report_dir, subject, "two_stage_eval.json", config_name)
     return all_metrics
 
 
@@ -794,7 +794,9 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
         "n_blocks": n_blocks, "head_hidden_dim": head_hidden,
         "head_type": "mlp", "dropout": 0.3,
         "shared_head_backbone": True,
-        "enabled_layers": ['layer_4', 'layer_8', 'layer_12', 'final'],
+        "enabled_layers": layer_names,
+        "layer_dims": layer_dims,
+        "output_dim": layer_dims.get('final', 768),
         "best_epoch": best_epoch, "best_val_cosine": float(best_val_cosine),
         "n_params": n_params, "config_name": config_name, "subject": subject,
         "final_layer_weights": {k: float(v) for k, v in eff_w.items()},
@@ -814,7 +816,7 @@ def train_multilayer(X_train, Y_train_dict, X_val, Y_val_dict, X_test, Y_test_fi
         "data": {"n_train": len(X_train), "n_val": len(X_val), "n_test": len(X_test)},
         "test_metrics": all_metrics,
     }
-    _write_report(report, report_dir, subject, "multilayer_eval.json")
+    _write_report(report, report_dir, subject, "multilayer_eval.json", config_name)
     return all_metrics
 
 
@@ -836,8 +838,11 @@ def _predict_all(model, loader, device):
     return np.vstack(preds)
 
 
-def _write_report(report, report_dir, subject, filename):
-    """Write JSON report."""
+def _write_report(report, report_dir, subject, filename, config_name=""):
+    """Write JSON report. Uses config_name in filename to avoid overwriting."""
+    if config_name:
+        base, ext = filename.rsplit(".", 1)
+        filename = f"{base}_{config_name}.{ext}"
     rp = Path(report_dir) / subject / filename
     rp.parent.mkdir(parents=True, exist_ok=True)
     with open(rp, "w") as f:

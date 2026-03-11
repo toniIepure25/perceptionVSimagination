@@ -79,12 +79,17 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
     scaler_std = np.load(preproc / "scaler_std.npy")
 
     # Weights (hard binary or soft continuous)
-    if (preproc / "soft_weights.npy").exists():
+    if (preproc / "reliability_weights.npy").exists():
+        weights = np.load(preproc / "reliability_weights.npy")
+        logger.info(f"Using reliability weights: {(weights > 0).sum()} non-zero voxels")
+    elif (preproc / "soft_weights.npy").exists():
         weights = np.load(preproc / "soft_weights.npy")
         logger.info(f"Using soft weights: {(weights > 0).sum()} non-zero voxels")
+    elif (preproc / "reliability_mask.npy").exists():
+        weights = np.load(preproc / "reliability_mask.npy").astype(np.float32)
+        logger.info(f"Using reliability mask: {weights.sum():.0f} selected voxels")
     else:
-        weights = np.load(preproc / "weights.npy")
-        logger.info(f"Using hard weights: {weights.sum()} selected voxels")
+        raise FileNotFoundError(f"No weight file found in {preproc}. Expected reliability_weights.npy")
 
     mask = weights > 0
     n_features = pca_components.shape[0]
