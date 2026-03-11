@@ -338,7 +338,7 @@ def _generate_synthetic_multilayer(
     n_perc = bundle.perception.shape[0]
     n_imag = bundle.imagery.shape[0]
 
-    layer_dims = {"layer_4": 768, "layer_8": 768, "layer_12": 768, "final": 512}
+    layer_dims = {"layer_4": 768, "layer_8": 768, "layer_12": 768, "final": 768}
     # Signal strength gap increases with layer depth
     layer_gaps = {"layer_4": 0.05, "layer_8": 0.12, "layer_12": 0.22, "final": 0.30}
 

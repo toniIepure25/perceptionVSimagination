@@ -211,15 +211,15 @@ class MultiTargetDecoder(nn.Module):
         self.n_tokens = n_tokens
         self.predict_sd_latent = predict_sd_latent
         
-        # CLIP head (standard 512-D CLIP ViT-B/32)
+        # CLIP head (768-D CLIP ViT-L/14)
         if clip_head_type == "linear":
-            self.clip_head = nn.Linear(latent_dim, 512)
+            self.clip_head = nn.Linear(latent_dim, 768)
         elif clip_head_type == "mlp":
             self.clip_head = nn.Sequential(
-                nn.Linear(latent_dim, 512),
+                nn.Linear(latent_dim, 768),
                 nn.GELU(),
                 nn.Dropout(dropout),
-                nn.Linear(512, 512)
+                nn.Linear(768, 768)
             )
         else:
             raise ValueError(f"Unknown clip_head_type: {clip_head_type}")

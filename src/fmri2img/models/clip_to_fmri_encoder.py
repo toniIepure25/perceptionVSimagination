@@ -47,7 +47,8 @@ class CLIPToFMRIEncoder(nn.Module):
     
     Args:
         clip_dim: CLIP embedding dimension (default: 512)
-        fmri_dim: fMRI PCA dimension (default: 512)
+        clip_dim: CLIP embedding dimension (default: 768 for ViT-L/14)
+        fmri_dim: fMRI PCA dimension (default: 3072)
         architecture: "linear", "mlp", or "residual"
         hidden_dim: Hidden dimension for MLP/residual (default: 1024)
         n_layers: Number of layers for residual (default: 2)
@@ -55,7 +56,7 @@ class CLIPToFMRIEncoder(nn.Module):
     
     Example:
         >>> # Train CLIP→fMRI encoder
-        >>> encoder = CLIPToFMRIEncoder(clip_dim=512, fmri_dim=512)
+        >>> encoder = CLIPToFMRIEncoder(clip_dim=768, fmri_dim=3072)
         >>> 
         >>> # Training loop
         >>> for clip_emb, fmri_pca in dataloader:
@@ -71,8 +72,8 @@ class CLIPToFMRIEncoder(nn.Module):
     
     def __init__(
         self,
-        clip_dim: int = 512,
-        fmri_dim: int = 512,
+        clip_dim: int = 768,
+        fmri_dim: int = 3072,
         architecture: Literal["linear", "mlp", "residual"] = "mlp",
         hidden_dim: int = 1024,
         n_layers: int = 2,

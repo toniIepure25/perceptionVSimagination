@@ -34,7 +34,7 @@ dataset:
 # -----------------------------------------------------------------------------
 preprocessing:
   reliability_threshold: 0.1
-  pca_k: 512                        # Dimensionality after PCA
+  pca_k: 3072                       # Dimensionality after PCA
   use_roi: false
 
 # Ridge Regression Configuration

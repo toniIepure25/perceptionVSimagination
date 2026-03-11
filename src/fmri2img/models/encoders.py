@@ -178,7 +178,7 @@ class CLIPMappingHead(nn.Module):
         head_type: Literal["linear", "mlp"] = "linear",
         hidden_dim: int = 512,
         dropout: float = 0.2,
-        output_dim: int = 512
+        output_dim: int = 768
     ):
         super().__init__()
         self.latent_dim = latent_dim
@@ -256,7 +256,7 @@ class TwoStageEncoder(nn.Module):
         dropout: float = 0.3,
         head_type: Literal["linear", "mlp"] = "linear",
         head_hidden_dim: int = 512,
-        output_dim: int = 512
+        output_dim: int = 768
     ):
         super().__init__()
         self.input_dim = input_dim

@@ -38,7 +38,7 @@ class RealityDiscriminator(nn.Module):
     based on representational features.
     """
 
-    def __init__(self, embed_dim: int = 512, hidden_dim: int = 256, dropout: float = 0.3):
+    def __init__(self, embed_dim: int = 768, hidden_dim: int = 256, dropout: float = 0.3):
         super().__init__()
         self.net = nn.Sequential(
             nn.LayerNorm(embed_dim),
@@ -64,7 +64,7 @@ class RealityGenerator(nn.Module):
     "far from reality" each imagery trial is.
     """
 
-    def __init__(self, embed_dim: int = 512, hidden_dim: int = 256, dropout: float = 0.1):
+    def __init__(self, embed_dim: int = 768, hidden_dim: int = 256, dropout: float = 0.1):
         super().__init__()
         self.norm = nn.LayerNorm(embed_dim)
         self.fc1 = nn.Linear(embed_dim, hidden_dim)

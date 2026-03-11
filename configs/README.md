@@ -16,7 +16,7 @@ configs/
 │   ├── ridge_baseline.yaml      # Ridge regression (~5 min, CPU)
 │   ├── mlp_standard.yaml        # MLP encoder (~2 hrs, GPU)
 │   ├── two_stage_sota.yaml      # Two-Stage SOTA (~4 hrs, GPU)
-│   ├── adapter_vitl14.yaml      # CLIP 512→768 adapter (~30 min)
+│   ├── adapter_vitl14.yaml      # [DEPRECATED] CLIP 512→768 adapter
 │   ├── clip2fmri.yaml           # Inverse mapping (research)
 │   └── dev_fast.yaml            # Fast debugging (1K samples, 10 epochs)
 │
@@ -117,10 +117,10 @@ Two CLIP models are used in the pipeline:
 
 | Model | Dim | Config | Purpose |
 |-------|-----|--------|---------|
-| ViT-B/32 | 512 | `base.yaml` clip section | fMRI training target |
+| ViT-L/14 | 768 | `base.yaml` clip section | fMRI training target & CLIP cache |
 | ViT-L/14 | 768 | `clip.yaml` | CLIP cache, diffusion conditioning |
 
-The `adapter_vitl14.yaml` config trains a lightweight adapter bridging 512-D to 768-D.
+The `adapter_vitl14.yaml` config is **deprecated** — encoders now train directly against ViT-L/14.
 
 ---
 

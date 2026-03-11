@@ -25,7 +25,7 @@ class EmbeddingBundle:
     imagery: np.ndarray  # (N_i, D)
     perception_targets: np.ndarray  # (N_p, D) ground-truth CLIP
     imagery_targets: np.ndarray  # (N_i, D) ground-truth CLIP
-    embed_dim: int = 512
+    embed_dim: int = 768
     subject: str = "subj01"
 
     # Per-trial metadata
@@ -165,7 +165,7 @@ def collect_embeddings(
 def generate_synthetic_embeddings(
     n_perception: int = 500,
     n_imagery: int = 200,
-    embed_dim: int = 512,
+    embed_dim: int = 768,
     imagery_dim_fraction: float = 0.6,
     imagery_noise_scale: float = 0.3,
     seed: int = 42,

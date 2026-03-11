@@ -57,12 +57,12 @@ class ImageEncoder(nn.Module):
         self.freeze = freeze
         
         if backbone == "clip_vit_b32":
-            # Use CLIP ViT-B/32
+            # Use CLIP ViT-B/32 (legacy; project now uses ViT-L/14)
             try:
                 import open_clip
                 model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
                 self.backbone = model.visual
-                self.feature_dim = 768  # ViT-B/32 hidden dim
+                self.feature_dim = 768  # ViT-B/32 hidden dim (768 tokens, each 768-D)
                 self.preprocess = preprocess
             except ImportError:
                 raise ImportError("open_clip_torch required. Install: pip install open-clip-torch")
@@ -167,11 +167,11 @@ class EncodingModel(nn.Module):
     
     Example:
         >>> # Create encoding model
-        >>> model = EncodingModel(output_dim=512, backbone="clip_vit_b32")
+        >>> model = EncodingModel(output_dim=768, backbone="clip_vit_l14")
         >>> 
         >>> # Forward pass
         >>> img_tensor = preprocess_image(pil_image)
-        >>> pred_fmri = model(img_tensor.unsqueeze(0))  # (1, 512)
+        >>> pred_fmri = model(img_tensor.unsqueeze(0))  # (1, 768)
     """
     
     def __init__(

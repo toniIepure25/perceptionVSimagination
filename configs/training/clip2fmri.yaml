@@ -21,14 +21,14 @@ dataset:
 
 preprocessing:
   reliability_threshold: 0.1
-  pca_k: 512  # Must match fMRI→CLIP encoder
+  pca_k: 3072  # Must match fMRI→CLIP encoder
   use_roi: false
 
 # CLIP→fMRI Encoder Architecture
 encoder:
   type: "clip_to_fmri"
-  clip_dim: 512        # CLIP ViT-B/32 final embedding
-  fmri_dim: 512        # Must match PCA dimension
+  clip_dim: 768        # CLIP ViT-L/14 final embedding
+  fmri_dim: 3072       # Must match PCA dimension
   architecture: "mlp"  # Options: "linear", "mlp", "residual"
   hidden_dim: 1024     # For mlp/residual
   n_layers: 2          # For residual architecture

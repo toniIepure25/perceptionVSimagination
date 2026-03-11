@@ -47,7 +47,7 @@ dataset:
 # -----------------------------------------------------------------------------
 preprocessing:
   reliability_threshold: 0.1
-  pca_k: 512                        # Higher dimensionality for better signal
+  pca_k: 3072                       # Higher dimensionality for better signal
   use_roi: false
   scaler_type: standard
 
@@ -58,7 +58,7 @@ encoder:
   
   # Stage 1: fMRI → Latent Brain Representation
   stage1:
-    input_dim: 512                  # Will match pca_k
+    input_dim: 3072                 # Will match pca_k
     latent_dim: 768                 # Latent brain representation size
     n_blocks: 4                     # Number of residual blocks
     block_hidden_dim: 1024          # Hidden dimension within blocks
@@ -70,7 +70,7 @@ encoder:
   # Stage 2: Latent → CLIP Embedding
   stage2:
     input_dim: 768                  # Must match stage1.latent_dim
-    output_dim: 512                 # CLIP embedding dimension
+    output_dim: 768                 # CLIP embedding dimension
     head_type: mlp                  # Options: linear, mlp
     hidden_dim: 512                 # Hidden dimension for MLP head
     dropout: 0.2                    # Lower dropout for head

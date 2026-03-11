@@ -23,49 +23,49 @@ print("=" * 60)
 
 # Test 1: LinearAdapter
 print("\n1. Testing LinearAdapter...")
-adapter = LinearAdapter(embed_dim=512)
-x = torch.randn(4, 512)
+adapter = LinearAdapter(embed_dim=768)
+x = torch.randn(4, 768)
 y = adapter(x)
-assert y.shape == (4, 512), f"Expected shape (4, 512), got {y.shape}"
+assert y.shape == (4, 768), f"Expected shape (4, 768), got {y.shape}"
 assert torch.allclose(torch.norm(y, dim=1), torch.ones(4), atol=1e-5), "Output not normalized"
 print(f"   ✓ Forward pass: {x.shape} -> {y.shape}")
 print("   ✓ Output L2 normalized")
 
 # Test 2: MLPAdapter
 print("\n2. Testing MLPAdapter...")
-adapter2 = MLPAdapter(embed_dim=512, hidden_scale=2.0)
+adapter2 = MLPAdapter(embed_dim=768, hidden_scale=2.0)
 y2 = adapter2(x)
-assert y2.shape == (4, 512), f"Expected shape (4, 512), got {y2.shape}"
+assert y2.shape == (4, 768), f"Expected shape (4, 768), got {y2.shape}"
 assert torch.allclose(torch.norm(y2, dim=1), torch.ones(4), atol=1e-5), "Output not normalized"
 print(f"   ✓ Forward pass: {x.shape} -> {y2.shape}")
 print("   ✓ Output L2 normalized")
 
 # Test 3: ConditionEmbedding
 print("\n3. Testing ConditionEmbedding...")
-cond = ConditionEmbedding(embed_dim=512, n_conditions=2, mode='add')
+cond = ConditionEmbedding(embed_dim=768, n_conditions=2, mode='add')
 x_cond = cond(x, condition_idx=torch.tensor([0, 1, 0, 1]))
-assert x_cond.shape == (4, 512), f"Expected shape (4, 512), got {x_cond.shape}"
+assert x_cond.shape == (4, 768), f"Expected shape (4, 768), got {x_cond.shape}"
 print(f"   ✓ Additive conditioning: {x.shape} -> {x_cond.shape}")
 
-cond_film = ConditionEmbedding(embed_dim=512, n_conditions=2, mode='film')
+cond_film = ConditionEmbedding(embed_dim=768, n_conditions=2, mode='film')
 x_film = cond_film(x, condition_idx=torch.tensor([0, 1, 0, 1]))
-assert x_film.shape == (4, 512), f"Expected shape (4, 512), got {x_film.shape}"
+assert x_film.shape == (4, 768), f"Expected shape (4, 768), got {x_film.shape}"
 print(f"   ✓ FiLM conditioning: {x.shape} -> {x_film.shape}")
 
 # Test 4: create_adapter factory
 print("\n4. Testing create_adapter factory...")
-adapter_linear = create_adapter('linear', embed_dim=512)
+adapter_linear = create_adapter('linear', embed_dim=768)
 assert isinstance(adapter_linear, LinearAdapter), "Expected LinearAdapter"
 print("   ✓ Created LinearAdapter")
 
-adapter_mlp = create_adapter('mlp', embed_dim=512, hidden_scale=2.0)
+adapter_mlp = create_adapter('mlp', embed_dim=768, hidden_scale=2.0)
 assert isinstance(adapter_mlp, MLPAdapter), "Expected MLPAdapter"
 print("   ✓ Created MLPAdapter")
 
 # Test 5: Identity initialization check
 print("\n5. Testing identity initialization...")
-adapter_id = LinearAdapter(embed_dim=512)
-x_test = torch.randn(8, 512)
+adapter_id = LinearAdapter(embed_dim=768)
+x_test = torch.randn(8, 768)
 x_test_norm = torch.nn.functional.normalize(x_test, dim=1)
 y_test = adapter_id(x_test)
 # Should be very close to identity at initialization

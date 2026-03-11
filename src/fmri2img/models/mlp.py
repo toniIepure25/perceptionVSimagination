@@ -23,7 +23,7 @@ class MLPEncoder(nn.Module):
     Multilayer perceptron encoder for fMRI → CLIP embedding mapping.
     
     Architecture:
-        Linear(input_dim, hidden) → ReLU → Dropout → Linear(hidden, 512) → L2-normalize
+        Linear(input_dim, hidden) → ReLU → Dropout → Linear(hidden, 768) → L2-normalize
     
     Args:
         input_dim: Input feature dimensionality (after preprocessing)
@@ -31,7 +31,7 @@ class MLPEncoder(nn.Module):
         dropout: Dropout probability (default: 0.1)
     """
     
-    def __init__(self, input_dim: int, hidden: int = 1024, dropout: float = 0.1, output_dim: int = 512):
+    def __init__(self, input_dim: int, hidden: int = 1024, dropout: float = 0.1, output_dim: int = 768):
         super().__init__()
         self.input_dim = input_dim
         self.hidden = hidden
@@ -56,7 +56,7 @@ class MLPEncoder(nn.Module):
             x: Input features (B, input_dim)
         
         Returns:
-            z: L2-normalized CLIP embeddings (B, 512)
+            z: L2-normalized CLIP embeddings (B, 768)
         """
         z = self.net(x)  # (B, 512)
         z = torch.nn.functional.normalize(z, dim=-1)  # Unit sphere for cosine
@@ -117,8 +117,8 @@ def load_mlp(path: str, map_location: str = "cpu") -> Tuple[MLPEncoder, Dict]:
     
     # Reconstruct model from metadata
     # Infer output_dim from state dict if not in metadata (v1 checkpoints)
-    output_dim = meta.get("output_dim", 512)
-    if output_dim == 512 and "state_dict" in checkpoint:
+    output_dim = meta.get("output_dim", 768)
+    if output_dim in (512, 768) and "state_dict" in checkpoint:
         # Check actual weight shape
         last_weight_key = "net.3.weight"
         if last_weight_key in checkpoint["state_dict"]:

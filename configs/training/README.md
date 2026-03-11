@@ -24,7 +24,7 @@ Encoder training presets for fMRI-to-CLIP embedding prediction. All configs inhe
 1. **Ridge baseline** -- validates the data pipeline and establishes a lower bound.
 2. **MLP standard** -- confirms neural encoder improvement over linear.
 3. **Two-Stage SOTA** -- final results for the paper.
-4. **CLIP adapter** -- bridges ViT-B/32 (512-D) to ViT-L/14 (768-D) for diffusion generation.
+4. **CLIP adapter** -- [DEPRECATED] was used to bridge ViT-B/32 (512-D) to ViT-L/14 (768-D). Encoders now train directly against ViT-L/14.
 
 ```bash
 # Step 1

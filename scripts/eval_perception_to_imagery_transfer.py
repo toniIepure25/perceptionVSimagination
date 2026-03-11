@@ -60,9 +60,9 @@ def load_checkpoint_and_model(
         class DummyModel:
             def predict(self, X: np.ndarray) -> np.ndarray:
                 # Return random embeddings
-                return np.random.randn(len(X), 512).astype(np.float32)
+                return np.random.randn(len(X), 768).astype(np.float32)
         
-        return DummyModel(), {'model_type': 'dry_run', 'embedding_dim': 512}
+        return DummyModel(), {'model_type': 'dry_run', 'embedding_dim': 768}
     
     logger.info(f"Loading {model_type} model from {checkpoint_path}")
     
@@ -139,7 +139,7 @@ def load_adapter_model(
     adapter, adapter_meta = load_imagery_adapter(
         adapter_checkpoint,
         adapter_type=adapter_type,
-        embed_dim=512,
+        embed_dim=768,
         map_location=device
     )
     adapter = adapter.to(device)
@@ -210,8 +210,8 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
     except ImportError:
         raise ImportError("CLIP not installed. Run: pip install git+https://github.com/openai/CLIP.git")
     
-    # Load CLIP model
-    model, preprocess = clip.load("ViT-B/32", device=device)
+    # Load CLIP model (must match training target: ViT-L/14, 768-D)
+    model, preprocess = clip.load("ViT-L/14", device=device)
     model.eval()
     
     image_embs = []

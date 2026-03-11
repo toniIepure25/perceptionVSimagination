@@ -20,7 +20,9 @@ dependencies = [
     "h5py",
     "pyyaml",
     "matplotlib",
-    "seaborn"
+    "seaborn",
+    "scikit-learn",
+    "scipy",
 ]
 
 [project.optional-dependencies]

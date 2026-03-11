@@ -160,7 +160,7 @@ def compute_run_metrics(
     # Extract metadata (using flattened keys)
     run_name = guess_run_name(json_path)
     clip_space = data.get("clip_space", "unknown")
-    clip_dim = data.get("clip_dim", 512)
+    clip_dim = data.get("clip_dim", 768)
     use_adapter = data.get("use_adapter", False)
     model_id = data.get("model_id", "N/A")
     n_samples = data.get("n_samples", 0)

@@ -179,7 +179,7 @@ def encode_images_multilayer(
         model: CLIP model (must be ViT-based)
         preprocess: CLIP preprocessing function
         images: List of PIL Images
-        layers: Layer indices to extract (e.g., [4, 8, 12] for ViT-B/32)
+        layers: Layer indices to extract (e.g., [6, 12, 18, 24] for ViT-L/14)
         device: Device for computation
         normalize: If True, L2-normalize all embeddings
         
@@ -191,7 +191,8 @@ def encode_images_multilayer(
         - 'final': Final CLIP embeddings (after projection head)
         
     Note:
-        ViT-B/32 has 12 transformer blocks. Common choices:
+        ViT-B/32 has 12 transformer blocks, ViT-L/14 has 24. Common choices
+        for ViT-L/14:
         - Early: layer 4 (low-level features)
         - Middle: layer 8 (mid-level features)
         - Late: layer 12 (high-level features)

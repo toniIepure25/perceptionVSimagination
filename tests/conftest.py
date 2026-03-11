@@ -23,8 +23,8 @@ def sample_fmri():
 @pytest.fixture
 def sample_clip_embeddings():
     """Generate sample CLIP embeddings for testing."""
-    # 10 samples x 512 dimensions
-    embeddings = np.random.randn(10, 512).astype(np.float32)
+    # 10 samples x 768 dimensions (ViT-L/14)
+    embeddings = np.random.randn(10, 768).astype(np.float32)
     # L2 normalize
     embeddings = embeddings / (np.linalg.norm(embeddings, axis=1, keepdims=True) + 1e-8)
     return embeddings

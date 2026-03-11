@@ -18,7 +18,7 @@ import pandas as pd
 import pytest
 
 
-def create_dummy_base_model(input_dim=50, embed_dim=512):
+def create_dummy_base_model(input_dim=50, embed_dim=768):
     """Create a tiny dummy base model for testing."""
     class DummyBaseModel(nn.Module):
         def __init__(self, input_dim, embed_dim):
@@ -98,7 +98,7 @@ def save_dummy_checkpoint(checkpoint_path: Path, model: nn.Module, model_type='t
                 'model_type': 'two_stage',
                 'input_dim': 50,
                 'latent_dim': 64,
-                'embed_dim': 512,
+                'embed_dim': 768,
                 'n_blocks': 1,
                 'head_type': 'linear'
             }
@@ -124,26 +124,26 @@ def test_adapter_modules():
     )
     
     # Test LinearAdapter
-    linear_adapter = LinearAdapter(embed_dim=512, use_condition=False)
-    x = torch.randn(4, 512)
+    linear_adapter = LinearAdapter(embed_dim=768, use_condition=False)
+    x = torch.randn(4, 768)
     out = linear_adapter(x)
-    assert out.shape == (4, 512)
+    assert out.shape == (4, 768)
     assert torch.allclose(torch.norm(out, dim=-1), torch.ones(4), atol=1e-5)
     
     # Test MLPAdapter
-    mlp_adapter = MLPAdapter(embed_dim=512, use_condition=False)
+    mlp_adapter = MLPAdapter(embed_dim=768, use_condition=False)
     out = mlp_adapter(x)
-    assert out.shape == (4, 512)
+    assert out.shape == (4, 768)
     assert torch.allclose(torch.norm(out, dim=-1), torch.ones(4), atol=1e-5)
     
     # Test with condition embedding
-    cond_adapter = MLPAdapter(embed_dim=512, use_condition=True)
+    cond_adapter = MLPAdapter(embed_dim=768, use_condition=True)
     condition_idx = torch.tensor([0, 1, 0, 1])
     out = cond_adapter(x, condition_idx=condition_idx)
-    assert out.shape == (4, 512)
+    assert out.shape == (4, 768)
     
     # Test factory function
-    adapter = create_adapter('linear', embed_dim=512)
+    adapter = create_adapter('linear', embed_dim=768)
     assert isinstance(adapter, LinearAdapter)
     
     print("✓ Adapter module tests passed")
@@ -180,7 +180,7 @@ def test_training_pipeline_synthetic():
         
         # Create dummy base model and save checkpoint
         print("\nCreating dummy base model...")
-        base_model = create_dummy_base_model(input_dim=50, embed_dim=512)
+        base_model = create_dummy_base_model(input_dim=50, embed_dim=768)
         checkpoint_path = tmpdir / 'checkpoint.pt'
         save_dummy_checkpoint(checkpoint_path, base_model, model_type='mlp')
         print("✓ Dummy checkpoint saved")

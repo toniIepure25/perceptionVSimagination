@@ -3,12 +3,12 @@
 CLIP Adapter Training Script
 ============================
 
-Train a lightweight adapter to map 512-D CLIP embeddings (ViT-B/32) to the
-target dimension required by diffusion models (768-D for SD-1.5, 1024-D for SD-2.1).
+Train a lightweight adapter to map 768-D CLIP embeddings (ViT-L/14) to the
+target dimension required by diffusion models (1024-D for SD-2.1).
 
 Pipeline:
 1. Load canonical index and split train/val/test (matches encoder training)
-2. Load ground-truth ViT-B/32 CLIP embeddings (512-D) from cache
+2. Load ground-truth ViT-L/14 CLIP embeddings (768-D) from cache
 3. Compute target CLIP embeddings from diffusion model's CLIP encoder
 4. Train linear adapter with MSE + cosine loss
 5. Early stopping on validation cosine similarity
@@ -16,7 +16,7 @@ Pipeline:
 7. Evaluate on test set and save checkpoint + report
 
 Scientific Design:
-- Reduces representation gap between encoder output (512-D) and diffusion conditioning
+- Reduces representation gap between encoder output (768-D) and diffusion conditioning
 - Target embeddings are from the diffusion model's own CLIP (e.g., OpenCLIP ViT-H/14)
 - Trained with combined MSE+cosine loss for both magnitude and angular alignment
 - L2-normalized outputs preserve cosine similarity metric in target CLIP space
@@ -416,7 +416,7 @@ def main():
                        help="NSD index root directory")
     parser.add_argument("--subject", default="subj01", help="Subject ID")
     parser.add_argument("--clip-cache", required=True,
-                       help="Path to ViT-B/32 CLIP cache (512-D)")
+                       help="Path to ViT-L/14 CLIP cache (768-D)")
     
     # Model
     parser.add_argument("--model-id", default="stabilityai/stable-diffusion-2-1",
@@ -491,11 +491,11 @@ def main():
             random_seed=splits_config.get("random_seed", 42)
         )
         
-        # Load source CLIP cache (512-D ViT-B/32)
+        # Load source CLIP cache (768-D ViT-L/14)
         logger.info(f"Loading source CLIP cache from {args.clip_cache}")
         clip_cache = CLIPCache(args.clip_cache).load()
         stats = clip_cache.stats()
-        logger.info(f"✅ Source CLIP cache: {stats['cache_size']} embeddings (512-D)")
+        logger.info(f"✅ Source CLIP cache: {stats['cache_size']} embeddings (768-D)")
         
         # Setup S3 filesystem for image loading
         s3_fs = get_s3_filesystem()
@@ -710,7 +710,7 @@ def main():
         metadata = {
             "subject": args.subject,
             "model_id": args.model_id,
-            "input_dim": 512,          # fMRI→CLIP predicted dim (ViT-B/32)
+            "input_dim": 768,          # fMRI→CLIP predicted dim (ViT-L/14)
             "target_dim": target_dim,  # CLIP dim expected by diffusion model
             "created_at": datetime.now().isoformat(),
             "repo_version": repo_version,

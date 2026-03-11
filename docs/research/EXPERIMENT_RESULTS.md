@@ -42,7 +42,7 @@ Four encoder architectures trained with configurable multi-objective losses:
 ### 2.4 Evaluation
 
 - **Test-split retrieval**: R@1, R@5, R@10, Median Rank, MRR on held-out 3K samples
-- **Shared-1000 benchmark**: NSD's 1000 images seen 3× by each subject, with 3-rep averaging and statistical testing (Phase C, pending)
+- **Shared-1000 benchmark**: NSD's 1000 images seen 3× by each subject, with 3-rep averaging and statistical testing (Phase C, completed — see Section 7)
 
 ---
 

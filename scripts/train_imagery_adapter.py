@@ -103,7 +103,7 @@ def compute_clip_targets(
     Compute CLIP embeddings for target images/texts.
     
     Returns:
-        (targets, valid_indices) - targets is (N, 512), valid_indices maps to dataset
+        (targets, valid_indices) - targets is (N, 768), valid_indices maps to dataset
     """
     if cache_path is not None and cache_path.exists() and not force_recompute:
         logger.info(f"Loading cached CLIP targets from {cache_path}")
@@ -117,8 +117,8 @@ def compute_clip_targets(
     except ImportError:
         raise ImportError("CLIP not installed. Run: pip install git+https://github.com/openai/CLIP.git")
     
-    # Load CLIP model
-    clip_model, preprocess = clip.load("ViT-B/32", device=device)
+    # Load CLIP model (must match training target: ViT-L/14, 768-D)
+    clip_model, preprocess = clip.load("ViT-L/14", device=device)
     clip_model.eval()
     
     targets = []
@@ -425,19 +425,23 @@ def main():
         cache_path=cache_dir / f'val_{args.split_val}.pt'
     )
     
-    # Collect voxel data
+    # Collect voxel data (materialize datasets once to avoid O(N²) re-iteration)
     logger.info("Loading voxel data...")
+    train_samples = list(train_dataset)
     train_voxels = []
     for idx in tqdm(train_valid_idx, desc="Loading train voxels"):
-        sample = list(train_dataset)[idx]
+        sample = train_samples[idx]
         train_voxels.append(torch.from_numpy(sample['voxels']).float())
     train_voxels = torch.stack(train_voxels)
+    del train_samples
     
+    val_samples = list(val_dataset)
     val_voxels = []
     for idx in tqdm(val_valid_idx, desc="Loading val voxels"):
-        sample = list(val_dataset)[idx]
+        sample = val_samples[idx]
         val_voxels.append(torch.from_numpy(sample['voxels']).float())
     val_voxels = torch.stack(val_voxels)
+    del val_samples
     
     logger.info(f"✓ Train voxels: {train_voxels.shape}")
     logger.info(f"✓ Val voxels: {val_voxels.shape}")
@@ -448,7 +452,7 @@ def main():
     
     adapter = create_adapter(
         adapter_type=args.adapter,
-        embed_dim=512,
+        embed_dim=768,
         use_condition=args.condition_token,
         condition_mode='add'
     ).to(args.device)
@@ -520,7 +524,7 @@ def main():
                 meta={
                     'adapter_type': args.adapter,
                     'use_condition': args.condition_token,
-                    'embed_dim': 512,
+                    'embed_dim': 768,
                     'epoch': epoch,
                     'val_cosine': best_val_cosine,
                     'train_args': vars(args)
@@ -543,7 +547,7 @@ def main():
         meta={
             'adapter_type': args.adapter,
             'use_condition': args.condition_token,
-            'embed_dim': 512,
+            'embed_dim': 768,
             'epoch': epoch,
             'train_args': vars(args)
         }

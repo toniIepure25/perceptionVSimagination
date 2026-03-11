@@ -5,15 +5,13 @@
 # Authoritative config for CLIP embedding extraction.
 # Used by clip_utils.py and build_clip_cache.py.
 #
-# Note: The fMRI encoders train against ViT-B/32 (512-D) targets defined in
-# base.yaml. This config defines the higher-quality ViT-L/14 (768-D) model
-# used for building the CLIP cache and for diffusion conditioning.
-# The adapter_vitl14.yaml bridges the 512→768 dimension gap.
+# The fMRI encoders train against ViT-L/14 (768-D) targets defined in
+# base.yaml. This is the same model used for the CLIP cache.
 #
 # Supported models:
-#   ViT-B/32  — 512-D, fastest, used as fMRI training target
+#   ViT-B/32  — 512-D, fastest (legacy, no longer used)
 #   ViT-B/16  — 512-D, better quality
-#   ViT-L/14  — 768-D, high quality (default here)
+#   ViT-L/14  — 768-D, high quality (default, used as fMRI training target)
 #   ViT-L/14@336px — 768-D, highest quality
 # =============================================================================
 

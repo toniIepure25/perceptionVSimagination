@@ -236,7 +236,7 @@ def compute_retrieval_metrics(Y_pred, Y_gt, ks=(1, 5, 10, 20, 50)):
 
     metrics["mean_rank"] = float(true_ranks.mean())
     metrics["median_rank"] = float(np.median(true_ranks))
-    metrics["MRR"] = float((1.0 / (true_ranks + 1)).mean())
+    metrics["mrr"] = float((1.0 / (true_ranks + 1)).mean())
 
     # Per-sample cosine similarity (diagonal)
     diag_cos = np.diag(sim)
@@ -474,7 +474,7 @@ def main():
             f.write(f"| {r['model_name']} | {r['model_type']} | {r['feature_config']} "
                     f"| {r.get('R@1', 0):.2f} | {r.get('R@5', 0):.2f} | {r.get('R@10', 0):.2f} "
                     f"| {r.get('R@20', 0):.2f} | {r.get('median_rank', -1):.0f} "
-                    f"| {r.get('MRR', 0):.4f} | {r.get('cosine_mean', 0):.4f} |\n")
+                    f"| {r.get('mrr', 0):.4f} | {r.get('cosine_mean', 0):.4f} |\n")
 
         if comparisons:
             f.write("\n## Statistical Comparisons\n\n")
@@ -497,7 +497,7 @@ def main():
     for r in sorted(results_for_table, key=lambda x: -x.get("R@1", 0)):
         print(f"{r['model_name']:<30s} {r['model_type']:<12s} {r['feature_config']:<10s} "
               f"{r.get('R@1', 0):>7.2f} {r.get('R@5', 0):>7.2f} {r.get('R@10', 0):>7.2f} "
-              f"{r.get('median_rank', -1):>8.0f} {r.get('MRR', 0):>8.4f} {r.get('cosine_mean', 0):>8.4f}")
+              f"{r.get('median_rank', -1):>8.0f} {r.get('mrr', 0):>8.4f} {r.get('cosine_mean', 0):>8.4f}")
     print("=" * 120)
 
     return 0

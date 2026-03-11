@@ -34,15 +34,15 @@ dataset:
 # -----------------------------------------------------------------------------
 preprocessing:
   reliability_threshold: 0.1
-  pca_k: 512                        # Input dimensionality
+  pca_k: 3072                       # Input dimensionality
 
 # MLP Architecture
 # -----------------------------------------------------------------------------
 mlp:
   # Architecture
-  input_dim: 512                    # Will match pca_k
+  input_dim: 3072                   # Will match pca_k
   hidden_dims: [2048, 1024]         # Hidden layer dimensions
-  output_dim: 512                   # CLIP embedding dimension
+  output_dim: 768                   # CLIP embedding dimension
   
   # Regularization
   dropout: 0.2                      # Dropout rate

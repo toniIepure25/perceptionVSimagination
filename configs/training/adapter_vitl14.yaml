@@ -1,22 +1,16 @@
 # =============================================================================
-# CLIP Adapter Training Configuration
+# CLIP Adapter Training Configuration  [DEPRECATED]
 # =============================================================================
 #
-# Train adapter network to map from 512D CLIP to 768D/1024D target space.
-# This enables using larger CLIP models while keeping the encoder compact.
+# NOTE: This config is DEPRECATED. Since commit b825618, fMRI encoders train
+# directly against ViT-L/14 (768-D), so the ViT-B/32→ViT-L/14 adapter is
+# no longer needed. Kept for historical reference.
 #
-# Use Cases:
+# Original purpose:
 # - Map ViT-B/32 (512D) predictions to ViT-L/14 (768D) space
 # - Map to OpenCLIP ViT-H/14 (1024D) for better generation quality
 #
-# Expected Performance:
-# - Quick training: ~30 minutes
-# - Preserves ~95% of similarity scores
-# - Improves diffusion generation quality significantly
-#
-# Usage:
-#   python -m fmri2img.training.train_clip_adapter \
-#       --config configs/adapter_vitl14.yaml
+# If you need a 768D→1024D adapter for SD-2.1, create a new config.
 # =============================================================================
 
 # Inherit from base configuration

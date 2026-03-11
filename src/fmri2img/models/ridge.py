@@ -49,7 +49,7 @@ class RidgeEncoder:
         alpha: L2 regularization strength (higher = more regularization)
         model: sklearn Ridge regressor
         input_dim: Input feature dimension (set during fit)
-        output_dim: Output dimension (always 512 for CLIP ViT-B/32)
+        output_dim: Output dimension (768 for CLIP ViT-L/14)
     """
     
     def __init__(self, alpha: float = 1.0):

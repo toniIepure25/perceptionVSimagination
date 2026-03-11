@@ -486,9 +486,9 @@ Image (224×224×3) → CLIP Vision Encoder → Embedding (512D)
                nn.Linear(4096, 2048),
                nn.ReLU(),
                nn.Dropout(0.5),
-               nn.Linear(2048, 512)
+               nn.Linear(2048, 768)
            )
-           self.clip_model, _ = clip.load("ViT-B/32")
+           self.clip_model, _ = clip.load("ViT-L/14")
 
        def forward(self, fmri, images):
            fmri_features = self.fmri_encoder(fmri.flatten(1))

@@ -385,9 +385,9 @@ echo "✅ Index created with ${INDEX_ROWS} rows"
 echo "[$(date '+%H:%M:%S')] Index built: ${INDEX_ROWS} samples" | tee -a "${MASTER_LOG}"
 
 # ==============================================================================
-# STEP 2: Build CLIP Cache (512-D)
+# STEP 2: Build CLIP Cache (768-D)
 # ==============================================================================
-print_header "STEP 2/8: Building CLIP Cache (512-D ViT-B/32)"
+print_header "STEP 2/8: Building CLIP Cache (768-D ViT-L/14)"
 
 mkdir -p "${CACHE_DIR}"
 mkdir -p "${LOG_DIR}/clip_cache"

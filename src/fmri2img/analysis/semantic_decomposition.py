@@ -71,7 +71,7 @@ def compute_concept_axes(
     clip_model=None,
     preprocess=None,
     device: str = "cpu",
-    embed_dim: int = 512,
+    embed_dim: int = 768,
 ) -> np.ndarray:
     """
     Compute CLIP text embeddings for concept descriptions.
@@ -86,7 +86,7 @@ def compute_concept_axes(
     import torch
 
     if clip_model is None:
-        clip_model, preprocess = clip_module.load("ViT-B/32", device=device)
+        clip_model, preprocess = clip_module.load("ViT-L/14", device=device)
         clip_model.eval()
 
     embeddings = []

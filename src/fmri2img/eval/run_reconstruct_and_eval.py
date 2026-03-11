@@ -4,7 +4,7 @@ Orchestrator: Generate reconstructions + evaluate in correct CLIP space.
 
 This script combines decode_diffusion.py and eval_reconstruction.py into a single
 workflow that ensures evaluation is performed in the same CLIP space as generation:
-- No adapter → 512-D evaluation (ViT-B/32)
+- No adapter → 768-D evaluation (ViT-L/14)
 - With adapter → 768/1024-D evaluation (target CLIP)
 
 Outputs:
@@ -394,15 +394,15 @@ def create_markdown_summary(
         f.write("\n")
         f.write(f"- **Model ID:** `{model_id or 'N/A (default)'}`\n")
         f.write(f"- **CLIP Space:** **{clip_dim}-D** ")
-        f.write(f"({'ViT-B/32' if clip_dim == 512 else 'target CLIP'})\n")
+        f.write(f"({'ViT-L/14' if clip_dim == 768 else 'target CLIP'})\n")
         f.write(f"- **Test Samples:** {results.get('n_samples', 'N/A')} / {results.get('n_test_total', 'N/A')}\n")
         f.write(f"- **Output Directory:** `{recon_dir}`\n\n")
         
         # Important note
         f.write("---\n\n")
         f.write("**Note:** Evaluated in **")
-        if clip_dim == 512:
-            f.write("512-D CLIP space (ViT-B/32)")
+        if clip_dim == 768:
+            f.write("768-D CLIP space (ViT-L/14)")
         elif clip_dim == 768:
             f.write("768-D CLIP space (target for SD-1.5)")
         elif clip_dim == 1024:
@@ -753,7 +753,7 @@ def main():
             return 1
     
     # Determine CLIP dimension for evaluation
-    clip_dim = clip_target_dim if args.use_adapter else 512
+    clip_dim = clip_target_dim if args.use_adapter else 768
     
     # Determine galleries to evaluate
     if args.all_galleries:
@@ -839,7 +839,7 @@ def main():
         print(f"    Model ID:      {args.model_id}")
         print(f"    Target Dim:    {clip_target_dim}D")
     print()
-    print(f"  CLIP Space:      {clip_dim}D ({('ViT-B/32' if clip_dim == 512 else f'{clip_target_dim}D target')})")
+    print(f"  CLIP Space:      {clip_dim}D ({('ViT-L/14' if clip_dim == 768 else f'{clip_target_dim}D target')})")
     print(f"  Galleries:       {', '.join(galleries)}")
     print(f"  Image Source:    {args.image_source}")
     if args.nsd_hdf5:
@@ -988,7 +988,7 @@ def main():
         print("=" * 80)
     else:
         print("🔍 " + "=" * 76)
-        print(f"   NOTE: Evaluation performed in 512D CLIP space (ViT-B/32)")
+        print(f"   NOTE: Evaluation performed in 768D CLIP space (ViT-L/14)")
         print(f"         (no adapter used)")
         print("=" * 80)
     print()

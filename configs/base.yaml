@@ -30,7 +30,7 @@ dataset:
 # -----------------------------------------------------------------------------
 preprocessing:
   reliability_threshold: 0.1         # Minimum voxel reliability score
-  pca_k: 512                        # PCA components for dimensionality reduction
+  pca_k: 3072                       # PCA components for dimensionality reduction
   use_roi: false                    # Use ROI-based selection
   scaler_type: standard             # Options: standard, robust, minmax
   

@@ -2,8 +2,12 @@
 CLIP Adapter for Dimension Alignment
 =====================================
 
-Lightweight trainable adapter to map 512-D CLIP embeddings (ViT-B/32) to higher
-dimensions required by diffusion models (768-D for SD-1.5, 1024-D for SD-2.1).
+Lightweight trainable adapter to map 768-D CLIP embeddings (ViT-L/14) to higher
+dimensions required by diffusion models (1024-D for SD-2.1).
+
+Note: Since fMRI encoders now train directly against ViT-L/14 (768-D), this
+adapter is only needed when targeting diffusion models with different CLIP
+dimensions (e.g., SD-2.1 uses 1024-D).
 
 Scientific Design:
 - Linear projection with optional LayerNorm for stable training
@@ -13,14 +17,14 @@ Scientific Design:
 
 Usage:
     # Training
-    adapter = CLIPAdapter(in_dim=512, out_dim=1024, use_layernorm=True)
-    pred_512d = encoder(fmri)
+    adapter = CLIPAdapter(in_dim=768, out_dim=1024, use_layernorm=True)
+    pred_768d = encoder(fmri)
     target_1024d = diffusion_clip(images)
-    loss = mse_loss(adapter(pred_512d), target_1024d)
+    loss = mse_loss(adapter(pred_768d), target_1024d)
     
     # Inference
     adapter.load(checkpoint_path)
-    adapted_emb = adapter(pred_512d)
+    adapted_emb = adapter(pred_768d)
     images = diffusion_pipeline(adapted_emb)
 """
 
@@ -35,21 +39,21 @@ class CLIPAdapter(nn.Module):
     """
     Lightweight adapter for CLIP embedding dimension alignment.
     
-    Maps 512-D embeddings (ViT-B/32) to target dimension (768/1024) for diffusion
+    Maps 768-D embeddings (ViT-L/14) to target dimension (1024) for diffusion
     model compatibility. Preserves angular relationships in CLIP space.
     
     Architecture:
         Linear(in_dim, out_dim) → [LayerNorm(out_dim)] → L2-normalize
     
     Args:
-        in_dim: Input dimension (default: 512, ViT-B/32)
-        out_dim: Output dimension (768 for SD-1.5, 1024 for SD-2.1)
+        in_dim: Input dimension (default: 768, ViT-L/14)
+        out_dim: Output dimension (1024 for SD-2.1)
         use_layernorm: Apply LayerNorm before normalization (default: True)
     """
     
     def __init__(
         self,
-        in_dim: int = 512,
+        in_dim: int = 768,
         out_dim: int = 1024,
         use_layernorm: bool = True
     ):

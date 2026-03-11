@@ -22,7 +22,7 @@ dataset:
 
 # Preprocessing — use all available RAM
 preprocessing:
-  pca_k: 512                        # Standard: 512-D (can go higher if needed)
+  pca_k: 3072                       # Match actual pipeline (3072-D PCA features)
 
 # CLIP — large batch for fast cache building
 clip:
