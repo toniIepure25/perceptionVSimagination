@@ -116,10 +116,19 @@ def load_mlp(path: str, map_location: str = "cpu") -> Tuple[MLPEncoder, Dict]:
     meta = checkpoint.get("meta", {})
     
     # Reconstruct model from metadata
+    # Infer output_dim from state dict if not in metadata (v1 checkpoints)
+    output_dim = meta.get("output_dim", 512)
+    if output_dim == 512 and "state_dict" in checkpoint:
+        # Check actual weight shape
+        last_weight_key = "net.3.weight"
+        if last_weight_key in checkpoint["state_dict"]:
+            output_dim = checkpoint["state_dict"][last_weight_key].shape[0]
+    
     model = MLPEncoder(
         input_dim=meta["input_dim"],
         hidden=meta.get("hidden", 1024),
-        dropout=meta.get("dropout", 0.1)
+        dropout=meta.get("dropout", 0.1),
+        output_dim=output_dim
     )
     
     model.load_state_dict(checkpoint["state_dict"], strict=True)

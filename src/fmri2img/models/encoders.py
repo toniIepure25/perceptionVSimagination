@@ -758,14 +758,30 @@ def load_two_stage_encoder(
     meta = checkpoint.get("meta", {})
     
     # Reconstruct model from metadata
+    # Infer head_type from state dict if not in metadata (v1 checkpoints)
+    head_type = meta.get("head_type", "linear")
+    if head_type == "linear" and "state_dict" in checkpoint:
+        # MLP head has "stage2.head.0.weight", linear has "stage2.head.weight"
+        if "stage2.head.0.weight" in checkpoint["state_dict"]:
+            head_type = "mlp"
+    
+    # Infer output_dim from state dict
+    output_dim = meta.get("output_dim", 768)
+    if "state_dict" in checkpoint:
+        # Find last weight in stage2
+        for key in ["stage2.head.3.weight", "stage2.head.weight"]:
+            if key in checkpoint["state_dict"]:
+                output_dim = checkpoint["state_dict"][key].shape[0]
+                break
+    
     model = TwoStageEncoder(
         input_dim=meta["input_dim"],
         latent_dim=meta.get("latent_dim", 512),
         n_blocks=meta.get("n_blocks", 4),
         dropout=meta.get("dropout", 0.3),
-        head_type=meta.get("head_type", "linear"),
-        head_hidden_dim=meta.get("head_hidden_dim", 512),
-        output_dim=meta.get("output_dim", 768)
+        head_type=head_type,
+        head_hidden_dim=meta.get("head_hidden_dim", meta.get("head_hidden", 512)),
+        output_dim=output_dim
     )
     
     model.load_state_dict(checkpoint["state_dict"], strict=True)
