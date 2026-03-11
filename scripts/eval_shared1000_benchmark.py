@@ -95,6 +95,10 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
     # Flatten mask and weights for indexing into flattened volumes
     mask_flat = mask.flatten()
     weights_flat = weights.flatten()
+    # Scaler mean/std are in full brain space — extract masked voxels
+    scaler_mean_masked = scaler_mean.flatten()[mask_flat]
+    scaler_std_masked = scaler_std.flatten()[mask_flat]
+    weights_masked = weights_flat[mask_flat]
     n_features = pca_components.shape[0]
     n_images, n_reps = trials.shape
 
@@ -141,15 +145,14 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
 
             # Apply mask/weights
             v = flat[mask_flat]
-            if weights_flat[mask_flat].max() <= 1.0 and weights_flat[mask_flat].min() >= 0.0:
+            if weights_masked.max() <= 1.0 and weights_masked.min() >= 0.0:
                 # Soft weights
-                v = v * weights_flat[mask_flat]
+                v = v * weights_masked
 
-            # Z-score
-            std = scaler_std[scaler_std > 0]  # avoid div by zero
-            v_z = np.zeros_like(scaler_mean)
-            valid = scaler_std > 0
-            v_z[valid] = (v[valid] - scaler_mean[valid]) / scaler_std[valid]
+            # Z-score using pre-computed scaler (already masked)
+            v_z = np.zeros_like(scaler_mean_masked)
+            valid = scaler_std_masked > 0
+            v_z[valid] = (v[valid] - scaler_mean_masked[valid]) / scaler_std_masked[valid]
 
             # PCA
             feat = (v_z - pca_mean) @ pca_components.T
