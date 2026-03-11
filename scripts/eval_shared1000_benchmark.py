@@ -79,30 +79,34 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
     scaler_std = np.load(preproc / "scaler_std.npy")
 
     # Weights (hard binary or soft continuous)
-    if (preproc / "reliability_weights.npy").exists():
-        weights = np.load(preproc / "reliability_weights.npy")
-        logger.info(f"Using reliability weights: {(weights > 0).sum()} non-zero voxels")
-    elif (preproc / "soft_weights.npy").exists():
-        weights = np.load(preproc / "soft_weights.npy")
-        logger.info(f"Using soft weights: {(weights > 0).sum()} non-zero voxels")
-    elif (preproc / "reliability_mask.npy").exists():
-        weights = np.load(preproc / "reliability_mask.npy").astype(np.float32)
-        logger.info(f"Using reliability mask: {weights.sum():.0f} selected voxels")
+    # Always use reliability_mask for voxel selection (matches PCA dimensionality)
+    # Use reliability_weights for optional soft weighting within the mask
+    if (preproc / "reliability_mask.npy").exists():
+        mask = np.load(preproc / "reliability_mask.npy")
+        logger.info(f"Using reliability mask: {mask.sum()} selected voxels")
     else:
-        raise FileNotFoundError(f"No weight file found in {preproc}. Expected reliability_weights.npy")
+        raise FileNotFoundError(f"No reliability_mask.npy found in {preproc}")
 
-    mask = weights > 0
-    # Flatten mask and weights for indexing into flattened volumes
+    # Soft weights for within-mask weighting (optional)
+    soft_weights = None
+    if (preproc / "reliability_weights.npy").exists():
+        w = np.load(preproc / "reliability_weights.npy")
+        w_masked = w.flatten()[mask.flatten()]
+        # Check if weights are non-uniform (soft weighting mode)
+        if not np.allclose(w_masked, w_masked[0]):
+            soft_weights = w_masked
+            logger.info(f"Using soft weights within mask (range: {w_masked.min():.4f} - {w_masked.max():.4f})")
+
+    # Flatten mask for indexing flattened volumes
     mask_flat = mask.flatten()
-    weights_flat = weights.flatten()
     # Scaler mean/std are in full brain space — extract masked voxels
     scaler_mean_masked = scaler_mean.flatten()[mask_flat]
     scaler_std_masked = scaler_std.flatten()[mask_flat]
-    weights_masked = weights_flat[mask_flat]
     n_features = pca_components.shape[0]
     n_images, n_reps = trials.shape
 
-    logger.info(f"Preprocessing: {mask_flat.sum()} voxels → PCA {n_features} components")
+    n_masked = int(mask_flat.sum())
+    logger.info(f"Preprocessing: {n_masked} voxels → PCA {n_features} components")
 
     # Map trial index → (session_file, volume_index)
     # NSD: 40 sessions × 750 trials, 0-indexed
@@ -143,14 +147,14 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
             vol = data_4d[..., vol_idx]  # (X, Y, Z)
             flat = vol.flatten()
 
-            # Apply mask/weights
+            # Apply mask to select relevant voxels
             v = flat[mask_flat]
-            if weights_masked.max() <= 1.0 and weights_masked.min() >= 0.0:
-                # Soft weights
-                v = v * weights_masked
+            # Apply soft weights if available
+            if soft_weights is not None:
+                v = v * soft_weights
 
-            # Z-score using pre-computed scaler (already masked)
-            v_z = np.zeros_like(scaler_mean_masked)
+            # Z-score using pre-computed scaler (already masked to same voxels)
+            v_z = np.zeros(n_masked, dtype=np.float32)
             valid = scaler_std_masked > 0
             v_z[valid] = (v[valid] - scaler_mean_masked[valid]) / scaler_std_masked[valid]
 
