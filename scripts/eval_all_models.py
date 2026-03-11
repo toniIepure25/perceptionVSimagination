@@ -56,6 +56,12 @@ def load_and_split(features_dir, clip_cache_path, index_root, subject, seed=42):
     nsd_ids = nsd_ids[valid_mask]
     Y = np.stack(Y_list).astype(np.float32)
 
+    # Center features (removes PCA mean bias from soft-reliability weighting)
+    feature_mean = X.mean(axis=0)
+    if np.linalg.norm(feature_mean) > 0.01:
+        logger.info(f"  Centering features (mean norm={np.linalg.norm(feature_mean):.4f})")
+        X = X - feature_mean
+
     # Same split as training
     n = len(X)
     np.random.seed(seed)

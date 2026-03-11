@@ -84,6 +84,17 @@ def load_features_and_targets(features_dir, clip_cache_path, index_root, subject
 
     logger.info(f"Matched: X={X.shape}, Y={Y.shape} ({valid_mask.sum()}/{len(valid_mask)} valid)")
 
+    # Center features (critical for novel soft-reliability weights where
+    # PCA mean mismatch creates a constant bias)
+    feature_mean = X.mean(axis=0)
+    feature_mean_norm = np.linalg.norm(feature_mean)
+    if feature_mean_norm > 0.01:
+        logger.warning(f"Feature centering: mean norm={feature_mean_norm:.4f} (>0.01 threshold). "
+                       f"Centering to remove PCA mean bias.")
+        X = X - feature_mean
+    else:
+        logger.info(f"Features already centered (mean norm={feature_mean_norm:.6f})")
+
     df = read_subject_index(index_root, subject)
     if limit:
         df = df.head(limit)
