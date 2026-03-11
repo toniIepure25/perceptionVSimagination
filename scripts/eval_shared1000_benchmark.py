@@ -92,10 +92,13 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
         raise FileNotFoundError(f"No weight file found in {preproc}. Expected reliability_weights.npy")
 
     mask = weights > 0
+    # Flatten mask and weights for indexing into flattened volumes
+    mask_flat = mask.flatten()
+    weights_flat = weights.flatten()
     n_features = pca_components.shape[0]
     n_images, n_reps = trials.shape
 
-    logger.info(f"Preprocessing: {mask.sum()} voxels → PCA {n_features} components")
+    logger.info(f"Preprocessing: {mask_flat.sum()} voxels → PCA {n_features} components")
 
     # Map trial index → (session_file, volume_index)
     # NSD: 40 sessions × 750 trials, 0-indexed
@@ -137,10 +140,10 @@ def extract_shared1000_features(trials, preproc_dir, beta_root, subject):
             flat = vol.flatten()
 
             # Apply mask/weights
-            v = flat[mask]
-            if weights[mask].max() <= 1.0 and weights[mask].min() >= 0.0:
+            v = flat[mask_flat]
+            if weights_flat[mask_flat].max() <= 1.0 and weights_flat[mask_flat].min() >= 0.0:
                 # Soft weights
-                v = v * weights[mask]
+                v = v * weights_flat[mask_flat]
 
             # Z-score
             std = scaler_std[scaler_std > 0]  # avoid div by zero
