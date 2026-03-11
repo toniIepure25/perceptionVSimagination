@@ -87,36 +87,36 @@ Four encoder architectures trained with configurable multi-objective losses:
 
 Sorted by R@1 (top-1 retrieval accuracy). All models evaluated on subj01.
 
-| Config | Model | Features | Cosine | R@1 | R@5 | R@10 | Med Rank |
-|--------|-------|----------|--------|-----|-----|------|----------|
-| mlp_novel_strong_infonce_v2 | MLP | novel | 0.5298 | 0.0573 | 0.1667 | 0.2583 | 37 |
-| ts_novel_cosine_v2 | TwoStage | novel | 0.8124 | 0.0350 | 0.1160 | 0.1993 | 56 |
-| multilayer_baseline_v2 | Multilayer | baseline | 0.8084 | 0.0327 | 0.1020 | 0.1607 | 72 |
-| multilayer_baseline | Multilayer | baseline | 0.8076 | 0.0320 | 0.1023 | 0.1710 | 73 |
-| multilayer_novel_v3_lw | Multilayer | novel | 0.8098 | 0.0317 | 0.1153 | 0.1810 | 64 |
-| multilayer_novel_v3 | Multilayer | novel | 0.8115 | 0.0283 | 0.1080 | 0.1783 | 61 |
-| mlp_novel_cosine_v2 | MLP | novel | 0.8026 | 0.0277 | 0.0887 | 0.1437 | 92 |
-| ts_novel_cosine_mse_v2 | TwoStage | novel | 0.8129 | 0.0277 | 0.1053 | 0.1713 | 61 |
-| mlp_baseline | MLP | baseline | 0.8014 | 0.0270 | 0.0870 | 0.1403 | 94 |
-| mlp_novel_light_infonce_v2 | MLP | novel | 0.7723 | 0.0267 | 0.0990 | 0.1530 | 78 |
-| mlp_novel_cosine_mse_v2 | MLP | novel | 0.8021 | 0.0257 | 0.0883 | 0.1370 | 96 |
-| ridge_baseline | Ridge | baseline | 0.7913 | 0.0183 | 0.0620 | 0.0987 | 197 |
-| ts_novel_light_infonce_v2 | TwoStage | novel | 0.7754 | 0.0090 | 0.0413 | 0.0767 | 137 |
-| mlp_novel_light_infonce | MLP | novel | 0.4541 | 0.0010 | 0.0023 | 0.0057 | 1321 |
-| ts_novel_strong_infonce_v2 | TwoStage | novel | 0.6832 | 0.0010 | 0.0037 | 0.0077 | 729 |
-| two_stage_baseline | TwoStage | baseline | 0.5515 | 0.0010 | 0.0043 | 0.0090 | 648 |
-| mlp_novel_strong_infonce | MLP | novel | 0.3877 | 0.0007 | 0.0023 | 0.0040 | 1459 |
-| mlp_novel | MLP | novel | 0.3868 | 0.0003 | 0.0017 | 0.0030 | 1462 |
-| mlp_novel_cosine | MLP | novel | 0.5103 | 0.0003 | 0.0017 | 0.0040 | 1462 |
-| mlp_novel_cosine_mse | MLP | novel | 0.5171 | 0.0003 | 0.0017 | 0.0037 | 1463 |
-| multilayer_novel | Multilayer | novel | 0.7440 | 0.0003 | 0.0017 | 0.0033 | 1500 |
-| multilayer_novel_v2 | Multilayer | novel | 0.7442 | 0.0003 | 0.0017 | 0.0033 | 1496 |
-| ridge_novel | Ridge | novel | -0.0036 | 0.0003 | 0.0020 | 0.0040 | 1404 |
-| ts_novel_cosine | TwoStage | novel | 0.7469 | 0.0003 | 0.0017 | 0.0033 | 1500 |
-| ts_novel_cosine_mse | TwoStage | novel | 0.7469 | 0.0003 | 0.0017 | 0.0033 | 1500 |
-| ts_novel_light_infonce | TwoStage | novel | 0.7466 | 0.0003 | 0.0017 | 0.0033 | 1500 |
-| ts_novel_strong_infonce | TwoStage | novel | 0.7286 | 0.0003 | 0.0017 | 0.0033 | 1500 |
-| two_stage_novel | TwoStage | novel | 0.6399 | 0.0003 | 0.0017 | 0.0033 | 1500 |
+| Config | Model | Features | Cosine | R@1 | R@5 | R@10 | Med Rank | MRR |
+|--------|-------|----------|--------|-----|-----|------|----------|-----|
+| mlp_novel_strong_infonce_v2 | MLP | novel | 0.5298 | 0.0573 | 0.1667 | 0.2583 | 37 | 0.1235 |
+| ts_novel_cosine_v2 | TwoStage | novel | 0.8124 | 0.0350 | 0.1160 | 0.1993 | 56 | 0.0896 |
+| multilayer_baseline_v2 | Multilayer | baseline | 0.8084 | 0.0327 | 0.1020 | 0.1607 | 72 | 0.0798 |
+| multilayer_baseline | Multilayer | baseline | 0.8076 | 0.0320 | 0.1023 | 0.1710 | 73 | 0.0798 |
+| multilayer_novel_v3_lw | Multilayer | novel | 0.8098 | 0.0317 | 0.1153 | 0.1810 | 64 | 0.0850 |
+| multilayer_novel_v3 | Multilayer | novel | 0.8115 | 0.0283 | 0.1080 | 0.1783 | 61 | 0.0800 |
+| mlp_novel_cosine_v2 | MLP | novel | 0.8026 | 0.0277 | 0.0887 | 0.1437 | 92 | 0.0700 |
+| ts_novel_cosine_mse_v2 | TwoStage | novel | 0.8129 | 0.0277 | 0.1053 | 0.1713 | 61 | 0.0781 |
+| mlp_baseline | MLP | baseline | 0.8014 | 0.0270 | 0.0870 | 0.1403 | 94 | 0.0680 |
+| mlp_novel_light_infonce_v2 | MLP | novel | 0.7723 | 0.0267 | 0.0990 | 0.1530 | 78 | 0.0737 |
+| mlp_novel_cosine_mse_v2 | MLP | novel | 0.8021 | 0.0257 | 0.0883 | 0.1370 | 96 | 0.0674 |
+| ridge_baseline | Ridge | baseline | 0.7913 | 0.0183 | 0.0620 | 0.0987 | 197 | 0.0478 |
+| ridge_novel | Ridge | novel | 0.7913 | 0.0177 | 0.0603 | 0.0947 | 203 | 0.0466 |
+| ts_novel_light_infonce_v2 | TwoStage | novel | 0.7754 | 0.0090 | 0.0413 | 0.0767 | 137 | 0.0366 |
+| mlp_novel_light_infonce | MLP | novel | 0.4541 | 0.0010 | 0.0023 | 0.0057 | 1321 | 0.0043 |
+| ts_novel_strong_infonce_v2 | TwoStage | novel | 0.6832 | 0.0010 | 0.0037 | 0.0077 | 729 | 0.0062 |
+| two_stage_baseline | TwoStage | baseline | 0.5515 | 0.0010 | 0.0043 | 0.0090 | 648 | 0.0065 |
+| mlp_novel_strong_infonce | MLP | novel | 0.3877 | 0.0007 | 0.0023 | 0.0040 | 1459 | 0.0033 |
+| mlp_novel | MLP | novel | 0.3868 | 0.0003 | 0.0017 | 0.0030 | 1462 | 0.0030 |
+| mlp_novel_cosine | MLP | novel | 0.5103 | 0.0003 | 0.0017 | 0.0040 | 1462 | 0.0030 |
+| mlp_novel_cosine_mse | MLP | novel | 0.5171 | 0.0003 | 0.0017 | 0.0037 | 1463 | 0.0031 |
+| multilayer_novel | Multilayer | novel | 0.7440 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
+| multilayer_novel_v2 | Multilayer | novel | 0.7442 | 0.0003 | 0.0017 | 0.0033 | 1496 | 0.0029 |
+| ts_novel_cosine | TwoStage | novel | 0.7469 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
+| ts_novel_cosine_mse | TwoStage | novel | 0.7469 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
+| ts_novel_light_infonce | TwoStage | novel | 0.7466 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
+| ts_novel_strong_infonce | TwoStage | novel | 0.7286 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
+| two_stage_novel | TwoStage | novel | 0.6399 | 0.0003 | 0.0017 | 0.0033 | 1500 | 0.0029 |
 
 > **Note**: v1 models (no `_v2`/`_v3` suffix) trained on uncentered novel features — performance collapsed due to PCA mean bias (norm=11.1). v2/v3 models trained after auto-centering fix.
 
@@ -149,11 +149,12 @@ When `use_learnable_weights=True` AND `use_multilayer_infonce=True`:
 
 ### 6.5 Novel vs. Baseline Features
 
-After the centering fix, novel (soft-reliability-weighted) features generally **match or slightly exceed** baseline (hard-threshold) features:
+After the centering fix, novel (soft-reliability-weighted) features **match** baseline (hard-threshold) features across all architectures:
 - Best novel R@1: 0.0573 vs. best baseline R@1: 0.0327
 - Best novel cosine: 0.8129 vs. best baseline cosine: 0.8084
+- Ridge novel (0.7913, R@1=0.0177) ≈ Ridge baseline (0.7913, R@1=0.0183) — virtually identical
 
-This suggests soft-reliability weighting captures additional signal once the mean bias is corrected.
+This suggests soft-reliability weighting captures comparable signal once the mean bias is corrected, with neural network models able to exploit the richer feature representation.
 
 ---
 
@@ -171,7 +172,8 @@ This suggests soft-reliability weighting captures additional signal once the mea
 
 ## 8. Remaining Work
 
-- [ ] Fix ridge_novel evaluation (centering mismatch)
+- [x] Fix ridge_novel evaluation (centering mismatch) — **Fixed**: cosine 0.7913, R@1 0.0177
+- [x] Fix MRR display (key case mismatch) — **Fixed**: MRR now showing correctly
 - [ ] Run Shared-1000 benchmark (Phase C)
 - [ ] Retrain TwoStage baseline with v2 hyperparameters
 - [ ] Imagery adapter training and cross-domain evaluation (Phase D)

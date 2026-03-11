@@ -53,7 +53,7 @@ export VIRTUAL_ENV=/home/jovyan/local-data/venv
 | Config | Architecture | Features | Status | Key Result |
 |--------|-------------|----------|--------|------------|
 | ridge_baseline | Ridge | baseline | ✅ Done | cosine=0.7913, R@1=0.0183 |
-| ridge_novel | Ridge | novel | ⚠️ Broken eval | cosine=-0.0036 (centering mismatch) |
+| ridge_novel | Ridge | novel | ✅ Fixed | cosine=0.7913, R@1=0.0177 |
 | mlp_baseline | MLP | baseline | ✅ Done | cosine=0.8014, R@1=0.0270 |
 | mlp_novel | MLP | novel | ❌ v1 collapsed | cosine=0.3868 |
 | mlp_novel_cosine | MLP | novel | ❌ v1 collapsed | cosine=0.5103 |
@@ -101,12 +101,13 @@ export VIRTUAL_ENV=/home/jovyan/local-data/venv
 - **Fix**: Reduce infonce_weight to 0.4-0.5, raise temp to 0.07, or use gradient scaling
 - **Status**: Not started
 
-### P3: Ridge Novel Eval Broken (High Priority)
+### P3: Ridge Novel Eval Broken (Resolved)
 
 - **Symptom**: `ridge_novel` cosine=-0.0036 (essentially random)
-- **Cause**: `eval_all_models.py` centers ALL features (subtracts dataset mean), but Ridge trained on uncentered features with `fit_intercept=True`. The intercept absorbed the mean during training — centering during eval removes signal the intercept expects.
-- **Fix**: Skip centering for ridge models in eval (they handle mean internally)
-- **Status**: Fix ready, pending deployment
+- **Cause**: `eval_all_models.py` centered ALL features, but Ridge trained on uncentered features with `fit_intercept=True`
+- **Fix**: Ridge models now use raw (uncentered) features during eval
+- **Result**: cosine=0.7913, R@1=0.0177 — matches ridge_baseline
+- **Status**: ✅ Resolved
 
 ### P4: Multilayer LW + InfoNCE Collapse (Resolved)
 
@@ -115,12 +116,13 @@ export VIRTUAL_ENV=/home/jovyan/local-data/venv
 - **Fix**: Use cosine-only loss for multilayer. v3 models work correctly.
 - **Status**: ✅ Resolved
 
-### P5: MRR Shows 0.0000 in Eval Table (Low Priority)
+### P5: MRR Shows 0.0000 in Eval Table (Resolved)
 
-- **Symptom**: MRR column always shows 0.0000 in comparison table
+- **Symptom**: MRR column always showed 0.0000 in comparison table
 - **Cause**: Key case mismatch — `compute_ranking_metrics()` returns lowercase `'mrr'`, but `eval_all_models.py` reads `'MRR'` (uppercase)
-- **Fix**: Change `r.get('MRR', 0)` → `r.get('mrr', 0)` at 4 locations
-- **Status**: Fix ready, pending deployment
+- **Fix**: Changed `r.get('MRR', 0)` → `r.get('mrr', 0)` at 4 locations
+- **Result**: MRR now shows correctly (top model: 0.1235)
+- **Status**: ✅ Resolved
 
 ### P6: Shared-1000 Benchmark Not Run (High Priority)
 
