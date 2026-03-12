@@ -99,6 +99,19 @@ def _get_cell_str(cell) -> str:
     return str(cell)
 
 
+def _safe_int(val) -> Optional[int]:
+    """Convert to int, returning None for None/NaN/invalid values."""
+    if val is None:
+        return None
+    try:
+        import math
+        if isinstance(val, float) and math.isnan(val):
+            return None
+        return int(val)
+    except (TypeError, ValueError):
+        return None
+
+
 def _get_dm_onset_conds(dm: np.ndarray) -> List[Tuple[int, int]]:
     """Extract (onset_tr, cond_idx) pairs from an individual design matrix.
     
@@ -222,13 +235,24 @@ def _build_col_to_cue_map(
             cue_letter = label.split("_")[0]
             result[glm_col] = cue_letter
         else:
-            # Multiple DM conditions mapped to same GLM column — 
-            # pick the most common one
-            logger.warning(
-                f"Ambiguous mapping for col {glm_col}: DM conds {dm_conds}"
-            )
-            dm_idx = list(dm_conds)[0]
-            result[glm_col] = labels[dm_idx].split("_")[0]
+            # Multiple DM conditions mapped to same GLM column.
+            # This is expected for attention and visual runs where both
+            # attended (_1) and unattended (_0) conditions share the same
+            # cue letter and trial onset time.
+            cue_letters_found = set()
+            for dm_idx in dm_conds:
+                cue_letters_found.add(labels[dm_idx].split("_")[0])
+            
+            if len(cue_letters_found) == 1:
+                # All map to the same cue letter — expected for att/vis runs
+                result[glm_col] = list(cue_letters_found)[0]
+            else:
+                # Genuinely ambiguous — warn and pick first
+                logger.warning(
+                    f"Ambiguous mapping for col {glm_col}: "
+                    f"DM conds {dm_conds} → cues {cue_letters_found}"
+                )
+                result[glm_col] = list(cue_letters_found)[0]
     
     return result
 
@@ -329,7 +353,8 @@ def parse_all_trials(
                             image_path = str(matches[0])
                 
                 # Also check rawtargetimages for the actual target
-                if nsd_id is not None and nsd_id > 0:
+                safe_nsd = _safe_int(nsd_id)
+                if safe_nsd is not None and safe_nsd > 0:
                     raw_img = (metadata_dir / "rawtargetimages" / "setB" / 
                               stimulus_name)
                     if raw_img.exists():
@@ -345,8 +370,8 @@ def parse_all_trials(
                 stimulus_type=stim_type,
                 cue_letter=cue_letter,
                 stimulus_name=stimulus_name,
-                nsd_id=int(nsd_id) if nsd_id is not None else None,
-                shared_id=int(shared_id) if shared_id is not None else None,
+                nsd_id=_safe_int(nsd_id),
+                shared_id=_safe_int(shared_id),
                 image_path=image_path,
                 repeat_index=repeat_index,
             )
