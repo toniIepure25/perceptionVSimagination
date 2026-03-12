@@ -168,10 +168,14 @@ In MultiLayerTwoStageEncoder, learnable layer weights (softmax logits) interact 
 - [x] **P8**: Deploy imagery save fix ✅
 - [x] **P7**: Update config CLIP dimensions ✅
 - [x] **P6**: Run Shared-1000 benchmark (10 models evaluated) ✅
+- [x] Build 19 analysis modules (v0.3.0) — RSA, CKA, noise ceiling, domain confusion, etc. ✅
+- [x] Build external model loader for FMRI2images cross-project comparison ✅
+- [x] Full documentation overhaul (10+ docs rewritten) ✅
+- [ ] **BLOCKED**: Download NSD-Imagery fMRI data (OpenNeuro ds004937)
+- [ ] Run cross-domain eval with real imagery data (needs NSD-Imagery)
 - [ ] **P1**: Retrain TwoStage baseline with v2 hyperparameters
 - [ ] **P2**: Retrain TwoStage strong_infonce with reduced weight
-- [ ] Investigate Shared-1000 preprocessing mismatch (negative cosine for ridge)
-- [ ] Begin imagery adapter experiments (Phase D)
+- [ ] Compare FMRI2images predictions on shared stimuli
 - [ ] Paper figures: bar charts comparing baseline vs. novel across architectures
 
 ---
@@ -214,3 +218,14 @@ In MultiLayerTwoStageEncoder, learnable layer weights (softmax logits) interact 
 - Shared-1000 results: Ridge R@1=0.70% best; deep models 0.10-0.20%; all much lower than test-split
 - Statistical finding: Ridge significantly outperforms NNs on Shared-1000 (opposite of test-split ranking)
 - Commits: b825618, 76a5294, 72e18ec, 063c33a, 602f22d
+
+### Session 6 — Research Extension & Documentation Overhaul (v0.3.0)
+- Built 19 analysis modules: RSA, CKA, noise ceiling, domain confusion, Barlow Twins, VICReg, DANN, topographic, temporal dynamics, feature attribution, manifold geometry, uncertainty, soft retrieval, composite score, stats, transfer eval, loss functions
+- Built imagery adapter framework (LoRA + linear + MLP)
+- 51 tests passing across all modules
+- Discovered FMRI2images sister project at `/home/jovyan/work/FMRI2images/` — 825M param bigG model, R@1 ~58%
+- Built `external_loader.py` to bridge FMRI2images checkpoints into this project's comparison pipeline
+- Complete documentation overhaul: rewrote README, START_HERE, ROADMAP, IMAGERY_EXTENSION, ADAPTER_QUICK_START, PAPER_DRAFT_OUTLINE, CLUSTER_ENVIRONMENT, docs/README
+- Created STATUS.md as single source of truth
+- **Critical finding**: NSD-Imagery data never downloaded — all 19 modules tested only on synthetic data
+- Version 0.3.0, commit `0d162f4`

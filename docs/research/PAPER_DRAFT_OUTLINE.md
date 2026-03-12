@@ -1,6 +1,6 @@
 # Paper Draft Outline
 
-> **Living document** -- serves as a north-star for the narrative structure of the research paper. Update as results emerge.
+> **Living document** — serves as a north-star for the narrative structure. Update as results emerge.
 
 ---
 
@@ -10,13 +10,13 @@
 
 ---
 
-## Abstract (placeholder structure)
+## Abstract (placeholder)
 
-- **Context**: Brain-to-image decoding has achieved impressive results for perception, but mental imagery remains unexplored as a decoding target.
-- **Gap**: It is unknown whether perception-trained decoders transfer to imagery, and if not, *what specifically degrades* and why.
-- **Approach**: We use multi-target fMRI decoders (CLIP, IP-Adapter, SD VAE) trained on the Natural Scenes Dataset (NSD) and evaluate them on the NSD-Imagery benchmark, augmented with six novel analysis directions.
-- **Key Finding**: Imagery preserves high-level semantic content (CLIP embeddings) while losing structural detail (SD-latent, IP-Adapter tokens), producing a characteristic "semantic skeleton" -- a compressed, lower-dimensional representation that maintains categorical boundaries but drops spatial layout.
-- **Significance**: This dissociation provides computational evidence for hierarchical predictive coding theories of imagination and suggests that mental imagery engages a fundamentally different generative process than bottom-up perception.
+- **Context**: Brain-to-image decoding achieves impressive results for perception; mental imagery remains largely unexplored as a decoding target.
+- **Gap**: Unknown whether perception-trained decoders transfer to imagery, and if not, *what specifically degrades* and why.
+- **Approach**: Multi-target fMRI decoders (CLIP ViT-L/14 768-d, ViT-bigG/14 328K-d) trained on NSD perception, evaluated on NSD-Imagery, augmented with 19 novel analysis directions.
+- **Key Finding**: (Expected) Imagery preserves semantic content while losing structural detail — a "semantic skeleton" pattern.
+- **Significance**: Computational evidence for hierarchical predictive coding theories of imagination.
 
 ---
 
@@ -25,203 +25,174 @@
 ### 1.1 Motivation
 
 - Brain-to-image decoding as a window into neural representations (Ozcelik & VanRullen 2023; Scotti et al. 2023; Takagi & Nishimoto 2023)
-- The NSD dataset (Allen et al. 2022) as the standard benchmark for visual decoding
+- NSD dataset (Allen et al. 2022) as the standard benchmark
 - Mental imagery as a related but distinct neural process (Pearson 2019; Kosslyn et al. 2006)
-- The NSD-Imagery extension (hypothetical benchmark) as a naturalistic imagery dataset
+- NSD-Imagery extension as a naturalistic imagery benchmark
 
 ### 1.2 Research Questions
 
-1. **Transfer gap**: Do perception-trained decoders work on imagery fMRI? How large is the performance drop?
-2. **What degrades**: Is the loss uniform across representational levels, or does it follow a hierarchical pattern?
-3. **Bridging the gap**: Can lightweight adapters close the transfer gap, and what does their structure reveal?
+1. **Transfer gap**: Do perception-trained decoders work on imagery fMRI? How large is the drop?
+2. **What degrades**: Uniform loss or hierarchical pattern?
+3. **Model quality**: Do findings replicate across a weak (R@1=5.7%) and strong (R@1=58%) decoder?
+4. **Bridging the gap**: Can lightweight adapters close it, and what does adapter structure reveal?
 
 ### 1.3 Contributions
 
-1. First systematic evaluation of multi-target fMRI decoders on imagery data
-2. Six novel analysis directions that go beyond accuracy metrics to characterize *how* representations change
-3. Evidence for the "semantic skeleton" hypothesis: imagery is a low-dimensional, semantics-preserving projection of perceptual space
-4. A reusable open-source framework for cross-domain fMRI decoding
+1. First systematic evaluation of multi-model fMRI decoders on imagery data — including both lightweight (MLP, 6.3M params) and SoTA (vMF-NCE, 825M params) architectures
+2. 19 novel analysis directions beyond accuracy metrics
+3. Evidence for the "semantic skeleton" hypothesis
+4. Reusable open-source framework with 51+ tests
 
 ---
 
 ## 2. Related Work
 
 ### 2.1 Brain-to-Image Decoding
+- Ridge regression (Horikawa & Kamitani 2017), CLIP-guided (Ozcelik & VanRullen 2023), two-stage (Scotti et al. 2023), IP-Adapter (Ye et al. 2023)
 
-- Ridge regression approaches (Horikawa & Kamitani 2017)
-- CLIP-guided decoding (Ozcelik & VanRullen 2023)
-- Two-stage architectures: embedding prediction + conditional generation (Scotti et al. 2023)
-- IP-Adapter conditioning (Ye et al. 2023)
+### 2.2 Mental Imagery
+- Shared substrates (Kosslyn et al. 2001), hierarchical differences (Dijkstra et al. 2019), predictive coding (Rao & Ballard 1999)
 
-### 2.2 Mental Imagery and Neural Representations
+### 2.3 Representation Analysis Methods
+- CKA (Kornblith et al. 2019), persistent homology (Carlsson 2009), VICReg (Bardes et al. 2022), Barlow Twins (Zbontar et al. 2021)
 
-- Shared neural substrates for perception and imagery (Kosslyn et al. 2001)
-- Hierarchical differences: imagery engages top-down pathways (Dijkstra et al. 2019)
-- Predictive coding accounts (Rao & Ballard 1999; Keller & Mrsic-Flogel 2018)
-
-### 2.3 Domain Transfer in Neural Decoding
-
-- Cross-subject transfer (Defossez et al. 2023)
-- Limited work on perception-to-imagery transfer
+### 2.4 Domain Transfer
+- Cross-subject (Defossez et al. 2023), LoRA (Hu et al. 2021), domain adversarial (Ganin et al. 2016)
 
 ---
 
 ## 3. Methods
 
 ### 3.1 Data
-
-- **NSD Perception**: 10,000 images, 3 repetitions per stimulus, 8 subjects (Allen et al. 2022)
+- **NSD Perception**: 30K trials, 3 repetitions per stimulus, subj01 (Allen et al. 2022)
 - **NSD-Imagery**: Subset of NSD stimuli recalled from memory under controlled conditions
-- Preprocessing: denoising, ROI selection (V1-V4, higher visual cortex, ventral temporal)
+- **Preprocessing**: Z-score per session + PCA(3072) for this project; raw 15,724 voxels for FMRI2images
 
-### 3.2 Multi-Target Decoder Architecture
+### 3.2 Decoder Architectures
 
-- **CLIP pathway**: Linear projection from fMRI voxels to CLIP ViT-L/14 embedding space (768-d)
-- **IP-Adapter pathway**: MLP mapping to 4 IP-Adapter tokens (4 × 768-d), capturing fine-grained visual detail
-- **SD VAE pathway**: Linear projection to Stable Diffusion VAE latent space (4 × 64 × 64), encoding coarse spatial structure
-- **MultiTargetDecoder**: Shared trunk with task-specific heads, trained with composite loss
+#### 3.2.1 Lightweight Decoder (This Project)
+- **Input**: 3,072-d PCA features
+- **CLIP target**: ViT-L/14 768-d CLS token
+- **Architectures**: Ridge, MLP (~6.3M), TwoStage (~7.9M)
+- **Best perception**: R@1=5.7%, cosine=0.81
+
+#### 3.2.2 High-Capacity Decoder (FMRI2images)
+- **Input**: 15,724 raw voxels (nsdgeneral)
+- **CLIP target**: ViT-bigG/14, 1280-d × 257 tokens = 328,960-d
+- **Architecture**: 4-layer residual MLP → vMF decoder (825M params)
+- **Training**: vMF-NCE + SoftCLIP + MixCo + EMA
+- **Best perception**: R@1~58%, CSLS R@1~70%
 
 ### 3.3 Cross-Domain Evaluation Protocol
+1. Train all decoders exclusively on perception fMRI
+2. Evaluate on held-out perception trials (within-domain baseline)
+3. Evaluate on imagery fMRI (cross-domain transfer)
+4. Compare with both weak and strong decoders
+5. Metrics: CLIP cosine, R@K, noise-ceiling normalized
 
-- Train all decoders exclusively on perception fMRI
-- Evaluate on held-out perception trials (within-domain baseline)
-- Evaluate on imagery fMRI (cross-domain transfer)
-- Metrics: CLIP cosine similarity, retrieval@K, pixel-level SSIM for reconstructions
+### 3.4 Imagery Adapters
+- LinearAdapter, MLPAdapter (frozen backbone)
+- LoRA (ranks 2-16) for parameter-efficient transfer
+- Domain adversarial (DANN) for domain-invariant features
 
-### 3.4 Imagery Adapter
+### 3.5 Novel Analysis Methods (19 Directions)
 
-- Lightweight modules (LinearAdapter, MLPAdapter) that remap perception-space outputs to imagery-space
-- Frozen perception backbone + trainable adapter (parameter-efficient)
-- Ablation: linear vs. MLP, frozen vs. fine-tuned backbone
+#### Tier 1: Core (Directions 1-6)
+1. **Dimensionality Gap** — PCA participation ratio, intrinsic dimensionality
+2. **Uncertainty as Vividness** — MC Dropout variance ↔ decoding accuracy
+3. **Semantic Survival** — Per-concept preservation ratios (category, scene, texture)
+4. **Topological RSA** — Persistent homology H0/H1 between perception/imagery RDMs
+5. **Individual Fingerprints** — Second-order RSA of degradation profiles
+6. **Semantic-Structural Dissociation** — SSI: CLIP preservation vs. structural preservation
 
-### 3.5 Novel Analysis Methods
+#### Tier 2: Reality Perception (Directions 7-10)
+7. **Reality Monitor** — PRM theory: metacognitive confusability prediction
+8. **Reality Confusion** — Decision boundary estimation in embedding space
+9. **Adversarial Reality** — GAN-style discriminator accuracy at perception/imagery classification
+10. **Hierarchical Reality** — Layer-by-layer emergence of the perception-imagery gap
 
-#### 3.5.1 Direction 1: Representational Dimensionality
+#### Tier 3: Generative Imagination (Directions 11-15)
+11. **Compositional Imagination** — Brain algebra (combine concepts in embedding space)
+12. **Predictive Coding** — Top-down vs bottom-up information flow indices
+13. **Manifold Geometry** — Centrality bias (imagined representations drift toward manifold center)
+14. **Modality Decomposition** — Shared core vs modality-specific residual components
+15. **Creative Divergence** — Systematic transformation rules of imagination
 
-- PCA participation ratio (Gao et al. 2017) on perception vs. imagery embeddings
-- Intrinsic dimensionality estimation (Levina & Bickel 2004)
-- Hypothesis: imagery embeddings occupy a lower-dimensional subspace
-
-#### 3.5.2 Direction 2: Uncertainty as Vividness Proxy
-
-- MC Dropout at inference time (Gal & Ghahramani 2016) to obtain predictive uncertainty
-- Correlate trial-level uncertainty with decoding accuracy
-- Hypothesis: high-confidence imagery trials decode better (proxy for subjective vividness)
-
-#### 3.5.3 Direction 3: Semantic Survival Analysis
-
-- Project CLIP embeddings onto concept axes (object category, scene type, emotional valence)
-- Compare per-concept preservation ratios between perception and imagery
-- Hypothesis: abstract/semantic concepts survive imagery; texture/color concepts degrade
-
-#### 3.5.4 Direction 4: Topological RSA
-
-- Compute persistence diagrams (H0, H1) from representational distance matrices (Carlsson 2009)
-- Wasserstein distance between perception and imagery persistence diagrams
-- Separate analysis for metric geometry (RDM correlation) vs. topological structure (persistent homology)
-- Hypothesis: metric geometry changes while topological structure partially survives
-
-#### 3.5.5 Direction 5: Individual Difference Fingerprints
-
-- Compute per-subject degradation profiles across all metrics
-- Second-order RSA: do subjects who are similar in perception remain similar in imagery?
-- Adapter weight analysis: do architecturally similar adapters emerge for similar subjects?
-- Hypothesis: the perception-imagery gap has a stable, subject-specific signature
-
-#### 3.5.6 Direction 6: Semantic-Structural Dissociation
-
-- Compare transfer performance across the three decoder targets:
-  - CLIP (high-level semantics)
-  - IP-Adapter tokens (mid-level visual features)
-  - SD VAE latents (low-level spatial structure)
-- Compute Semantic-Structural Index (SSI): ratio of CLIP preservation to SD-latent preservation
-- Hypothesis: SSI >> 1, confirming that semantics survive while structure degrades
+#### Cross-Cutting
+- **CKA** — Layer-wise representational similarity across conditions
+- **UMAP/t-SNE** — Manifold visualization with density comparison
+- **ROI Decoding** — Per-brain-region (V1-V4, ventral temporal, parietal) accuracy
+- **Interpretability** — Integrated Gradients, SmoothGrad, Grad×Input attribution
+- **Noise-Ceiling Normalization** — All metrics as % of theoretical maximum
+- **SoTA Comparison** — Against 8 published baselines with LaTeX tables
 
 ---
 
 ## 4. Expected Results
 
-### 4.1 Transfer Gap (Baseline)
-
-We expect perception-trained decoders to show a significant but non-catastrophic drop on imagery data: 15-30% reduction in CLIP cosine similarity, with larger drops for structural metrics (SSIM, SD-latent MSE). This establishes the baseline transfer gap.
+### 4.1 Transfer Gap (H1)
+Perception-trained decoders show 15-30% CLIP cosine reduction on imagery. Larger drops for structural metrics. The weak decoder (5.7% R@1) shows proportionally larger gaps than the strong decoder (58% R@1).
 
 ### 4.2 Dimensionality Compression
-
-Imagery representations should exhibit 20-40% lower effective dimensionality (participation ratio) than perception, consistent with the idea that imagery is a lossy compression of the perceptual manifold that discards fine-grained variation.
+Imagery embeddings exhibit 20-40% lower effective dimensionality — imagery is a lossy compression that discards fine-grained variation.
 
 ### 4.3 Uncertainty-Vividness Link
-
-MC Dropout uncertainty should negatively correlate with single-trial decoding accuracy (ρ ≈ -0.3 to -0.5), and this correlation should be stronger for imagery than perception, suggesting that uncertainty captures variance in imagery quality.
+MC Dropout uncertainty negatively correlates with decoding accuracy (ρ ≈ -0.3 to -0.5), stronger for imagery than perception.
 
 ### 4.4 Semantic Survival Gradient
-
-We expect a clear hierarchy: abstract categories (animal vs. vehicle) will show >80% preservation, scene-level features (indoor vs. outdoor) ~60-70%, and low-level features (texture, color) <40%. This produces the "semantic skeleton" pattern.
+Abstract categories >80% preservation, scene features ~60-70%, low-level texture <40% — the "semantic skeleton."
 
 ### 4.5 Topological Reorganization
-
-Persistent homology should reveal that 0th-order topology (connected components = category clusters) is largely preserved in imagery, while 1st-order topology (loops = fine-grained relationships) is disrupted. This provides a formal, metric-free characterization of representational change.
+H0 (clusters) preserved; H1 (loops/fine relationships) disrupted in imagery.
 
 ### 4.6 Subject-Specific Signatures
+Degradation profiles more similar within-subject than between-subjects.
 
-Cross-subject analysis should reveal that degradation profiles are more similar within-subject (across sessions) than between-subjects, and adapter weight similarity should correlate with behavioral similarity in imagery tasks. This suggests the perception-imagery mapping is idiosyncratic.
-
-### 4.7 Semantic-Structural Dissociation
-
-The SSI should be significantly greater than 1 (expected range: 2-5), confirming that CLIP-level semantics are preferentially preserved over SD-latent-level structure. This is the central result tying all directions together.
+### 4.7 Cross-Model Consistency
+If both the weak (6.3M) and strong (825M) decoders show the same hierarchical pattern, the finding reflects neural organization, not model limitations.
 
 ---
 
 ## 5. Discussion
 
 ### 5.1 The Semantic Skeleton Hypothesis
+Mental imagery constructs a sparse, high-level representation preserving categorical structure while losing spatial/textural detail.
 
-Synthesis of all six directions into a unified narrative: mental imagery constructs a "semantic skeleton" -- a sparse, high-level representation that preserves categorical and conceptual structure while losing the fine-grained spatial, textural, and colorimetric detail that characterizes veridical perception. This is not a uniform degradation but a selective, hierarchical compression.
+### 5.2 Predictive Coding Implications
+Consistent with hierarchical predictive coding: higher layers generate internal representations without bottom-up input.
 
-### 5.2 Implications for Predictive Coding
-
-The dissociation between semantic and structural preservation is consistent with hierarchical predictive coding: imagination engages top-down generative predictions that capture the statistical structure of the world (what) but not its precise realization (how). The higher cortical layers that encode abstract semantics can generate internal representations without bottom-up sensory input, while lower layers that encode pixel-level structure require veridical input.
-
-### 5.3 Computational Implications
-
-The adapter framework reveals that the perception-to-imagery mapping is surprisingly low-rank: a small linear or shallow MLP transform suffices to bridge the gap. This suggests that imagery representations live in a subspace of perceptual space, not in a qualitatively different space.
+### 5.3 Cross-Model Robustness
+Same patterns across weak and strong decoders → genuine neural phenomenon. Different patterns → model quality mediates the finding (itself valuable).
 
 ### 5.4 Limitations
-
-- NSD-Imagery sample sizes may limit statistical power for individual-difference analyses
-- The "ground truth" for imagery is the originally perceived image, which may not match the actual mental image
-- Topological analyses require careful hyperparameter tuning (persistence threshold, distance metric)
-- Results may be specific to the NSD stimulus set (natural scenes) and not generalize to other imagery types
-
-### 5.5 Future Directions
-
-- Temporal dynamics: use MEG or EEG to track the time course of semantic vs. structural information
-- Intervention: use TMS to test causal role of specific cortical regions in the dissociation
-- Clinical applications: imagery quality in aphantasia, PTSD, and synesthesia
-- Generative models: train imagery-specific diffusion models that accept the "semantic skeleton" as conditioning
+- NSD-Imagery sample sizes may limit statistical power
+- Ground truth for imagery is the original perceived image, not the actual mental image
+- Results may be specific to NSD natural scenes
 
 ---
 
 ## 6. Conclusion
 
-[To be written after results are obtained.]
+[To be written after results.]
 
 ---
 
-## References (key papers to cite)
+## References
 
-- Allen, E. J., et al. (2022). A massive 7T fMRI dataset to bridge cognitive neuroscience and artificial intelligence. *Nature Neuroscience*.
-- Carlsson, G. (2009). Topology and data. *Bulletin of the American Mathematical Society*.
-- Defossez, A., et al. (2023). Decoding speech from non-invasive brain recordings. *Nature Machine Intelligence*.
-- Dijkstra, N., Bosch, S. E., & van Gerven, M. A. (2019). Shared neural mechanisms of visual perception and imagery. *Trends in Cognitive Sciences*.
-- Gal, Y., & Ghahramani, Z. (2016). Dropout as a Bayesian approximation. *ICML*.
-- Gao, P., et al. (2017). A theory of multineuronal dimensionality, dynamics and measurement. *bioRxiv*.
-- Keller, G. B., & Mrsic-Flogel, T. D. (2018). Predictive processing: a canonical cortical computation. *Neuron*.
-- Kosslyn, S. M., Ganis, G., & Thompson, W. L. (2001). Neural foundations of imagery. *Nature Reviews Neuroscience*.
-- Kosslyn, S. M., Thompson, W. L., & Ganis, G. (2006). *The Case for Mental Imagery*. Oxford University Press.
-- Levina, E., & Bickel, P. (2004). Maximum likelihood estimation of intrinsic dimension. *NeurIPS*.
-- Ozcelik, F., & VanRullen, R. (2023). Natural scene reconstruction from fMRI signals using generative latent diffusion. *Scientific Reports*.
-- Pearson, J. (2019). The human imagination: the cognitive neuroscience of visual mental imagery. *Nature Reviews Neuroscience*.
-- Rao, R. P., & Ballard, D. H. (1999). Predictive coding in the visual cortex. *Nature Neuroscience*.
-- Scotti, P., et al. (2023). Reconstructing the mind's eye: fMRI-to-image with contrastive learning and diffusion priors. *NeurIPS*.
-- Takagi, Y., & Nishimoto, S. (2023). High-resolution image reconstruction with latent diffusion models from human brain activity. *CVPR*.
-- Ye, H., et al. (2023). IP-Adapter: text compatible image prompt adapter for text-to-image diffusion models. *arXiv*.
+- Allen et al. (2022). *Nature Neuroscience*.
+- Bardes et al. (2022). VICReg. *ICML*.
+- Carlsson (2009). Topology and data. *Bull. AMS*.
+- Defossez et al. (2023). *Nature Machine Intelligence*.
+- Dijkstra et al. (2019). *Trends in Cognitive Sciences*.
+- Gal & Ghahramani (2016). Dropout as Bayesian. *ICML*.
+- Ganin et al. (2016). Domain adversarial. *JMLR*.
+- Hu et al. (2021). LoRA. *ICLR*.
+- Kornblith et al. (2019). CKA. *ICML*.
+- Kosslyn et al. (2001). Neural foundations. *Nature Reviews Neuroscience*.
+- Ozcelik & VanRullen (2023). Brain-Diffuser. *Scientific Reports*.
+- Pearson (2019). *Nature Reviews Neuroscience*.
+- Rao & Ballard (1999). *Nature Neuroscience*.
+- Scotti et al. (2023). MindEye. *NeurIPS*.
+- Takagi & Nishimoto (2023). *CVPR*.
+- Ye et al. (2023). IP-Adapter. *arXiv*.
+- Zbontar et al. (2021). Barlow Twins. *ICML*.

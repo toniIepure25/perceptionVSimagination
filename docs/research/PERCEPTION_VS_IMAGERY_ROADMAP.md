@@ -1,306 +1,186 @@
 # Perception vs. Imagery: Cross-Domain fMRI Decoding
 
-**Research Track Roadmap**
+**Research Roadmap — v0.3.0**
+
+> Last Updated: March 12, 2026
+
+---
 
 ## Abstract
 
-This research track extends the existing NSD perception-based fMRI-to-image reconstruction pipeline to investigate the generalization of neural decoders from perception to mental imagery. By leveraging the NSD-Imagery dataset—which contains fMRI recordings from subjects imagining the same stimuli they previously viewed—we establish a reproducible benchmark for evaluating cross-domain transfer in visual decoding. The primary objective is to characterize the extent to which models trained on perception data can decode imagined visual content, and to quantify the performance gap between within-domain (perception→perception) and cross-domain (perception→imagery) decoding.
+This research extends existing NSD perception-based fMRI-to-image decoding to investigate cross-domain generalization to mental imagery. Using the NSD-Imagery dataset, we evaluate how models trained on perception transfer to imagery, quantify what information survives, and apply 19 novel analysis directions to characterize the representational differences between perceiving and imagining.
 
 ---
 
 ## Research Question
 
-**Can neural decoders trained on visual perception fMRI generalize to decode mental imagery fMRI, and what architectural or training adaptations improve cross-domain transfer?**
+**Can neural decoders trained on visual perception fMRI generalize to decode mental imagery fMRI, and what does the transfer gap reveal about the neural architecture of imagination?**
 
 ---
 
 ## Hypotheses
 
 ### H1: Perception-to-Imagery Generalization Gap
-Models trained exclusively on perception data will show degraded but non-zero performance when tested on imagery data, indicating partial shared neural representations between perception and imagery.
+Models trained on perception show degraded but non-zero performance on imagery, indicating partial shared representations.
 
-**Operationalization**: Measure CLIP cosine similarity and retrieval@K for perception-trained models evaluated on imagery test sets. Expected performance: 60-80% of within-domain performance.
+**Operationalization**: CLIP cosine similarity and R@K on imagery test sets. Expected: 60-80% of within-domain performance.
 
 ### H2: Mixed Training Improves Robustness
-Models trained on a mixture of perception and imagery data will achieve better cross-domain generalization than perception-only models, at potentially minor cost to perception-domain performance.
+Models trained on perception + imagery data achieve better cross-domain generalization at minor cost to perception performance.
 
-**Operationalization**: Compare mixed-training vs. perception-only models on both perception and imagery test sets. Expect <5% perception performance drop with >15% imagery performance gain.
+**Operationalization**: Compare mixed vs perception-only models on both test sets. Expect <5% perception drop with >15% imagery gain.
 
 ### H3: Lightweight Adapter Benefit
-A lightweight adapter head (e.g., single-layer MLP) trained on small amounts of imagery data can efficiently bridge the perception-imagery gap without full model retraining.
+A lightweight adapter trained on small amounts of imagery data bridges the gap without full retraining.
 
-**Operationalization**: Train adapter on 10-20% of imagery data while freezing perception-trained encoder. Compare to full fine-tuning baseline. Expect 80-90% of fine-tuning performance with 10x faster training.
+**Operationalization**: Adapter on 10-20% of imagery data, frozen encoder. Expect 80-90% of fine-tuning performance at 10× less cost.
 
 ---
 
 ## Experimental Matrix
 
-| Training Configuration | Training Data | Test Set: Perception | Test Set: Imagery |
-|------------------------|---------------|----------------------|-------------------|
-| **Baseline (Perception-Only)** | NSD perception | ✓ (within-domain) | ✓ (cross-domain) |
-| **Mixed Training** | NSD perception + NSD imagery | ✓ | ✓ |
-| **Perception + Adapter** | NSD perception (frozen) + NSD imagery (adapter) | ✓ | ✓ |
-| **No-Adaptation Baseline** | None (direct CLIP encoding) | ✓ | ✓ |
+| Training Config | Training Data | Test: Perception | Test: Imagery |
+|----------------|--------------|-----------------|---------------|
+| **Perception-Only** (baseline) | NSD perception | Within-domain | Cross-domain |
+| **Mixed Training** | Perception + Imagery | Within-domain | Mixed-domain |
+| **Perception + Adapter** | Perception (frozen) + Imagery (adapter) | Within-domain | Adapted |
+| **No-Adaptation Baseline** | None (direct CLIP) | Upper bound | Upper bound |
 
-**Model Variants to Test**:
-- Ridge regression (linear baseline)
-- MLP encoder (nonlinear)
-- Two-stage encoder (existing best model)
-- CLIP adapter (diffusion integration)
+**Model Variants**: Ridge, MLP, TwoStage, CLIP Adapter, FMRI2images vMF-NCE (external)
 
-**Subjects**: All available subjects in NSD-Imagery (typically subj01, subj02, subj05, subj07)
+**Subjects**: subj01 (primary), subj02, subj05, subj07 (NSD-Imagery availability)
 
 ---
 
 ## Evaluation Metrics
 
-### Primary Metrics
-1. **CLIP Cosine Similarity**: Average cosine similarity between predicted and ground-truth CLIP embeddings
-   - Threshold for success: >0.5 for perception, >0.35 for imagery
-   
-2. **Retrieval Accuracy @ K**: Proportion of test samples where ground-truth is in top-K retrievals
-   - K = {1, 5, 10, 50}
-   - Threshold for success: >10% @10 for imagery (random chance: 0.1%)
+### Primary
+1. **CLIP Cosine Similarity** — Semantic fidelity (ViT-L/14, 768-d)
+2. **Retrieval R@K** — K = {1, 5, 10, 50}
+3. **Noise-Ceiling Normalized** — Metrics as % of theoretical maximum
 
-### Secondary Metrics (if reconstructing images)
-3. **SSIM**: Structural similarity index between reconstructed and ground-truth images
-4. **LPIPS**: Perceptual similarity using deep feature distance
-5. **Pixel MSE**: Direct pixel-space reconstruction error
-
-### Optional Metrics (resource-permitting)
-6. **Human Preference**: Two-alternative forced choice on reconstructed image quality
-7. **Semantic Consistency**: CLIP text-to-image alignment with ground-truth captions
+### Secondary
+4. **CKA** — Centered Kernel Alignment between perception/imagery representations
+5. **Dimensionality** — PCA participation ratio
+6. **Transfer Ratio** — Imagery performance / Perception performance
 
 ---
 
-## Baselines
+## Phases
 
-### Required Baselines
-1. **Existing Perception Models** (no retraining):
-   - Ridge regression trained on NSD perception
-   - MLP encoder trained on NSD perception
-   - Two-stage model trained on NSD perception
-   
-2. **No-Adaptation Baseline**:
-   - Direct CLIP encoding of ground-truth images (upper bound)
-   - Random CLIP embeddings (lower bound)
+### Phase 0: Perception Models ✅ COMPLETE
 
-### Proposed Contributions
-1. **Evaluation + Reproducible Benchmark** (Phase 1, minimal implementation):
-   - Standardized evaluation protocol for perception-to-imagery transfer
-   - Reproducible scripts with exact commands and configs
-   - Comprehensive reporting (tables, plots, statistical tests)
-   
-2. **Simple Adapter Head** (Phase 2, optional):
-   - Single-layer MLP or linear projection trained on imagery data
-   - Minimal parameter overhead (<1% of base model)
-   - Fast training (<1 hour on single GPU)
+**28 models trained** on H100 cluster. All evaluated on test-split and Shared-1000.
 
----
+| Architecture | Best Metrics | Configs |
+|-------------|-------------|---------|
+| Ridge | cosine 0.79, R@1 1.8% | 1 |
+| MLP | cosine 0.79, R@1 5.7% | 11 |
+| TwoStage | cosine 0.81, R@1 3.2% | 10 |
+| Multilayer | cosine 0.81, R@1 3.2% | 4 |
+| Adapters | — (CLIP/fMRI direction) | 3 |
 
-## Reproducibility Checklist
+Key finding: Ridge outperforms deep models on Shared-1000, likely due to preprocessing mismatch.
 
-### Configuration Management
-- [ ] All experiments use version-controlled config files in `configs/experiments/imagery/`
-- [ ] Random seeds fixed and documented (default: 42 for train/val split, 123 for model init)
-- [ ] Data splits saved as manifests (train/val/test indices in `data/indices/imagery/`)
+See [EXPERIMENT_RESULTS.md](EXPERIMENT_RESULTS.md) for full results.
 
-### Data Management
-- [ ] NSD-Imagery data cached locally with checksums
-- [ ] Index files (Parquet) version-controlled or checksum-validated
-- [ ] CLIP embeddings pre-computed and cached
+### Phase 1: Analysis Infrastructure ✅ COMPLETE
 
-### Execution
-- [ ] Exact command-line invocations documented in this file and `START_HERE.md`
-- [ ] Conda environment pinned (`environment.yml` includes all dependencies)
-- [ ] GPU requirements documented (minimum: 16GB VRAM for two-stage model)
+All analysis modules implemented and tested (51+ tests passing):
 
-### Output Artifacts
-- [ ] Checkpoints saved with metadata (config, data split, training time)
-- [ ] Evaluation results saved as JSON + CSV for programmatic access
-- [ ] Figures/plots saved in vector format (PDF/SVG) for publication
+- **15 neuroscience analysis directions** (code complete, dry-run validated for 11-15)
+- **CKA analysis** — linear/RBF kernels, debiased HSIC (11 tests)
+- **Advanced losses** — VICReg, Barlow Twins, Triplet+InfoNCE, Hard Negatives (17 tests)
+- **LoRA adapters** — Multi-rank, save/load (12 tests)
+- **Domain adversarial** — Gradient reversal + DANN
+- **Noise-ceiling normalization** — Ceiling-relative metrics
+- **UMAP/t-SNE** — Manifold visualization
+- **ROI decoding** — Per-brain-region analysis
+- **Interpretability** — Integrated Gradients, SmoothGrad, Grad×Input
+- **SoTA comparison** — 8 published baselines, LaTeX tables
+- **FDR correction** — Benjamini-Hochberg, Bonferroni (11 tests)
 
----
+### Phase 2: Adapter Architecture ✅ COMPLETE
 
-## Output Artifacts
+Code implemented and tested (no real imagery data yet):
 
-### Reports
-- `outputs/reports/imagery/perception_baseline_results.json`: Baseline perception model scores
-- `outputs/reports/imagery/cross_domain_transfer_results.json`: Imagery test scores
-- `outputs/reports/imagery/comparison_table.csv`: Side-by-side metric comparison
+- [x] `LinearAdapter`, `MLPAdapter`, `ConditionEmbedding` in `src/fmri2img/models/adapters.py`
+- [x] `LoRAAdapter`, `MultiRankLoRA` in `src/fmri2img/models/lora_adapter.py`
+- [x] Training: `scripts/train_imagery_adapter.py`
+- [x] Ablation: `scripts/run_imagery_ablations.py`
+- [x] Figure generation: `scripts/make_paper_figures.py`
 
-### Figures
-- `outputs/reports/imagery/figures/clip_similarity_by_condition.pdf`: Bar plot of CLIP scores
-- `outputs/reports/imagery/figures/retrieval_curves.pdf`: Retrieval@K curves
-- `outputs/reports/imagery/figures/subject_breakdown.pdf`: Per-subject performance
+### Phase 3: NSD-Imagery Data Acquisition ⚠️ BLOCKED
 
-### Logs
-- `outputs/logs/imagery/`: Training and evaluation logs with timestamps
+**Status: NOT STARTED — This is the critical blocker.**
 
----
+NSD-Imagery fMRI data has never been downloaded. Everything downstream requires it.
 
-## Definition of Done
+- [ ] Download NSD-Imagery betas from OpenNeuro ds004937 or NSD S3 bucket
+- [ ] Build imagery index (`scripts/build_nsd_imagery_index.py`)
+- [ ] Preprocess imagery betas (same z-score + PCA pipeline)
+- [ ] Validate alignment with perception stimulus IDs
 
-### Phase 1: Evaluation + Benchmark (Immediate Goal)
-**Scope**: Evaluate existing models on imagery data without any retraining.
+See [NSD_IMAGERY_DATASET_GUIDE.md](../technical/NSD_IMAGERY_DATASET_GUIDE.md).
 
-**Deliverables**:
-- [ ] NSD-Imagery index built for all subjects (Parquet format)
-- [ ] Evaluation script runs successfully on existing checkpoints
-- [ ] Comprehensive report generated with all primary metrics
-- [ ] Statistical significance tests for cross-domain performance gap
-- [ ] Documentation complete (this file + technical guide + architecture diagram)
-- [ ] Code passes tests: `pytest tests/test_imagery_scaffold.py -v`
+### Phase 4: Cross-Domain Discovery 🔮 PLANNED
 
-**Success Criteria**:
-- Cross-domain evaluation completes without errors for all model types
-- Results reproducible across runs (same metrics given same seeds)
-- Report includes clear visualizations and interpretation guidance
+Once imagery data is available:
 
-**Timeline**: 1 week (assuming data access secured)
+- [ ] Run cross-domain transfer eval (H1) — all 28 models
+- [ ] Run 15 analysis directions on real data
+- [ ] Run CKA / UMAP / ROI analysis
+- [ ] Generate publication figures
+- [ ] Noise-ceiling normalize all results
+- [ ] Compare against SoTA baselines
+
+### Phase 5: Cross-Project Integration 🔮 PLANNED
+
+Leverage the FMRI2images project (R@1~58%) for cross-validation:
+
+- [ ] Build external model loader for FMRI2images vMF-NCE checkpoint
+- [ ] Run same analyses with FMRI2images predictions
+- [ ] Compare patterns: same findings with different model quality → robust phenomenon
+- [ ] Document where model quality affects findings
 
 ---
 
-### Phase 2: Adapter Fine-Tuning **[IMPLEMENTED ✅]**
-**Scope**: Implement and train lightweight adapter to improve imagery decoding.
+## Cross-Project Context
 
-**Deliverables**:
-- [x] Adapter architecture implemented (`src/fmri2img/models/adapters.py`)
-  - LinearAdapter: Simple linear transformation (W x + b)
-  - MLPAdapter: Two-layer MLP with residual connection
-  - ConditionEmbedding: Optional learnable condition tokens
-- [x] Training script: `scripts/train_imagery_adapter.py`
-- [x] Evaluation script updated to support adapters
-- [x] Ablation runner: `scripts/run_imagery_ablations.py`
-- [x] Paper-ready figure generator: `scripts/make_paper_figures.py`
-- [x] Comprehensive tests with synthetic data
+### FMRI2images (`/home/jovyan/work/FMRI2images/`)
 
-**Implementation Details**:
-- Adapters preserve embedding dimensionality (512-D CLIP space)
-- Identity initialization ensures smooth gradient-based adaptation
-- Base model frozen during adapter training (parameter-efficient)
-- Supports condition embeddings for multi-domain learning
-- Training typically converges in 20-50 epochs
+| Aspect | Details |
+|--------|---------|
+| Architecture | 4-layer residual MLP → vMF decoder (825M params) |
+| CLIP backbone | ViT-bigG/14, 1280-d × 257 tokens |
+| Input | 15,724 raw voxels (nsdgeneral) |
+| Best metrics | R@1 ~58%, CSLS R@1 ~70% |
+| Training | vMF-NCE + SoftCLIP + MixCo + EMA, bf16, queue 1024 |
+| Checkpoint | `experimental_results/N1v27a_bigg_tokens/subj01/checkpoint_best.pt` |
 
-**Exact Commands**:
+The R@1 gap (5.7% vs 58%) is primarily due to:
+1. **Target quality**: ViT-bigG/14 (1280-d×257) vs ViT-L/14 (768-d×1)
+2. **Input representation**: Raw 15724 voxels vs PCA-reduced 3072 features
+3. **Model capacity**: 825M vs 6.3M params
+4. **Training recipe**: vMF-NCE + SoftCLIP + MixCo + EMA vs InfoNCE alone
 
-```bash
-# 1. Build NSD-Imagery index
-python scripts/build_nsd_imagery_index.py \
-  --subject subj01 \
-  --data-root data/nsd_imagery \
-  --cache-root cache/ \
-  --output cache/indices/imagery/subj01.parquet
+---
 
-# 2. Evaluate baseline (no adapter)
-python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --model-type two_stage \
-  --mode imagery \
-  --split test \
-  --output-dir outputs/reports/imagery/baseline
+## Reproducibility
 
-# 3. Train linear adapter
-python scripts/train_imagery_adapter.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --model-type two_stage \
-  --adapter linear \
-  --output-dir outputs/adapters/subj01/linear \
-  --epochs 50 \
-  --lr 1e-3 \
-  --batch-size 32 \
-  --device cuda
-
-# 4. Train MLP adapter
-python scripts/train_imagery_adapter.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --model-type two_stage \
-  --adapter mlp \
-  --output-dir outputs/adapters/subj01/mlp \
-  --epochs 50 \
-  --lr 1e-3 \
-  --batch-size 32 \
-  --device cuda
-
-# 5. Evaluate with adapter
-python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --model-type two_stage \
-  --adapter-checkpoint outputs/adapters/subj01/mlp/checkpoints/adapter_best.pt \
-  --adapter-type mlp \
-  --mode imagery \
-  --split test \
-  --output-dir outputs/reports/imagery/mlp_adapter
-
-# 6. Run full ablation suite
-python scripts/run_imagery_ablations.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --model-type two_stage \
-  --output-dir outputs/imagery_ablations/subj01 \
-  --epochs 50 \
-  --with-condition
-
-# 7. Generate paper figures
-python scripts/make_paper_figures.py \
-  --ablation-dir outputs/imagery_ablations/subj01 \
-  --output-dir outputs/imagery_ablations/subj01/figures
-```
-
-**Expected Outputs**:
-
-After running the ablation suite, you'll find:
-
-```
-outputs/imagery_ablations/subj01/
-├── adapters/
-│   ├── linear/checkpoints/adapter_best.pt
-│   ├── mlp/checkpoints/adapter_best.pt
-│   └── mlp_condition/checkpoints/adapter_best.pt
-├── eval/
-│   ├── baseline/metrics.json
-│   ├── linear_adapter/metrics.json
-│   ├── mlp_adapter/metrics.json
-│   └── mlp_adapter_condition/metrics.json
-├── figures/
-│   ├── bar_overall_metric.png
-│   ├── bar_by_stimulus_type.png
-│   ├── table.tex
-│   └── table_formatted.md
-├── results_table.csv
-├── results_table.md
-├── metrics_all.json
-└── commands.txt
-```
-
-**Success Criteria**:
-- [x] Adapter improves imagery metrics by >15% relative to perception-only baseline
-- [x] Training completes in <2 hours per subject on single GPU
-- [x] Ablation suite runs end-to-end with single command
-- [x] Paper-ready figures and tables generated automatically
-- [x] Tests pass without requiring real NSD data: `pytest tests/test_imagery_adapter.py -v`
-
-**Timeline**: ✅ Complete (January 2026)
+- All configs version-controlled in `configs/`
+- Seeds fixed: 42 for splits, per-config for training
+- Hardware: H100 80GB, CUDA 12.8, PyTorch 2.10.0
+- Results JSON in `outputs/` for programmatic access
+- 51+ tests passing locally and on cluster
 
 ---
 
 ## References
 
-1. Allen et al. (2022). "A massive 7T fMRI dataset to bridge cognitive neuroscience and artificial intelligence." *Nature Neuroscience*.
-2. Ozcelik & VanRullen (2023). "Brain-Diffuser: Natural scene reconstruction from fMRI signals using generative latent diffusion."
-3. Takagi & Nishimoto (2023). "High-resolution image reconstruction with latent diffusion models from human brain activity."
-4. Houlsby et al. (2019). "Parameter-Efficient Transfer Learning for NLP." *ICML*.
-5. Hu et al. (2021). "LoRA: Low-Rank Adaptation of Large Language Models." *ICLR*.
-
----
-
-## Contact & Collaboration
-
-For questions or collaboration on this research track, please open an issue on the GitHub repository or contact the maintainers.
-
-**Status**: Phase 2 (Adapter Fine-Tuning) — Complete ✅  
-**Last Updated**: January 10, 2026
+1. Allen et al. (2022). "A massive 7T fMRI dataset." *Nature Neuroscience*.
+2. Ozcelik & VanRullen (2023). "Brain-Diffuser." *Scientific Reports*.
+3. Takagi & Nishimoto (2023). "High-resolution reconstruction." *CVPR*.
+4. Scotti et al. (2023). "MindEye." *NeurIPS*.
+5. Hu et al. (2021). "LoRA." *ICLR*.
+6. Dijkstra et al. (2019). "Shared neural mechanisms." *Trends in Cognitive Sciences*.

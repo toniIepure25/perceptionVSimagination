@@ -27,7 +27,7 @@ configs/
 │
 ├── experiments/                 # Research experiment configs
 │   ├── ablation.yaml            # Ablation study template
-│   ├── novel_analyses.yaml      # Six novel analysis directions
+│   ├── novel_analyses.yaml      # 19 novel analysis directions
 │   ├── perception_to_imagery_eval.yaml  # Cross-domain evaluation
 │   └── reproducibility.yaml     # Experiment protocol & seeds
 │
@@ -69,44 +69,37 @@ Priority: runtime overrides > specific config > base.yaml
 ### Training
 
 ```bash
-# Ridge baseline (~5 min, CPU)
-python scripts/train_ridge.py --config configs/training/ridge_baseline.yaml --subject subj01
+# Full pipeline (Ridge + MLP + TwoStage, all subjects)
+python scripts/run_full_pipeline.py
 
-# MLP encoder (~2 hrs)
-python scripts/train_mlp.py --config configs/training/mlp_standard.yaml --subject subj01
+# Train from pre-extracted features
+python scripts/train_from_features_v2.py --config mlp_baseline --subject subj01
 
-# Two-Stage SOTA (~4 hrs, best results)
-python scripts/train_two_stage.py --config configs/training/two_stage_sota.yaml --subject subj01
-
-# CLIP adapter (~30 min, after training encoder)
-python scripts/train_clip_adapter.py --config configs/training/adapter_vitl14.yaml \
-    --pretrained checkpoints/two_stage/subj01/two_stage_best.pt
+# Imagery adapter (requires NSD-Imagery data)
+python scripts/train_imagery_adapter.py --subject subj01
 ```
 
-### Inference
+### Evaluation
 
 ```bash
-# Balanced quality/speed
-python scripts/decode_diffusion.py --config configs/inference/production.yaml \
-    --checkpoint checkpoints/two_stage/subj01/two_stage_best.pt
+# Shared-1000 benchmark
+python scripts/eval_shared1000_full.py
 
-# Publication figures
-python scripts/decode_diffusion.py --config configs/inference/highres_quality.yaml \
-    --checkpoint checkpoints/two_stage/subj01/two_stage_best.pt
+# Cross-domain transfer (requires NSD-Imagery data)
+python scripts/eval_perception_to_imagery_transfer.py
 ```
 
 ### Research
 
 ```bash
-# Cross-domain transfer evaluation
-python scripts/eval_perception_to_imagery_transfer.py \
-    --config configs/experiments/perception_to_imagery_eval.yaml
-
-# Novel analyses (all 6 directions)
+# Novel analyses (all 19 directions — RSA, CKA, domain confusion, etc.)
 python scripts/run_novel_analyses.py --config configs/experiments/novel_analyses.yaml
 
-# Ablation study
-python -m fmri2img.eval.ablation_driver --base-config configs/experiments/ablation.yaml
+# Imagery ablation studies (requires NSD-Imagery data)
+python scripts/run_imagery_ablations.py
+
+# Paper figures
+python scripts/make_paper_figures.py
 ```
 
 ---

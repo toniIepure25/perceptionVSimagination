@@ -1,426 +1,288 @@
 # Imagery Extension Architecture
 
-**System Architecture for NSD-Imagery Integration**
+**System Architecture for NSD-Imagery Integration & Cross-Project Discovery**
+
+> Last Updated: March 12, 2026 — v0.3.0
 
 ---
 
 ## Overview
 
-This document describes how the NSD-Imagery dataset and perception-to-imagery evaluation capabilities integrate into the existing fMRI-to-Image reconstruction pipeline. The design prioritizes **minimal disruption** to existing code while providing **clean extension points** for imagery-specific functionality.
+This document describes how the NSD-Imagery dataset, perception-to-imagery evaluation, and cross-project model integration fit into the fMRI decoding pipeline. The system is built for **scientific discovery** — comparing how the brain represents perceived vs. imagined visual content — not just model building.
+
+### Current State
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **28 perception models** | Trained | Ridge, MLP (11 configs), TwoStage (10), Multilayer (4), Adapters (3) |
+| **19 analysis modules** | Code complete | All validated with dry-run / synthetic data; awaiting imagery data |
+| **4 advanced losses** | Tested | VICReg, Barlow Twins, Triplet+InfoNCE, Hard Negative Mining |
+| **CKA analysis** | Tested | Linear/RBF kernels, debiased HSIC, cross-condition comparison |
+| **LoRA adapters** | Tested | Multi-rank LoRA for parameter-efficient perception→imagery transfer |
+| **Domain adversarial** | Tested | Gradient reversal + DANN for domain-invariant representations |
+| **Noise-ceiling normalization** | Tested | Ceiling-relative metrics for fair cross-study comparison |
+| **UMAP/t-SNE visualization** | Tested | Density comparison, perception vs imagery manifold plots |
+| **ROI decoding** | Tested | Per-ROI Ridge decoding with hierarchy barplots |
+| **Interpretability** | Tested | Integrated Gradients, SmoothGrad, Grad×Input |
+| **SoTA comparison** | Tested | 8 published baselines, LaTeX table generation |
+| **NSD-Imagery data** | **NOT DOWNLOADED** | Critical blocker for all cross-domain analyses |
+| **Cross-project bridge** | Planned | Load FMRI2images vMF-NCE model (R@1~58%, CSLS~70%) |
 
 ---
 
 ## Design Principles
 
-1. **Backwards Compatibility**: All existing perception-only workflows remain unchanged
-2. **Shared Infrastructure**: Reuse existing modules (preprocessing, CLIP cache, models) wherever possible
-3. **Clear Separation**: Imagery-specific logic isolated in dedicated modules
-4. **Unified Interface**: Perception and imagery datasets expose identical APIs
-5. **Graceful Degradation**: Scripts fail informatively if imagery data unavailable
+1. **Discovery-First**: The goal is scientific findings about perception vs. imagination, not novel architectures
+2. **Backwards Compatibility**: All existing perception-only workflows remain unchanged
+3. **Cross-Project Integration**: Leverage the stronger FMRI2images encoder (vMF-NCE, ViT-bigG/14) for analysis
+4. **Shared Infrastructure**: Reuse preprocessing, CLIP cache, and evaluation across both projects
+5. **Graceful Degradation**: Scripts fail informatively if imagery data or external checkpoints are unavailable
 
 ---
 
-## System Architecture Diagram
+## System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Data Sources
-        A[NSD Perception Data] --> C[build_full_index.py]
-        B[NSD-Imagery Data] --> D[build_nsd_imagery_index.py]
-    end
-    
-    subgraph Index Layer
-        C --> E[cache/indices/perception/*.parquet]
+    subgraph Data["Data Sources"]
+        A[NSD Perception fMRI<br/>30K trials, subj01] --> C[data/indices/nsd_index/]
+        B["NSD-Imagery fMRI<br/>⚠️ NOT YET DOWNLOADED"] --> D[build_nsd_imagery_index.py]
         D --> F[cache/indices/imagery/*.parquet]
     end
-    
-    subgraph Preprocessing
-        E --> G[NSDPreprocessor]
-        F --> G
-        G --> H[cache/preproc/]
+
+    subgraph Preproc["Preprocessing"]
+        A --> G["fit_preprocessing.py<br/>Z-score + PCA 3072"]
+        B --> G
+        G --> H[outputs/preproc/]
     end
-    
-    subgraph CLIP Cache
-        E --> I[build_clip_cache.py]
-        F --> I
-        I --> J[cache/clip_embeddings/]
+
+    subgraph CLIP["CLIP Embeddings"]
+        I["ViT-L/14 — 768-d CLS<br/>(this project)"] --> J[cache/clip_embeddings/]
+        K["ViT-bigG/14 — 1280-d × 257 tokens<br/>(FMRI2images)"] --> L[FMRI2images token cache]
     end
-    
-    subgraph Data Loading
-        E --> K[NSDIterableDataset]
-        F --> L[NSDImageryDataset]
-        H --> K
-        H --> L
-        J --> K
-        J --> L
+
+    subgraph Models["Trained Models"]
+        M1["Ridge — cosine 0.79"]
+        M2["MLP — R@1 5.7%"]
+        M3["TwoStage — cosine 0.81"]
+        M5["FMRI2images vMF-NCE<br/>R@1 ~58%, 825M params"]
     end
-    
-    subgraph Training
-        K --> M[train_ridge.py]
-        K --> N[train_mlp.py]
-        K --> O[train_two_stage.py]
-        L -.->|Phase 2| P[train_with_imagery.py]
+
+    subgraph Analysis["19 Analysis Modules + CKA/UMAP/ROI"]
+        N1[Dimensionality · Uncertainty · Semantic Survival]
+        N2[Topology · Cross-Subject · Dissociation]
+        N3[Reality Monitor · Confusion · Adversarial]
+        N4[Compositional · Predictive Coding · Manifold]
+        N5[CKA · UMAP · ROI Decoding · Interpretability]
     end
-    
-    subgraph Models
-        M --> Q[checkpoints/ridge/]
-        N --> R[checkpoints/mlp/]
-        O --> S[checkpoints/two_stage/]
-        P -.->|Phase 2| T[checkpoints/imagery_adapter/]
+
+    subgraph Eval["Evaluation & Discovery"]
+        E1[eval_perception_to_imagery_transfer.py]
+        E2[run_novel_analyses.py]
+        E3[Noise-Ceiling + SoTA Comparison]
     end
-    
-    subgraph Evaluation
-        Q --> U[eval_perception_to_imagery_transfer.py]
-        R --> U
-        S --> U
-        T -.->|Phase 2| U
-        K --> U
-        L --> U
-        U --> V[outputs/reports/imagery/]
-    end
-    
-    subgraph Reporting
-        V --> W[generate_imagery_report.py]
-        W --> X[outputs/reports/imagery/figures/]
-    end
-    
-    style B fill:#e1f5ff
-    style D fill:#e1f5ff
-    style F fill:#e1f5ff
-    style L fill:#e1f5ff
-    style P fill:#ffe1e1
-    style T fill:#ffe1e1
-    style U fill:#e1f5ff
-    style W fill:#e1f5ff
+
+    H --> Models
+    J --> M1 & M2 & M3
+    L --> M5
+    Models --> E1
+    E1 --> Analysis
+    E2 --> Analysis
+    Analysis --> E3
+
+    style B fill:#ff9999,stroke:#cc0000
+    style M5 fill:#e1f5ff,stroke:#0066cc
+    style K fill:#e1f5ff,stroke:#0066cc
 ```
 
-**Legend**:
-- **Blue**: New imagery-specific components
-- **Red**: Phase 2 (future work)
-- **Solid lines**: Implemented dependencies
-- **Dashed lines**: Planned dependencies
+---
+
+## The Two Projects
+
+### This Project: `perceptionVSimagination` (v0.3.0)
+
+| Aspect | Details |
+|--------|---------|
+| **CLIP model** | ViT-L/14 (OpenAI), 768-d CLS embeddings |
+| **Input** | PCA-reduced features (3072-d) from z-scored NSD betas |
+| **Best model** | MLP `strong_infonce_v2` — R@1=5.7%, cosine=0.79 (test-split) |
+| **Models trained** | 28 configs across Ridge, MLP, TwoStage, Multilayer, Adapters |
+| **Focus** | Cross-domain transfer analysis, perception-imagery comparison |
+
+### FMRI2images (separate codebase)
+
+Located at `/home/jovyan/work/FMRI2images/` on the H100 cluster.
+
+| Aspect | Details |
+|--------|---------|
+| **CLIP model** | ViT-bigG/14 (LAION-2B), 1280-d × 257 tokens = 328,960-d |
+| **Input** | 15,724 raw voxels (nsdgeneral ROI), no PCA |
+| **Architecture** | 4-layer residual MLP [8192, 8192, 4096, 2048] → vMF decoder (825M params) |
+| **Training** | vMF-NCE + SoftCLIP + MixCo + EMA, queue size 1024, bf16 |
+| **Best checkpoint** | `N1v27a_bigg_tokens/subj01/checkpoint_best.pt` |
+| **Metrics** | R@1 ~58%, CSLS R@1 ~70% (continuing to improve) |
+
+### Integration Strategy
+
+Rather than porting architectures, we use each model's **predictions as scientific probes**:
+
+1. Both models predict embeddings for the same stimuli (perceived and imagined)
+2. Compare: Does the stronger model show the same perception-vs-imagery patterns?
+3. **If consistent**: Findings are robust — a genuine neural phenomenon
+4. **If different**: Model quality mediates the finding — itself a contribution
 
 ---
 
 ## Module Organization
 
-### New Modules
+### Data Modules
 
-#### 1. `src/fmri2img/data/nsd_imagery.py`
+| Module | Purpose |
+|--------|---------|
+| `src/fmri2img/data/nsd_imagery.py` | NSD-Imagery dataset + index builder (mirrors perception API) |
+| `scripts/build_nsd_imagery_index.py` | CLI to build Parquet indices from raw imagery betas |
 
-**Purpose**: Dataset and index-building logic for NSD-Imagery.
+### Evaluation Scripts
 
-**Key Components**:
-- `ImageryTrial`: Dataclass for canonical trial representation
-- `NSDImageryDataset`: PyTorch Dataset for imagery data (mirrors `NSDIterableDataset`)
-- `build_nsd_imagery_index(...)`: Function to construct Parquet indices from raw imagery data
+| Script | Purpose |
+|--------|---------|
+| `scripts/eval_perception_to_imagery_transfer.py` | Cross-domain evaluation (perception → imagery) |
+| `scripts/run_novel_analyses.py` | Orchestrate all 15 analysis directions |
+| `scripts/make_novel_figures.py` | Publication-quality figures from analysis results |
+| `scripts/make_paper_figures.py` | Paper-specific figure generation |
 
-**Interface Compatibility**:
-```python
-# Perception dataset (existing)
-perception_ds = NSDIterableDataset(
-    index_path="cache/indices/perception/subj01.parquet",
-    subject="subj01",
-    preprocessor=preprocessor
-)
+### 19 Analysis Directions
 
-# Imagery dataset (new, identical interface)
-imagery_ds = NSDImageryDataset(
-    index_path="cache/indices/imagery/subj01.parquet",
-    subject="subj01",
-    preprocessor=preprocessor  # Same preprocessor works!
-)
-```
+All in `src/fmri2img/analysis/`:
 
----
+| # | Module | Key Question | Status |
+|---|--------|-------------|--------|
+| 1 | `dimensionality.py` | Does imagery compress the perceptual manifold? | Code ✅ |
+| 2 | `imagery_uncertainty.py` | Does MC Dropout uncertainty track imagery vividness? | Code ✅ |
+| 3 | `semantic_decomposition.py` | Which semantic concepts survive imagination? | Code ✅ |
+| 4 | `topological_rsa.py` | Does imagination restructure representational topology? | Code ✅ |
+| 5 | `cross_subject.py` | Does the imagery gap have a subject-specific fingerprint? | Code ✅ |
+| 6 | `semantic_structural_dissociation.py` | Do semantics survive while structure degrades? | Code ✅ |
+| 7 | `reality_monitor.py` | Can PRM theory predict perception-imagery confusability? | Code ✅ |
+| 8 | `reality_confusion.py` | Where is the boundary between perceived and imagined? | Code ✅ |
+| 9 | `adversarial_reality.py` | Can a discriminator tell perception from imagery? | Code ✅ |
+| 10 | `hierarchical_reality.py` | At which layer does the perception-imagery gap emerge? | Code ✅ |
+| 11 | `compositional_imagination.py` | Can imagination compose novel concepts? | Code ✅, Dry-run ✅ |
+| 12 | `predictive_coding.py` | Does imagery follow top-down information flow? | Code ✅, Dry-run ✅ |
+| 13 | `manifold_geometry.py` | Is there a centrality bias in imagery? | Code ✅, Dry-run ✅ |
+| 14 | `modality_decomposition.py` | What's shared vs. unique between modalities? | Code ✅, Dry-run ✅ |
+| 15 | `creative_divergence.py` | What transformation rules govern imagination? | Code ✅, Dry-run ✅ |
 
-#### 2. `scripts/build_nsd_imagery_index.py`
+### Advanced Research Modules (v0.3.0)
 
-**Purpose**: CLI tool to build canonical Parquet indices from raw NSD-Imagery data.
-
-**Usage**:
-```bash
-python scripts/build_nsd_imagery_index.py \
-  --subject subj01 \
-  --cache-root cache/ \
-  --output cache/indices/imagery/subj01.parquet \
-  --dry-run  # Preview without writing
-```
-
-**Responsibilities**:
-- Scan `cache/nsd_imagery/betas/` for beta files
-- Parse stimulus metadata from `cache/nsd_imagery/stimuli/`
-- Align with existing NSD perception stimuli (validate `nsd_id` matching)
-- Write Parquet with canonical schema (see `NSD_IMAGERY_DATASET_GUIDE.md`)
-
----
-
-#### 3. `scripts/eval_perception_to_imagery_transfer.py`
-
-**Purpose**: Evaluate perception-trained models on imagery test data.
-
-**Usage**:
-```bash
-python scripts/eval_perception_to_imagery_transfer.py \
-  --subject subj01 \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode imagery \
-  --output-dir outputs/reports/imagery/
-```
-
-**Modes**:
-- `perception`: Evaluate on perception test set (within-domain)
-- `imagery`: Evaluate on imagery test set (cross-domain)
-- `both`: Run both evaluations and generate comparison
-
-**Output**:
-- `perception_baseline_results.json`: Perception test metrics
-- `cross_domain_transfer_results.json`: Imagery test metrics
-- `comparison_table.csv`: Side-by-side comparison
+| Module | Location | Purpose |
+|--------|----------|---------|
+| **CKA** | `analysis/cka.py` | Centered Kernel Alignment — layer-wise representation comparison |
+| **UMAP/t-SNE** | `analysis/embedding_visualization.py` | Perception vs imagery manifold visualization |
+| **ROI Decoding** | `analysis/roi_decoding.py` | Per-brain-region decoding accuracy |
+| **Interpretability** | `analysis/interpretability.py` | Integrated Gradients, SmoothGrad, Grad×Input |
+| **VICReg** | `training/losses.py` | Variance-Invariance-Covariance regularization |
+| **Barlow Twins** | `training/losses.py` | Redundancy reduction loss |
+| **Triplet+InfoNCE** | `training/losses.py` | Combined contrastive + triplet with hard negatives |
+| **DANN** | `training/domain_adversarial.py` | Domain adversarial training for invariant features |
+| **LoRA** | `models/lora_adapter.py` | Low-Rank Adaptation for parameter-efficient transfer |
+| **Noise Ceiling** | `eval/ceiling_normalized.py` | Normalize metrics against theoretical maximum |
+| **SoTA Comparison** | `eval/sota_comparison.py` | 8 published baselines, LaTeX table generation |
+| **FDR Correction** | `stats/inference.py` | Benjamini-Hochberg and Bonferroni correction |
 
 ---
 
-#### 4. `tests/test_imagery_scaffold.py`
+## Configuration
 
-**Purpose**: Verify that new modules import correctly and CLIs work.
-
-**Tests**:
-- `test_imagery_module_imports`: Check `from fmri2img.data.nsd_imagery import *`
-- `test_build_index_cli_help`: Run `python scripts/build_nsd_imagery_index.py --help`
-- `test_eval_cli_help`: Run `python scripts/eval_perception_to_imagery_transfer.py --help`
-- `test_not_implemented_messages`: Verify informative error messages when functions not yet implemented
-
-**No Real Data Required**: Tests use mocks and dry-runs.
-
----
-
-## Configuration Changes
-
-### Dataset Configuration (`configs/data.yaml`)
-
-Add new parameters to support imagery:
+### Dataset (`configs/data.yaml`)
 
 ```yaml
 dataset:
-  mode: "perception"  # Options: perception | imagery | mixed
-  source: "nsd"       # Future: support other datasets
-  
-  # Index paths (auto-constructed based on mode)
-  perception_index: "cache/indices/perception/{subject}.parquet"
-  imagery_index: "cache/indices/imagery/{subject}.parquet"
-  
-  # Split strategy
-  split_by: "stimulus"  # Options: stimulus | trial
-  # "stimulus": Same stimuli in perception and imagery test sets
-  # "trial": Random trial split (may differ across modalities)
-  
-  # Imagery-specific
+  mode: "perception"     # perception | imagery | mixed
+  source: "nsd"
   imagery:
-    enabled: false  # Set to true when imagery data available
-    use_shared_stimuli_only: true  # Restrict to stimuli present in both modalities
-    snr_threshold: null  # Filter low-SNR imagery trials if set
+    enabled: false       # Set true when NSD-Imagery data is downloaded
+    use_shared_stimuli_only: true
 ```
 
-### Experiment Configuration (`configs/experiments/imagery/`)
+### Analysis (`configs/experiments/novel_analyses.yaml`)
 
-New experiment configs for imagery evaluation:
+All 15 original analysis directions configured with hyperparameters.
+
+### Cross-Domain (`configs/experiments/perception_to_imagery_eval.yaml`)
+
+Imagery indices and model checkpoints for transfer evaluation.
+
+---
+
+## Data Flow: From Data to Discovery
 
 ```
-configs/experiments/imagery/
-├── baseline_evaluation.yaml        # Evaluate existing models on imagery
-├── mixed_training.yaml             # Train on perception + imagery (Phase 2)
-└── adapter_training.yaml           # Train adapter head (Phase 2)
-```
+1. Acquire NSD-Imagery Data         ← CURRENT BLOCKER
+   OpenNeuro ds004937 or NSD S3 → /home/jovyan/work/data/nsd_imagery/
 
-Example `baseline_evaluation.yaml`:
-```yaml
-experiment:
-  name: "perception_to_imagery_baseline"
-  description: "Evaluate perception-trained models on imagery test data"
-  
-model:
-  checkpoint: "checkpoints/two_stage/subj01/best.pt"
-  type: "two_stage"
-  
-evaluation:
-  test_sets:
-    - name: "perception"
-      index: "cache/indices/perception/subj01.parquet"
-      split: "test"
-    - name: "imagery"
-      index: "cache/indices/imagery/subj01.parquet"
-      split: "test"
-  
-  metrics:
-    - clip_cosine
-    - retrieval_at_k: [1, 5, 10, 50]
-    - ssim  # Optional if reconstructing images
-    - lpips  # Optional
-  
-output:
-  dir: "outputs/reports/imagery/"
-  save_predictions: false  # Set true to save embeddings
-  generate_figures: true
+2. Build Imagery Index
+   build_nsd_imagery_index.py → cache/indices/imagery/*.parquet
+
+3. Preprocess
+   fit_preprocessing.py → Z-score + PCA(3072)
+
+4. Evaluate Transfer (H1)
+   eval_perception_to_imagery_transfer.py → outputs/reports/imagery/
+
+5. Run Analyses (15 directions)
+   run_novel_analyses.py → outputs/novel_analyses/
+
+6. Generate Figures
+   make_novel_figures.py → Publication-ready plots
+
+7. Cross-Project Comparison
+   External model loader → Run same analyses with FMRI2images predictions
 ```
 
 ---
 
-## Data Flow
+## Error Handling
 
-### Phase 1: Evaluation Only (Current Implementation)
-
-```
-1. Index Building
-   Raw NSD-Imagery files → build_nsd_imagery_index.py → Parquet indices
-
-2. Preprocessing (Shared)
-   Parquet indices → NSDPreprocessor → Cached preprocessed betas
-
-3. CLIP Cache (Shared)
-   Stimulus IDs → build_clip_cache.py → CLIP embeddings
-
-4. Evaluation
-   Existing checkpoints + Imagery indices → eval_perception_to_imagery_transfer.py → Metrics
-
-5. Reporting
-   Metrics JSON → generate_imagery_report.py → Figures + Tables
-```
-
-### Phase 2: Adapter Training (Future)
-
-```
-1. Adapter Training
-   Perception checkpoint (frozen) + Imagery train set → train_imagery_adapter.py → Adapter checkpoint
-
-2. Joint Evaluation
-   Adapter checkpoint + Test sets → eval_perception_to_imagery_transfer.py → Improved metrics
-
-3. Ablation Studies
-   Vary adapter size, training data fraction → Multiple checkpoints → Comparison reports
-```
-
----
-
-## Extension Points
-
-### Adding New Models
-
-To add a new model architecture that supports imagery:
-
-1. **Model Definition**: Add to `src/fmri2img/models/` (e.g., `vision_transformer.py`)
-2. **Training Script**: Add to `scripts/` (e.g., `train_vit.py`)
-3. **Config**: Add to `configs/training/` (e.g., `vit.yaml`)
-4. **Evaluation Support**: Ensure model checkpoint loading works in `eval_perception_to_imagery_transfer.py`
-
-### Adding New Metrics
-
-To add a new evaluation metric:
-
-1. **Metric Function**: Add to `src/fmri2img/eval/metrics.py`
-2. **Config Entry**: Add to `configs/experiments/imagery/*.yaml` under `evaluation.metrics`
-3. **Reporting**: Update `generate_imagery_report.py` to visualize new metric
-
-### Supporting Other Imagery Datasets
-
-To support datasets beyond NSD-Imagery:
-
-1. **Dataset Module**: Add to `src/fmri2img/data/` (e.g., `bold5000_imagery.py`)
-2. **Index Builder**: Add script to `scripts/` (e.g., `build_bold5000_imagery_index.py`)
-3. **Config**: Add `dataset.source: "bold5000"` option in `configs/data.yaml`
-
----
-
-## Failure Modes & Error Handling
-
-### Missing Imagery Data
-
-**Scenario**: User tries to run imagery evaluation without imagery indices.
-
-**Handling**:
 ```python
+# Missing imagery data
 if not Path(imagery_index_path).exists():
     raise FileNotFoundError(
         f"Imagery index not found: {imagery_index_path}\n"
-        f"Please run: python scripts/build_nsd_imagery_index.py --subject {subject}"
+        f"See docs/technical/NSD_IMAGERY_DATASET_GUIDE.md for data acquisition"
     )
-```
 
-### Model-Data Mismatch
-
-**Scenario**: User tries to load a checkpoint trained on different subject.
-
-**Handling**:
-```python
-checkpoint_subject = checkpoint_metadata["subject"]
+# Cross-subject mismatch
 if checkpoint_subject != args.subject:
-    logger.warning(
-        f"Checkpoint trained on {checkpoint_subject}, evaluating on {args.subject}. "
-        f"Cross-subject transfer may perform poorly."
-    )
-```
+    logger.warning(f"Checkpoint trained on {checkpoint_subject}, evaluating on {args.subject}")
 
-### Insufficient Imagery Samples
-
-**Scenario**: Imagery test set has <50 samples (too small for reliable metrics).
-
-**Handling**:
-```python
+# Small sample warning
 if len(imagery_test_set) < 50:
-    logger.warning(
-        f"Imagery test set has only {len(imagery_test_set)} samples. "
-        f"Metrics may have high variance. Consider using more data."
-    )
+    logger.warning(f"Only {len(imagery_test_set)} imagery samples — high variance risk")
 ```
 
 ---
 
-## Performance Considerations
+## Testing
 
-### Memory Optimization
+All 51+ tests pass without real NSD data:
 
-- **Lazy Loading**: Use `NSDImageryDataset` with `IterableDataset` pattern (same as perception)
-- **CLIP Cache**: Share same cache for perception and imagery (keyed by `nsd_id`)
-- **Preprocessing Cache**: Share same cache for perception and imagery
-
-### Compute Optimization
-
-- **Batching**: Imagery evaluation uses same batch sizes as perception
-- **Multi-GPU**: Same distributed training support (if implemented in Phase 2)
-- **Caching**: Pre-compute CLIP embeddings and preprocessing once, reuse across experiments
-
----
-
-## Testing Strategy
-
-### Unit Tests
-- `tests/test_imagery_scaffold.py`: Module imports and CLI smoke tests
-- `tests/test_nsd_imagery.py`: Dataset class functionality (with mocked data)
-
-### Integration Tests
-- `tests/test_imagery_pipeline.py`: End-to-end evaluation with small synthetic dataset
-
-### Validation Tests
-- `scripts/validate_imagery_index.py`: Check index consistency (trial counts, nsd_id alignment)
-
----
-
-## Future Enhancements (Phase 2+)
-
-1. **Adapter Training Pipeline**: Implement lightweight adapter head training
-2. **Mixed Training**: Train models on combined perception + imagery data
-3. **Cross-Subject Transfer**: Evaluate models trained on one subject, tested on another
-4. **Attention Analysis**: Visualize which brain regions drive imagery decoding
-5. **Uncertainty Quantification**: Provide confidence intervals for imagery predictions
+```bash
+pytest tests/ -v                          # Full suite
+pytest tests/test_imagery_scaffold.py -v  # Scaffold
+pytest tests/test_cka.py -v               # CKA (11 tests)
+pytest tests/test_novel_losses.py -v      # VICReg, Barlow, Triplet (17 tests)
+pytest tests/test_lora.py -v              # LoRA adapters (12 tests)
+pytest tests/test_fdr.py -v               # FDR correction (11 tests)
+```
 
 ---
 
 ## References
 
-- **Existing Pipeline**: See `docs/architecture/PIPELINE_ARCHITECTURE.md`
-- **Data Details**: See `docs/technical/NSD_IMAGERY_DATASET_GUIDE.md`
-- **Research Context**: See `docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md`
-
----
-
-**Status**: Phase 1 (Documentation + Scaffolding) — In Progress  
-**Last Updated**: January 10, 2026
+- [PERCEPTION_VS_IMAGERY_ROADMAP.md](../research/PERCEPTION_VS_IMAGERY_ROADMAP.md) — Research plan
+- [EXPERIMENT_RESULTS.md](../research/EXPERIMENT_RESULTS.md) — Perception model results
+- [EXPERIMENT_CONTEXT.md](../research/EXPERIMENT_CONTEXT.md) — Living experiment log
+- [NSD_IMAGERY_DATASET_GUIDE.md](../technical/NSD_IMAGERY_DATASET_GUIDE.md) — Data format
+- [CLUSTER_ENVIRONMENT.md](../guides/CLUSTER_ENVIRONMENT.md) — Cluster setup
+- [STATUS.md](../research/STATUS.md) — Single source of truth for project status

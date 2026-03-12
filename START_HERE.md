@@ -1,8 +1,8 @@
 # Quick Start Guide
 
-> **Onboarding for the Perception vs. Imagination neural decoding project.**
+> **Onboarding for the Perception vs. Imagination neural decoding project (v0.3.0).**
 
-For a project overview, hypotheses, and architecture details, see the [main README](README.md).
+For project overview, see [README.md](README.md). For full status, see [STATUS.md](docs/research/STATUS.md).
 
 ---
 
@@ -10,19 +10,18 @@ For a project overview, hypotheses, and architecture details, see the [main READ
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **Python** | 3.10+ | 3.11+ |
-| **GPU** | 6 GB VRAM | 24 GB VRAM (RTX 3090/4090) |
-| **RAM** | 16 GB | 32 GB+ |
-| **Storage** | 50 GB free | 200 GB+ |
-| **OS** | Linux / macOS | Ubuntu 20.04+ |
+| **Python** | 3.10+ | 3.13+ (cluster) |
+| **GPU** | 6 GB VRAM | H100 80 GB (cluster) |
+| **RAM** | 16 GB | 100 GB (cluster) |
+| **Storage** | 50 GB | 200 GB+ |
 
 ### Environment Setup
 
 ```bash
-git clone https://github.com/yourusername/perceptionVSimagination.git
+git clone https://github.com/toniIepure25/perceptionVSimagination.git
 cd perceptionVSimagination
 
-# Option A: Conda (recommended)
+# Option A: Conda
 conda env create -f environment.yml
 conda activate fmri2img
 
@@ -33,158 +32,123 @@ pip install -e ".[all]"
 python -c "import fmri2img; print(fmri2img.__version__)"
 ```
 
+### H100 Cluster Access
+
+```bash
+# SSH into the cluster
+sshpass -p orchestraiq ssh -o StrictHostKeyChecking=no jovyan@10.130.123.131
+
+# Activate persistent venv
+export PATH=/home/jovyan/local-data/venv/bin:$PATH
+export VIRTUAL_ENV=/home/jovyan/local-data/venv
+
+# Navigate to project
+cd /home/jovyan/local-data/perceptionVSimagination
+```
+
+See [CLUSTER_ENVIRONMENT.md](docs/guides/CLUSTER_ENVIRONMENT.md) for full cluster details.
+
 ---
 
 ## Choose Your Path
 
-### Path 1: Perception Baseline (start here)
+### Path 1: Perception Baseline (already done)
 
-Train an encoder on perception fMRI, then evaluate within-domain.
+All 28 perception models are trained. To reproduce or extend:
 
 ```bash
-# 1. Build NSD perception index
-python scripts/build_full_index.py \
-  --cache-root cache --subject subj01 \
-  --output data/indices/nsd_index/
+# View existing results
+python scripts/eval_all_models.py
+python scripts/eval_shared1000_full.py
 
-# 2. Build CLIP embedding cache (~2-3 hours, one-time)
-python scripts/build_clip_cache.py \
-  --cache-root cache --output outputs/clip_cache/clip.parquet \
-  --batch-size 256
+# Train new model configs
+python scripts/train_from_features_v2.py --config configs/training/mlp.yaml
 
-# 3. Train Two-Stage encoder (~6-8 hours)
-python scripts/train_two_stage.py \
-  --config configs/two_stage_sota.yaml \
-  --subject subj01 \
-  --output-dir checkpoints/two_stage/subj01
-
-# Or use the Makefile shortcuts:
-make ridge          # Fast baseline (~5 min)
-make mlp            # MLP encoder (~2 hours)
+# Or run the full pipeline
+python scripts/run_full_pipeline.py
 ```
 
-### Path 2: Cross-Domain Transfer Evaluation
+**Results**: Best R@1=5.7% (MLP), best cosine=0.81 (TwoStage). See [EXPERIMENT_RESULTS.md](docs/research/EXPERIMENT_RESULTS.md).
 
-Test whether perception-trained models generalize to mental imagery.
+### Path 2: Cross-Domain Transfer (requires NSD-Imagery data)
+
+⚠️ **BLOCKER**: NSD-Imagery fMRI data has not been downloaded. See [NSD_IMAGERY_DATASET_GUIDE.md](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md).
 
 ```bash
-# 1. Build NSD-Imagery index
+# 1. Download NSD-Imagery data (on cluster)
+# See docs/technical/NSD_IMAGERY_DATASET_GUIDE.md
+
+# 2. Build imagery index
 python scripts/build_nsd_imagery_index.py \
   --subject subj01 --data-root data/nsd_imagery \
-  --cache-root cache/ \
-  --output cache/indices/imagery/subj01.parquet --verbose
+  --cache-root cache/ --output cache/indices/imagery/subj01.parquet
 
-# 2. Evaluate perception model on imagery data
+# 3. Evaluate cross-domain transfer
 python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode imagery --split test \
-  --output-dir outputs/reports/imagery/perception_transfer
-
-# 3. Compare against within-domain baseline
-python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode perception --split test \
-  --output-dir outputs/reports/imagery/perception_baseline
-
-# Or use Makefile:
-make imagery-index
-make imagery-eval
+  --checkpoint checkpoints/mlp/subj01/mlp.pt \
+  --mode both --output-dir outputs/reports/imagery/
 ```
 
-### Path 3: Imagery Adapter Training
-
-Train a lightweight adapter to bridge the perception-imagery gap (Hypothesis H3).
+### Path 3: Imagery Adapter Training (requires imagery data)
 
 ```bash
 python scripts/train_imagery_adapter.py \
-  --perception-checkpoint checkpoints/two_stage/subj01/best.pt \
-  --imagery-index cache/indices/imagery/subj01.parquet \
-  --adapter-type mlp \
-  --output-dir checkpoints/adapters/subj01
+  --index cache/indices/imagery/subj01.parquet \
+  --checkpoint checkpoints/two_stage/subj01/best.pt \
+  --model-type two_stage --adapter mlp \
+  --output-dir outputs/adapters/subj01/mlp --epochs 50
 
-# Or: make imagery-adapter
+# Full ablation suite
+python scripts/run_imagery_ablations.py \
+  --index cache/indices/imagery/subj01.parquet \
+  --checkpoint checkpoints/two_stage/subj01/best.pt \
+  --output-dir outputs/imagery_ablations/subj01
 ```
 
-See [Adapter Quick Start](docs/guides/ADAPTER_QUICK_START.md) for the full adapter guide.
+See [ADAPTER_QUICK_START.md](docs/guides/ADAPTER_QUICK_START.md) for details.
 
-### Path 4: Novel Neuroscience Analyses
-
-Run all six research directions that go beyond standard transfer evaluation.
+### Path 4: Novel Analyses (19 directions)
 
 ```bash
-# Dry-run (validates everything works without real data)
+# Dry-run — validates all code without real data
 python scripts/run_novel_analyses.py \
   --config configs/experiments/novel_analyses.yaml --dry-run
 
-# Full run with trained models and real data
+# Full run — requires imagery data for real results
 python scripts/run_novel_analyses.py \
   --config configs/experiments/novel_analyses.yaml
 
-# Generate publication-quality figures
+# Generate publication figures
 python scripts/make_novel_figures.py --results-dir outputs/novel_analyses/
-
-# Or: make novel-analyses && make novel-figures
 ```
+
+### Path 5: Cross-Project Comparison
+
+The [FMRI2images](docs/guides/CLUSTER_ENVIRONMENT.md) project at `/home/jovyan/work/FMRI2images/` has a stronger model (R@1~58%) that can serve as a comparison baseline. Running the same perception-vs-imagery analyses on both models' predictions tests whether findings are robust to model quality.
 
 ---
 
 ## Novel Analysis Directions
 
-| # | Direction | What It Reveals | Key Metric |
-|---|-----------|----------------|-----------|
-| 1 | **Dimensionality Gap** | Imagery compresses perceptual space into a lower-dimensional manifold | PCA participation ratio |
-| 2 | **Uncertainty as Vividness** | MC Dropout variance correlates with imagery quality | Spearman rho (uncertainty vs. accuracy) |
-| 3 | **Semantic Survival** | High-level concepts survive imagery; low-level features degrade | Per-concept preservation ratio |
-| 4 | **Topological Signatures** | Persistent homology reveals structural reorganization in imagery | Wasserstein distance between persistence diagrams |
-| 5 | **Individual Fingerprints** | The perception-imagery gap has a subject-specific, stable pattern | Second-order RSA across subjects |
-| 6 | **Semantic-Structural Dissociation** | CLIP (semantics) transfers better than SD-latents (structure) | Semantic-Structural Index |
+| # | Direction | Key Question | Module |
+|---|-----------|-------------|--------|
+| 1 | **Dimensionality Gap** | Does imagery compress perceptual space? | `analysis/dimensionality.py` |
+| 2 | **Uncertainty as Vividness** | Does MC Dropout uncertainty track vividness? | `analysis/imagery_uncertainty.py` |
+| 3 | **Semantic Survival** | Which concepts survive imagination? | `analysis/semantic_decomposition.py` |
+| 4 | **Topological RSA** | Is representational topology restructured? | `analysis/topological_rsa.py` |
+| 5 | **Individual Fingerprints** | Is the perception-imagery gap subject-specific? | `analysis/cross_subject.py` |
+| 6 | **Semantic-Structural Dissociation** | Semantics survive, structure degrades? | `analysis/semantic_structural_dissociation.py` |
+| 7 | **Reality Monitor** | PRM theory prediction | `analysis/reality_monitor.py` |
+| 8 | **Reality Confusion** | Perception-imagery boundary | `analysis/reality_confusion.py` |
+| 9 | **Adversarial Reality** | Discriminator detection | `analysis/adversarial_reality.py` |
+| 10 | **Hierarchical Reality** | Layer-wise gap emergence | `analysis/hierarchical_reality.py` |
+| 11 | **Compositional Imagination** | Novel concept composition | `analysis/compositional_imagination.py` |
+| 12 | **Predictive Coding** | Top-down information flow | `analysis/predictive_coding.py` |
+| 13 | **Manifold Geometry** | Centrality bias in imagery | `analysis/manifold_geometry.py` |
+| 14 | **Modality Decomposition** | Shared vs unique components | `analysis/modality_decomposition.py` |
+| 15 | **Creative Divergence** | Transformation rules of imagination | `analysis/creative_divergence.py` |
 
-Each direction has a dedicated module in `src/fmri2img/analysis/` and is configured via `configs/experiments/novel_analyses.yaml`.
-
----
-
-## Evaluation Outputs
-
-After running cross-domain evaluation, outputs land in:
-
-```
-outputs/reports/imagery/perception_transfer/
-  metrics.json        # CLIP cosine similarity, retrieval@K
-  per_trial.csv       # Per-trial results with stimulus_type breakdown
-  README.md           # Human-readable summary
-```
-
-After running novel analyses:
-
-```
-outputs/novel_analyses/
-  dimensionality/     # PCA curves, participation ratios
-  uncertainty/        # MC Dropout distributions
-  semantic_survival/  # Per-concept preservation profiles
-  topological_rsa/    # Persistence diagrams, RDMs
-  cross_subject/      # Degradation profiles, weight similarity
-  dissociation/       # SSI index, three-target comparison
-```
-
----
-
-## Configuration
-
-All experiments are driven by YAML configs in `configs/`:
-
-```bash
-# View the main experiment config
-cat configs/experiments/novel_analyses.yaml
-
-# Override parameters at runtime
-python scripts/train_two_stage.py \
-  --config configs/two_stage_sota.yaml \
-  --override "training.learning_rate=5e-5"
-```
-
-See `configs/experiments/reproducibility.yaml` for the full experimental protocol (seeds, splits, metrics).
+Additional: **CKA**, **UMAP/t-SNE**, **ROI Decoding**, **Interpretability** (Integrated Gradients, SmoothGrad).
 
 ---
 
@@ -192,38 +156,43 @@ See `configs/experiments/reproducibility.yaml` for the full experimental protoco
 
 | Document | Purpose |
 |----------|---------|
-| [README.md](README.md) | Project overview, architecture, hypotheses |
-| [Adapter Quick Start](docs/guides/ADAPTER_QUICK_START.md) | Imagery adapter training guide |
-| [docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md) | Full research plan with hypotheses H1-H3 |
-| [docs/research/PAPER_DRAFT_OUTLINE.md](docs/research/PAPER_DRAFT_OUTLINE.md) | Paper structure and narrative |
-| [docs/architecture/IMAGERY_EXTENSION.md](docs/architecture/IMAGERY_EXTENSION.md) | System design for imagery pipeline |
-| [docs/technical/NSD_IMAGERY_DATASET_GUIDE.md](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md) | NSD-Imagery data format and access |
+| [README.md](README.md) | Project overview and architecture |
+| [STATUS.md](docs/research/STATUS.md) | Single source of truth — what's done, what's blocked |
+| [EXPERIMENT_RESULTS.md](docs/research/EXPERIMENT_RESULTS.md) | Actual perception model results |
+| [EXPERIMENT_CONTEXT.md](docs/research/EXPERIMENT_CONTEXT.md) | Living experiment log |
+| [PERCEPTION_VS_IMAGERY_ROADMAP.md](docs/research/PERCEPTION_VS_IMAGERY_ROADMAP.md) | Research plan (H1-H3) |
+| [PAPER_DRAFT_OUTLINE.md](docs/research/PAPER_DRAFT_OUTLINE.md) | Paper narrative |
+| [IMAGERY_EXTENSION.md](docs/architecture/IMAGERY_EXTENSION.md) | System architecture |
+| [ADAPTER_QUICK_START.md](docs/guides/ADAPTER_QUICK_START.md) | Adapter training guide |
+| [CLUSTER_ENVIRONMENT.md](docs/guides/CLUSTER_ENVIRONMENT.md) | H100 cluster setup |
+| [NSD_IMAGERY_DATASET_GUIDE.md](docs/technical/NSD_IMAGERY_DATASET_GUIDE.md) | NSD-Imagery data access |
 
 ---
 
 ## Troubleshooting
 
-**"CLIP embedding missing for nsdId=XXX"** -- CLIP cache not built. Run `make build-clip-cache`.
+**"Module not found"** — Run `pip install -e ".[all]"` to install in development mode.
 
-**"CUDA out of memory"** -- Reduce batch size: `--override "training.batch_size=64"`.
+**"CUDA out of memory"** — Reduce batch size in config YAML or use `--override "training.batch_size=64"`.
 
-**Slow training on CPU** -- Verify GPU: `python -c "import torch; print(torch.cuda.is_available())"`.
+**SSH connection refused** — Cluster may have restarted. Clear host key: `ssh-keygen -f ~/.ssh/known_hosts -R "10.130.123.131"`.
+
+**Tests fail locally** — Some tests need `torchvision`. Use: `pip install -e ".[dev]"`.
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Full Makefile reference
-make help
+# Tests
+pytest tests/ -v                  # All 51+ tests
+pytest tests/test_cka.py -v       # CKA analysis tests
+pytest tests/test_lora.py -v      # LoRA adapter tests
 
-# Core workflow
-make ridge                # Train Ridge baseline (~5 min)
-make mlp                  # Train MLP encoder (~2 hours)
-make imagery-index        # Build NSD-Imagery index
-make imagery-eval         # Evaluate perception -> imagery transfer
-make imagery-adapter      # Train imagery adapter
-make novel-analyses       # Run all 6 novel analyses
-make novel-figures        # Generate publication figures
-make test                 # Run test suite
+# Evaluation
+python scripts/eval_all_models.py         # All perception models
+python scripts/eval_shared1000_full.py    # Shared-1000 benchmark
+
+# Analysis (dry-run)
+python scripts/run_novel_analyses.py --config configs/experiments/novel_analyses.yaml --dry-run
 ```

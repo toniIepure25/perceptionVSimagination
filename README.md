@@ -2,40 +2,68 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-51%2F51%20passing-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)]()
 
 > **Investigating how neural representations of visual perception and mental imagery diverge — and what that reveals about the architecture of imagination.**
 
-This project compares fMRI-based neural decoding across two cognitive domains: *visual perception* (seeing an image) and *mental imagery* (imagining the same image). Using the Natural Scenes Dataset (NSD) and its imagery extension, we train models to reconstruct visual content from brain activity and then measure how those representations transfer — or fail to transfer — between perceiving and imagining.
+This project compares fMRI-based neural decoding across two cognitive domains: *visual perception* (seeing an image) and *mental imagery* (imagining the same image). Using the Natural Scenes Dataset (NSD) and its imagery extension, we train models to reconstruct visual content from brain activity and measure how representations transfer — or fail to transfer — between perceiving and imagining.
 
-The core research question: **Can neural decoders trained on visual perception generalize to mental imagery, and what does the transfer gap reveal about the neural architecture of imagination?**
+---
+
+## Current Status
+
+> See [STATUS.md](docs/research/STATUS.md) for the full single-source-of-truth.
+
+| What | State | Details |
+|------|-------|---------|
+| **Perception models** | ✅ Done | 28 configs trained on H100 — Ridge, MLP, TwoStage, Multilayer, Adapters |
+| **Best perception R@1** | 5.7% | MLP `strong_infonce_v2` (test-split, gallery=3000) |
+| **Analysis modules** | ✅ Code complete | 19 neuroscience directions + CKA, UMAP, ROI, interpretability |
+| **Advanced losses** | ✅ Tested | VICReg, Barlow Twins, Triplet+InfoNCE, DANN, LoRA |
+| **NSD-Imagery data** | ⚠️ Not downloaded | The single blocker for all cross-domain analyses |
+| **Cross-project bridge** | 🔧 Planned | FMRI2images project (R@1~58%) for comparison |
+| **Real analysis results** | ❌ None yet | All 19 modules awaiting imagery data |
 
 ---
 
 ## Research Overview
 
-### Motivation
+### Core Question
 
-Perception and imagination share substantial neural substrate in visual cortex, yet they are not identical processes. How information degrades, transforms, or reorganizes when transitioning from external perception to internal imagery is a fundamental question in cognitive neuroscience. By training computational models on perception data and evaluating them on imagery data, we can precisely quantify *what* information survives the transition to imagination and *what* is lost.
+**Can neural decoders trained on visual perception generalize to mental imagery, and what does the transfer gap reveal about the neural architecture of imagination?**
 
 ### Hypotheses
 
-| ID | Hypothesis | Operationalization |
-|----|-----------|-------------------|
-| **H1** | Perception-trained decoders show degraded but non-zero performance on imagery | CLIP cosine similarity drops to 60-80% of within-domain performance |
+| ID | Hypothesis | How We Test It |
+|----|-----------|----------------|
+| **H1** | Perception-trained decoders show degraded but non-zero imagery performance | CLIP cosine drops to 60-80% of within-domain |
 | **H2** | Mixed perception+imagery training improves cross-domain robustness | <5% perception drop with >15% imagery gain |
-| **H3** | Lightweight adapters can bridge the perception-imagery gap efficiently | 80-90% of full fine-tuning performance at 10x less training cost |
+| **H3** | Lightweight adapters bridge the gap efficiently | 80-90% of full fine-tuning at 10× less cost |
 
-### Novel Analysis Directions
+### 19 Novel Analysis Directions
 
-Beyond standard cross-domain evaluation, this project implements six neuroscience-driven analyses:
+Beyond standard transfer evaluation, the project implements neuroscience-driven analyses:
 
-1. **The Dimensionality Gap** — Imagery representations occupy a lower-dimensional manifold than perception, suggesting a lossy compression during internalization.
-2. **Uncertainty as Vividness** — MC Dropout uncertainty in imagery decoding correlates with subjective vividness of mental images.
-3. **Semantic Survival** — High-level semantic content (object identity, category) is better preserved in imagery than low-level visual features (texture, spatial layout).
-4. **Topological Signatures** — Persistent homology reveals structural reorganization of representational geometry during imagination.
-5. **Individual Imagery Fingerprints** — The pattern of perception-to-imagery degradation is subject-specific and stable, constituting a cognitive fingerprint.
-6. **Semantic-Structural Dissociation** — Multi-target decoding (CLIP, IP-Adapter tokens, SD VAE latents) reveals differential preservation: semantics survive imagery while structural details degrade.
+| # | Direction | Key Question |
+|---|-----------|-------------|
+| 1 | **Dimensionality Gap** | Does imagery compress the perceptual manifold? |
+| 2 | **Uncertainty as Vividness** | Does MC Dropout uncertainty track imagery quality? |
+| 3 | **Semantic Survival** | Which concepts survive the transition to imagination? |
+| 4 | **Topological RSA** | Does imagination restructure representational geometry? |
+| 5 | **Individual Fingerprints** | Is the imagery gap subject-specific and stable? |
+| 6 | **Semantic-Structural Dissociation** | Do semantics survive while structure degrades? |
+| 7 | **Reality Monitor** | Can PRM theory predict perception-imagery confusability? |
+| 8 | **Reality Confusion** | Where is the boundary between perceived and imagined? |
+| 9 | **Adversarial Reality** | Can a discriminator tell perception from imagery? |
+| 10 | **Hierarchical Reality** | At which layer does the gap emerge? |
+| 11 | **Compositional Imagination** | Can imagination compose novel concepts? |
+| 12 | **Predictive Coding** | Does imagery follow top-down information flow? |
+| 13 | **Manifold Geometry** | Is there a centrality bias in imagery? |
+| 14 | **Modality Decomposition** | What's shared vs. unique between modalities? |
+| 15 | **Creative Divergence** | What transformation rules govern imagination? |
+
+Plus advanced research modules: **CKA** (representation comparison), **UMAP/t-SNE** (manifold visualization), **ROI Decoding** (per-brain-region accuracy), **Interpretability** (gradient attribution).
 
 ---
 
@@ -46,138 +74,110 @@ Beyond standard cross-domain evaluation, this project implements six neuroscienc
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐
 │  fMRI Data  │────▶│ Preprocessing│────▶│   Encoder   │────▶│    Target    │
-│ (Perception │     │ (Z-score +   │     │  (Ridge/MLP/│     │ Embeddings   │
-│ or Imagery) │     │  PCA k=512)  │     │  Two-Stage) │     │ (CLIP/IP/SD) │
+│ (Perception │     │  (Z-score +  │     │  (Ridge/MLP/│     │  Embeddings  │
+│ or Imagery) │     │  PCA k=3072) │     │  Two-Stage) │     │  (CLIP 768-d)│
 └─────────────┘     └──────────────┘     └─────────────┘     └──────────────┘
                                                                      │
                               ┌───────────────────────────────────────┘
                               ▼
-┌─────────────┐     ┌──────────────┐     ┌─────────────────────────────────┐
-│Reconstructed│◀────│   Stable     │◀────│  Cross-Domain Analysis Engine   │
-│   Image     │     │  Diffusion   │     │  (Dimensionality, Uncertainty,  │
-│  (512×512)  │     │  (v1.5/2.1)  │     │   Topology, Dissociation, ...)  │
-└─────────────┘     └──────────────┘     └─────────────────────────────────┘
+                    ┌──────────────────────────────────────────────────┐
+                    │     Cross-Domain Analysis Engine (19 dirs)       │
+                    │  Dimensionality · Topology · Uncertainty · CKA   │
+                    │  Semantics · ROI · Grad Attribution · UMAP/tSNE  │
+                    └──────────────────────────────────────────────────┘
 ```
 
-### Encoder Architectures
+### Encoder Architectures (This Project)
 
-| Architecture | Parameters | Description | Role in Project |
-|-------------|-----------|-------------|-----------------|
-| **Ridge** | — | Linear regression | Baseline: measures linearly decodable information |
-| **MLP** | ~148K | Multi-layer perceptron | Standard nonlinear baseline |
-| **Two-Stage** | ~413K | Residual blocks + projection | Primary encoder for cross-domain evaluation |
-| **Adapters** | ~10-50K | Linear/MLP heads on frozen encoder | Lightweight perception→imagery bridge (H3) |
-| **MultiTarget** | ~500K | Simultaneous CLIP + IP + SD prediction | Dissociation analysis (Direction 6) |
+| Architecture | Best Metric | Role |
+|-------------|------------|------|
+| **Ridge** | cosine 0.79 | Linear baseline |
+| **MLP** | R@1 5.7% | Nonlinear baseline (best retrieval) |
+| **TwoStage** | cosine 0.81 | Residual encoder (best cosine) |
+| **Multilayer** | cosine 0.81 | Deep variant |
+| **Adapters** | — | Lightweight perception→imagery bridge |
 
-### Cross-Domain Transfer Strategies
+### Cross-Project: FMRI2images
 
-| Strategy | Training Data | Frozen? | Use Case |
-|----------|--------------|---------|----------|
-| **Direct Transfer** | Perception only | N/A | Zero-shot imagery evaluation |
-| **Mixed Training** | Perception + Imagery | No | Joint domain training |
-| **Adapter Fine-tuning** | Imagery only | Encoder frozen | Efficient domain bridging |
-| **Full Fine-tuning** | Imagery only | No | Upper bound on adaptation |
+A separate project at `/home/jovyan/work/FMRI2images/` achieves R@1~58% (CSLS~70%) using:
+- vMF-NCE probabilistic posterior (825M params)
+- ViT-bigG/14 token targets (1280-d × 257 tokens)
+- 15,724 raw voxels (no PCA)
+- MixCo augmentation + SoftCLIP + EMA
+
+We plan to use its predictions alongside ours to validate that perception-vs-imagery findings are robust to model quality.
 
 ---
 
 ## Installation
 
-### Prerequisites
-
-- **Python**: 3.10+
-- **CUDA**: 11.7+ (for GPU acceleration)
-- **RAM**: 32GB recommended
-- **Storage**: ~200GB for NSD data + models
-
-### Setup
-
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/perceptionVSimagination.git
+git clone https://github.com/toniIepure25/perceptionVSimagination.git
 cd perceptionVSimagination
 
-# Create conda environment
+# Option A: Conda
 conda env create -f environment.yml
 conda activate fmri2img
 
-# Install in development mode
-pip install -e ".[dev]"
+# Option B: pip
+pip install -e ".[all]"
 
-# Verify installation
-python -c "import fmri2img; print('Ready')"
+# Verify
+python -c "import fmri2img; print(fmri2img.__version__)"
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Data Preparation
+### 1. Train Perception Encoder (on H100 cluster)
 
 ```bash
-# Build NSD perception index
-python scripts/build_full_index.py \
-  --cache-root cache --subject subj01 \
-  --output data/indices/nsd_index/
+# Extract features + fit preprocessing
+python scripts/fit_preprocessing.py
+python scripts/extract_features.py
 
-# Build CLIP embedding cache (~2-3 hours, one-time)
-python scripts/build_clip_cache.py \
-  --cache-root cache --output outputs/clip_cache/clip.parquet \
-  --batch-size 256
+# Train (recommended: run_full_pipeline.py handles everything)
+python scripts/run_full_pipeline.py
 
-# Build NSD-Imagery index
+# Or train individual models
+python scripts/train_from_features_v2.py --config configs/training/mlp.yaml
+```
+
+### 2. Evaluate Perception Models
+
+```bash
+# Evaluate all models on test split
+python scripts/eval_all_models.py
+
+# Shared-1000 benchmark
+python scripts/eval_shared1000_full.py
+```
+
+### 3. Cross-Domain Transfer (requires NSD-Imagery data)
+
+```bash
+# Build imagery index
 python scripts/build_nsd_imagery_index.py \
   --subject subj01 --data-root data/nsd_imagery \
   --cache-root cache/ --output cache/indices/imagery/subj01.parquet
-```
 
-### 2. Train Perception Encoder
-
-```bash
-# Two-Stage encoder (recommended, ~6-8 hours)
-python scripts/train_two_stage.py \
-  --config configs/two_stage_sota.yaml \
-  --subject subj01 \
-  --output-dir checkpoints/two_stage/subj01
-```
-
-### 3. Evaluate Cross-Domain Transfer
-
-```bash
-# Test perception-trained model on imagery data
+# Evaluate transfer
 python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode imagery --split test \
-  --output-dir outputs/reports/imagery/perception_transfer
-
-# Compare against within-domain baseline
-python scripts/eval_perception_to_imagery_transfer.py \
-  --index cache/indices/imagery/subj01.parquet \
-  --checkpoint checkpoints/two_stage/subj01/best.pt \
-  --mode perception --split test \
-  --output-dir outputs/reports/imagery/perception_baseline
+  --checkpoint checkpoints/mlp/subj01/mlp.pt \
+  --mode both --output-dir outputs/reports/imagery/
 ```
 
-### 4. Train Imagery Adapter (H3)
+### 4. Novel Analyses
 
 ```bash
-python scripts/train_imagery_adapter.py \
-  --perception-checkpoint checkpoints/two_stage/subj01/best.pt \
-  --imagery-index cache/indices/imagery/subj01.parquet \
-  --adapter-type mlp \
-  --output-dir checkpoints/adapters/subj01
-```
-
-### 5. Run Novel Analyses
-
-```bash
-# All six analysis directions (dry-run for validation)
+# Dry-run (validates code without real data)
 python scripts/run_novel_analyses.py --config configs/experiments/novel_analyses.yaml --dry-run
 
-# With real data and trained models
+# Full run (requires imagery data)
 python scripts/run_novel_analyses.py --config configs/experiments/novel_analyses.yaml
 
-# Generate publication-quality figures
+# Publication figures
 python scripts/make_novel_figures.py --results-dir outputs/novel_analyses/
 ```
 
@@ -185,25 +185,21 @@ python scripts/make_novel_figures.py --results-dir outputs/novel_analyses/
 
 ## Evaluation Metrics
 
-### Cross-Domain Metrics
+### Perception Models (actual results)
+
+| Model | CLIP Cosine | R@1 | R@5 | Median Rank |
+|-------|------------|-----|-----|-------------|
+| Ridge | 0.79 | 1.8% | — | — |
+| MLP (strong_infonce_v2) | 0.79 | **5.7%** | — | 37 |
+| TwoStage | **0.81** | 3.2% | — | — |
+
+### Cross-Domain Metrics (to be measured)
 
 | Metric | What It Measures | Perception Target | Imagery Target |
 |--------|-----------------|-------------------|----------------|
-| **CLIP Cosine** | Semantic fidelity of decoding | >0.50 | >0.35 |
-| **Retrieval R@1** | Exact image identification | >20% | >10% |
-| **Retrieval R@10** | Neighborhood accuracy | >60% | >40% |
-| **Transfer Ratio** | Imagery / Perception performance | — | 0.60–0.80 |
-
-### Novel Analysis Metrics
-
-| Analysis | Key Metric |
-|----------|-----------|
-| Dimensionality Gap | PCA participation ratio (perception vs. imagery) |
-| Uncertainty-Vividness | Spearman correlation between MC Dropout variance and vividness |
-| Semantic Survival | Per-concept preservation ratio across cognitive domains |
-| Topological RSA | Contraction ratio and neighborhood preservation |
-| Cross-Subject | Second-order RSA of degradation profiles |
-| Dissociation | Semantic-Structural Index (CLIP gap vs. SD-latent gap) |
+| CLIP Cosine | Semantic fidelity | >0.50 | >0.35 |
+| R@1 | Exact identification | >5% | >2% |
+| Transfer Ratio | Imagery / Perception | — | 0.60–0.80 |
 
 ---
 
@@ -212,120 +208,94 @@ python scripts/make_novel_figures.py --results-dir outputs/novel_analyses/
 ```
 perceptionVSimagination/
 ├── src/fmri2img/
-│   ├── models/                 # Encoder architectures
-│   │   ├── ridge.py            # Ridge regression baseline
-│   │   ├── mlp.py              # MLP encoder
-│   │   ├── encoders.py         # Two-stage residual encoder
-│   │   ├── clip_adapter.py     # CLIP dimension adapter
-│   │   ├── adapters.py         # Imagery adapters (Linear, MLP, MultiTarget)
-│   │   ├── multi_target_decoder.py  # Simultaneous CLIP/IP/SD prediction
-│   │   └── encoding_model.py   # Image→fMRI encoding model
-│   ├── analysis/               # Novel neuroscience analyses
-│   │   ├── core.py             # Shared utilities & embedding bundles
-│   │   ├── dimensionality.py   # Direction 1: Dimensionality gap
-│   │   ├── imagery_uncertainty.py   # Direction 2: Uncertainty as vividness
-│   │   ├── semantic_decomposition.py # Direction 3: Semantic survival
-│   │   ├── topological_rsa.py  # Direction 4: Topological signatures
-│   │   ├── cross_subject.py    # Direction 5: Individual fingerprints
-│   │   └── semantic_structural_dissociation.py  # Direction 6: Dissociation
-│   ├── data/                   # Data loading & preprocessing
-│   │   ├── nsd_imagery.py      # NSD-Imagery dataset & index builder
-│   │   ├── loaders.py          # DataLoaderFactory, FMRIDataset
-│   │   └── nsd_index.py        # NSD perception index
-│   ├── eval/                   # Evaluation & uncertainty
-│   ├── training/               # Training infrastructure
-│   ├── generation/             # Diffusion-based reconstruction
-│   ├── inference/              # Inference pipelines
-│   └── utils/                  # Config, logging, checkpointing
+│   ├── analysis/                   # 19 neuroscience analysis directions
+│   │   ├── core.py                 # Shared utilities & embedding bundles
+│   │   ├── dimensionality.py       # Dir 1: Dimensionality gap
+│   │   ├── imagery_uncertainty.py  # Dir 2: Uncertainty as vividness
+│   │   ├── semantic_decomposition.py # Dir 3: Semantic survival
+│   │   ├── topological_rsa.py      # Dir 4: Topological signatures
+│   │   ├── cross_subject.py        # Dir 5: Individual fingerprints
+│   │   ├── semantic_structural_dissociation.py  # Dir 6
+│   │   ├── reality_monitor.py      # Dir 7: PRM theory
+│   │   ├── reality_confusion.py    # Dir 8: Confusion boundaries
+│   │   ├── adversarial_reality.py  # Dir 9: Discriminator
+│   │   ├── hierarchical_reality.py # Dir 10: Layer emergence
+│   │   ├── compositional_imagination.py # Dir 11: Brain algebra
+│   │   ├── predictive_coding.py    # Dir 12: Information flow
+│   │   ├── manifold_geometry.py    # Dir 13: Centrality bias
+│   │   ├── modality_decomposition.py # Dir 14: Shared vs unique
+│   │   ├── creative_divergence.py  # Dir 15: Transformation rules
+│   │   ├── cka.py                  # CKA: Representation similarity
+│   │   ├── embedding_visualization.py # UMAP/t-SNE visualization
+│   │   ├── roi_decoding.py         # Per-ROI decoding
+│   │   └── interpretability.py     # Gradient attribution
+│   ├── models/                     # Encoder architectures
+│   │   ├── ridge.py                # Ridge regression
+│   │   ├── mlp.py                  # MLP encoder
+│   │   ├── encoders.py             # Two-stage residual encoder
+│   │   ├── adapters.py             # Imagery adapters (Linear, MLP)
+│   │   ├── lora_adapter.py         # LoRA (Low-Rank Adaptation)
+│   │   ├── clip_adapter.py         # CLIP dimension adapter
+│   │   ├── multi_target_decoder.py # CLIP/IP/SD prediction
+│   │   └── encoding_model.py       # Image→fMRI encoding
+│   ├── eval/                       # Evaluation & benchmarking
+│   │   ├── retrieval.py            # R@K, MRR, median rank
+│   │   ├── ceiling_normalized.py   # Noise-ceiling normalization
+│   │   ├── sota_comparison.py      # Published baseline comparison
+│   │   ├── uncertainty.py          # MC Dropout uncertainty
+│   │   └── brain_alignment.py      # Neural alignment metrics
+│   ├── training/                   # Training losses & loops
+│   │   ├── losses.py               # InfoNCE, VICReg, Barlow, Triplet
+│   │   ├── domain_adversarial.py   # DANN + gradient reversal
+│   │   └── base.py                 # Training loop infrastructure
+│   ├── stats/                      # Statistical inference
+│   │   └── inference.py            # BH/Bonferroni FDR correction
+│   ├── data/                       # Data loading
+│   │   ├── nsd_imagery.py          # NSD-Imagery dataset
+│   │   └── loaders.py              # DataLoaderFactory
+│   └── utils/                      # Config, logging, checkpointing
 │
 ├── scripts/
-│   ├── build_nsd_imagery_index.py          # Build imagery data index
-│   ├── eval_perception_to_imagery_transfer.py  # Cross-domain evaluation
-│   ├── train_imagery_adapter.py            # Train perception→imagery adapters
-│   ├── run_imagery_ablations.py            # Systematic ablation studies
-│   ├── run_novel_analyses.py               # Orchestrate all 6 analyses
-│   ├── make_novel_figures.py               # Publication-quality figures
-│   ├── train_two_stage.py                  # Train perception encoder
-│   ├── build_clip_cache.py                 # CLIP embedding extraction
-│   └── build_full_index.py                 # NSD perception index
+│   ├── run_full_pipeline.py        # End-to-end training pipeline
+│   ├── train_from_features_v2.py   # Feature-based training (latest)
+│   ├── eval_all_models.py          # Evaluate all perception models
+│   ├── eval_shared1000_full.py     # Shared-1000 benchmark
+│   ├── eval_perception_to_imagery_transfer.py  # Cross-domain eval
+│   ├── build_nsd_imagery_index.py  # NSD-Imagery index builder
+│   ├── run_novel_analyses.py       # 15-direction analysis orchestrator
+│   ├── make_novel_figures.py       # Publication figure generator
+│   ├── train_imagery_adapter.py    # Adapter training
+│   ├── run_imagery_ablations.py    # Ablation suite
+│   ├── fit_preprocessing.py        # Z-score + PCA preprocessing
+│   └── extract_features.py         # Feature extraction from betas
 │
 ├── configs/
+│   ├── base.yaml                   # Base config (ViT-L/14, 768-d)
 │   ├── experiments/
-│   │   ├── novel_analyses.yaml             # Novel analysis configuration
-│   │   └── perception_to_imagery_eval.yaml # Transfer evaluation config
-│   ├── two_stage_sota.yaml                 # SOTA encoder config
-│   └── base.yaml                           # Base configuration
+│   │   ├── novel_analyses.yaml     # 15-direction analysis config
+│   │   ├── perception_to_imagery_eval.yaml
+│   │   ├── ablation.yaml
+│   │   └── reproducibility.yaml
+│   └── training/                   # Per-model training configs
 │
-├── tests/
-│   ├── test_imagery_adapter.py             # Adapter unit tests
-│   ├── test_imagery_integration.py         # Integration tests
-│   └── test_imagery_scaffold.py            # Scaffold validation
-│
-├── docs/
-│   ├── research/
-│   │   └── PERCEPTION_VS_IMAGERY_ROADMAP.md
-│   ├── architecture/
-│   │   └── IMAGERY_EXTENSION.md
-│   └── technical/
-│       └── NSD_IMAGERY_DATASET_GUIDE.md
-│
-├── START_HERE.md               # Step-by-step onboarding guide
-├── docs/guides/ADAPTER_QUICK_START.md  # Adapter training quick reference
-├── pyproject.toml              # Package configuration
-└── environment.yml             # Conda environment
-```
-
----
-
-## Experimental Design
-
-### Cross-Domain Transfer Matrix
-
-| Training Config | Training Data | Test: Perception | Test: Imagery |
-|----------------|--------------|-----------------|---------------|
-| Perception-Only (baseline) | NSD perception | Within-domain | Cross-domain |
-| Mixed Training | Perception + Imagery | Within-domain | Mixed-domain |
-| Perception + Adapter | Perception (frozen) + Imagery (adapter) | Within-domain | Adapted |
-| Imagery-Only | NSD imagery | Cross-domain | Within-domain |
-
-### Subjects
-
-NSD-Imagery includes subjects: subj01, subj02, subj05, subj07. All analyses support per-subject and cross-subject comparisons.
-
-### Ablation Studies
-
-```bash
-# Adapter architecture ablations
-python scripts/run_imagery_ablations.py \
-  --perception-checkpoint checkpoints/two_stage/subj01/best.pt \
-  --imagery-index cache/indices/imagery/subj01.parquet \
-  --output-dir outputs/ablations/subj01
-
-# Covers: adapter type, hidden dimensions, learning rate, freeze depth, data fraction
+├── tests/                          # 51+ tests (all passing)
+├── docs/                           # Research docs, guides, technical
+├── checkpoints/                    # Trained model weights
+├── outputs/                        # Evaluation results & figures
+└── cache/                          # NSD data, CLIP embeddings
 ```
 
 ---
 
 ## Key References
 
-- Allen, E. J., et al. (2022). A massive 7T fMRI dataset to bridge cognitive neuroscience and artificial intelligence. *Nature Neuroscience*, 25(1), 116–126.
-- Radford, A., et al. (2021). Learning transferable visual models from natural language supervision. *ICML*.
-- Rombach, R., et al. (2022). High-resolution image synthesis with latent diffusion models. *CVPR*.
-- Pearson, J. (2019). The human imagination: the cognitive neuroscience of visual mental imagery. *Nature Reviews Neuroscience*, 20(10), 624–634.
-- Kosslyn, S. M. (2005). Mental images and the brain. *Cognitive Neuropsychology*, 22(3-4), 333–347.
+- Allen et al. (2022). A massive 7T fMRI dataset. *Nature Neuroscience*.
+- Ozcelik & VanRullen (2023). Brain-Diffuser. *Scientific Reports*.
+- Takagi & Nishimoto (2023). High-resolution reconstruction from brain activity. *CVPR*.
+- Scotti et al. (2023). MindEye: Reconstructing the mind's eye. *NeurIPS*.
+- Pearson (2019). The human imagination. *Nature Reviews Neuroscience*.
+- Dijkstra et al. (2019). Shared neural mechanisms of perception and imagery. *Trends in Cognitive Sciences*.
 
 ---
 
-## License
-
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## Acknowledgments
-
-- **Natural Scenes Dataset**: Emily Allen and team, University of Minnesota
-- **NSD-Imagery Extension**: For providing the mental imagery fMRI data that makes cross-domain comparison possible
-- **OpenAI CLIP**: Semantic embedding backbone
-- **Stability AI**: Stable Diffusion for visual reconstruction
-- **Hugging Face**: `diffusers` and `transformers` libraries
+**Version**: 0.3.0 | **Last Updated**: March 12, 2026 | **License**: MIT

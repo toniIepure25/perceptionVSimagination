@@ -204,5 +204,22 @@ Performance is substantially lower on Shared-1000 due to preprocessing mismatch:
 - [x] Fix ridge_novel evaluation (centering mismatch) — **Fixed**: cosine 0.7913, R@1 0.0177
 - [x] Fix MRR display (key case mismatch) — **Fixed**: MRR now showing correctly
 - [x] Run Shared-1000 benchmark (Phase C) — **Done**: All 10 models evaluated
+- [x] Build 19 analysis modules (v0.3.0, commit `0d162f4`) — RSA, CKA, noise ceiling, domain confusion, etc.
+- [ ] **BLOCKED**: Download NSD-Imagery fMRI data (OpenNeuro ds004937)
+- [ ] Run cross-domain eval with real imagery data
 - [ ] Retrain TwoStage baseline with v2 hyperparameters
-- [ ] Imagery adapter training and cross-domain evaluation (Phase D)
+- [ ] Run FMRI2images checkpoint on shared stimuli for cross-project comparison
+
+---
+
+## 10. Cross-Project Context
+
+A separate project (**FMRI2images**) on the same cluster achieves R@1 ~58% using:
+- ViT-bigG/14 (1280-d × 257 tokens) instead of ViT-L/14 (768-d CLS)
+- 4-layer residual MLP [8192, 8192, 4096, 2048] → vMF decoder (~825M params)
+- 15,724 raw voxels (nsdgeneral) instead of PCA-3072
+- vMF-NCE + SoftCLIP + MixCo + EMA training
+
+The 10× R@1 gap is expected given: 130× more parameters, higher-capacity CLIP backbone (bigG vs L/14), and richer input (raw voxels vs PCA). An external model loader (`src/fmri2img/models/external_loader.py`) allows loading FMRI2images checkpoints for prediction-level comparison without importing the other codebase.
+
+See [STATUS.md](STATUS.md) for the single source of truth on current project state.

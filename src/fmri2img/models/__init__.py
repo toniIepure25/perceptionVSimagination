@@ -46,6 +46,13 @@ from .losses import (
     ComposedLoss,
 )
 
+from .external_loader import (
+    ExternalModelLoader,
+    ExternalModelConfig,
+    load_fmri2images_model,
+    compare_predictions,
+)
+
 try:
     from .lora_adapter import (
         LoRALinear,
@@ -99,6 +106,11 @@ __all__ = [
     "infonce_loss",
     "compose_loss",
     "ComposedLoss",
+    # External model loader (FMRI2images bridge)
+    "ExternalModelLoader",
+    "ExternalModelConfig",
+    "load_fmri2images_model",
+    "compare_predictions",
     # LoRA adapters (parameter-efficient domain adaptation)
     "LoRALinear",
     "LoRAAdapter",
