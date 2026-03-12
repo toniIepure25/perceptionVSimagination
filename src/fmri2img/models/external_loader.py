@@ -293,10 +293,14 @@ class ExternalModelLoader:
 
     def _load_encoder_weights(self, encoder_sd: Dict[str, torch.Tensor]) -> None:
         """Load encoder weights with flexible key matching."""
-        # Strip 'encoder.' prefix
-        stripped = {
-            k.replace("encoder.", "", 1): v for k, v in encoder_sd.items()
-        }
+        # Strip 'encoder.' prefix (may be double: encoder.encoder.X → encoder.X → X)
+        stripped = {}
+        for k, v in encoder_sd.items():
+            clean = k
+            # Remove leading 'encoder.' prefixes until we get bare layer names
+            while clean.startswith("encoder."):
+                clean = clean[len("encoder."):]
+            stripped[clean] = v
 
         # Try direct load first
         missing, unexpected = self.encoder.load_state_dict(stripped, strict=False)
@@ -310,23 +314,30 @@ class ExternalModelLoader:
 
     def _load_decoder_weights(self, decoder_sd: Dict[str, torch.Tensor]) -> None:
         """Load decoder mu_head weights if available."""
-        mu_keys = {k: v for k, v in decoder_sd.items() if "mu_head" in k}
-        if not mu_keys:
+        # Find mu_head keys, stripping all prefix layers
+        mu_weight = None
+        mu_bias = None
+        for k, v in decoder_sd.items():
+            if "mu_head" in k and "weight" in k:
+                mu_weight = v
+            elif "mu_head" in k and "bias" in k:
+                mu_bias = v
+
+        if mu_weight is None:
             logger.info("No mu_head weights found — decode_tokens unavailable")
             return
 
-        # If mu_head is a single linear layer
-        if "decoder.mu_head.weight" in mu_keys:
-            w = mu_keys["decoder.mu_head.weight"]
-            b = mu_keys.get("decoder.mu_head.bias")
-            self.mu_head = nn.Linear(w.shape[1], w.shape[0], bias=b is not None)
-            self.mu_head.weight = nn.Parameter(w)
-            if b is not None:
-                self.mu_head.bias = nn.Parameter(b)
-            self.mu_head.to(self.device, self.dtype).eval()
-            logger.info(
-                "Loaded mu_head: %d → %d", w.shape[1], w.shape[0]
-            )
+        # Build a single linear layer for mu_head
+        w = mu_weight
+        b = mu_bias
+        self.mu_head = nn.Linear(w.shape[1], w.shape[0], bias=b is not None)
+        self.mu_head.weight = nn.Parameter(w)
+        if b is not None:
+            self.mu_head.bias = nn.Parameter(b)
+        self.mu_head.to(self.device, self.dtype).eval()
+        logger.info(
+            "Loaded mu_head: %d → %d", w.shape[1], w.shape[0]
+        )
 
     # -----------------------------------------------------------------------
     # Public API
