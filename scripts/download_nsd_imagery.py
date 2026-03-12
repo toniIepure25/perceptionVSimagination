@@ -125,7 +125,20 @@ def download_file(s3, key: str, dest: Path, expected_size: int,
 
     Returns True on success, False on failure.
     """
-    dest.parent.mkdir(parents=True, exist_ok=True)
+    # Skip 0-byte "directory" objects (S3 folder markers)
+    if expected_size == 0 and key.endswith("/"):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        return True
+
+    # Ensure parent exists (handle case where a "dir/" object was a file)
+    parent = dest.parent
+    if parent.exists() and parent.is_file():
+        parent.unlink()
+    parent.mkdir(parents=True, exist_ok=True)
+
+    # If dest path is itself a directory (from a prev "dir/" download), remove it
+    if dest.exists() and dest.is_dir():
+        shutil.rmtree(dest)
 
     # Skip if already downloaded with correct size
     if dest.exists() and dest.stat().st_size == expected_size:
@@ -201,10 +214,12 @@ def build_manifest(s3, subjects: list[str],
                 "category": f"betas_{subj}",
             })
 
+    # Filter out 0-byte directory markers (S3 "folder" objects ending in /)
+    manifest = [m for m in manifest if not (m["size"] == 0 and m["key"].endswith("/"))]
+    # Filter out entries with empty relative paths
+    manifest = [m for m in manifest if m["rel_path"].rstrip("/")]
+
     return manifest
-
-
-def print_manifest_summary(manifest: list[dict]) -> dict:
     """Print download summary grouped by category. Returns size totals."""
     categories: dict[str, dict] = {}
     for item in manifest:
