@@ -141,6 +141,7 @@ class NSDImageryDataset(IterableDataset):
         preprocessor: Optional["NSDPreprocessor"] = None,
         clip_cache: Optional["CLIPCache"] = None,
         cache_root: Optional[str] = None,
+        data_root: Optional[str] = None,
         stimulus_type_filter: Optional[str] = None,
         split_filter: Optional[str] = None,
     ):
@@ -155,6 +156,7 @@ class NSDImageryDataset(IterableDataset):
         self.preprocessor = preprocessor
         self.clip_cache = clip_cache
         self._cache_root = Path(cache_root) if cache_root else Path('cache')
+        self._data_root = Path(data_root) if data_root else None
         
         # Validate index exists
         if not Path(index_path).exists():
@@ -234,23 +236,35 @@ class NSDImageryDataset(IterableDataset):
         if info and info.num_workers > 1:
             indices = indices[info.id :: info.num_workers]
         
-        # Get cache root if available
+        # Get data root: prefer explicit data_root, then cache_root, then cwd
+        data_root = getattr(self, '_data_root', None)
         cache_root = getattr(self, '_cache_root', Path('cache'))
+        
+        def _resolve_path(rel_path: str) -> Path:
+            """Resolve a relative path from the index against known roots."""
+            if data_root is not None:
+                p = data_root / rel_path
+                if p.exists():
+                    return p
+            p = cache_root / rel_path
+            if p.exists():
+                return p
+            p = Path(rel_path)
+            if p.exists():
+                return p
+            # Return data_root version as best guess even if missing
+            return (data_root / rel_path) if data_root else Path(rel_path)
         
         for idx in indices:
             row = self.df.iloc[idx]
             
             try:
                 # Load fMRI data
-                fmri_path = cache_root / row['fmri_path']
-                if not fmri_path.exists():
-                    # Try without cache_root prefix
-                    fmri_path = Path(row['fmri_path'])
-                
+                fmri_path = _resolve_path(row['fmri_path'])
                 beta_idx = row.get('beta_index', None)
                 
                 if fmri_path.suffix == '.npy':
-                    voxels = np.load(fmri_path).astype(np.float32)
+                    vol_3d = np.load(fmri_path).astype(np.float32)
                 elif fmri_path.suffix == '.gz':
                     # Load NIfTI (may be 4D with multiple volumes)
                     import nibabel as nib
@@ -261,11 +275,11 @@ class NSDImageryDataset(IterableDataset):
                     data = img.get_fdata()
                     
                     if data.ndim == 4 and beta_idx is not None:
-                        # Extract single volume from 4D NIfTI
-                        voxels = data[..., int(beta_idx)].astype(np.float32).flatten()
+                        # Extract single 3D volume from 4D NIfTI
+                        vol_3d = data[..., int(beta_idx)].astype(np.float32)
                     else:
-                        # 3D NIfTI or no beta_index
-                        voxels = data.astype(np.float32).flatten()
+                        # Already 3D or no specific beta index
+                        vol_3d = data.astype(np.float32)
                 elif fmri_path.suffix == '.hdf5':
                     import h5py
                     fmri_key = str(fmri_path)
@@ -273,20 +287,22 @@ class NSDImageryDataset(IterableDataset):
                         _hdf5_cache[fmri_key] = h5py.File(fmri_path, 'r')
                     f = _hdf5_cache[fmri_key]
                     if beta_idx is not None:
-                        voxels = f['betas'][int(beta_idx)].astype(np.float32).flatten()
+                        vol_3d = f['betas'][int(beta_idx)].astype(np.float32)
                     else:
-                        voxels = f['betas'][:].astype(np.float32).flatten()
+                        vol_3d = f['betas'][:].astype(np.float32)
                 else:
                     raise ValueError(f"Unsupported fMRI file format: {fmri_path.suffix}")
                 
-                # Apply preprocessing if provided
+                # Apply preprocessing if provided (expects 3D volume)
                 if self.preprocessor is not None:
-                    voxels = self.preprocessor.transform(voxels)
+                    voxels = self.preprocessor.transform(vol_3d)
+                else:
+                    voxels = vol_3d.flatten()
                 
                 # Load target image if available
                 target_image = None
                 if pd.notna(row.get('image_path')):
-                    img_path = Path(row['image_path'])
+                    img_path = _resolve_path(row['image_path'])
                     if img_path.exists():
                         target_image = Image.open(img_path).convert('RGB')
                 

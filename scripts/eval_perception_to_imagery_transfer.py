@@ -211,8 +211,9 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
         raise ImportError("CLIP not installed. Run: pip install git+https://github.com/openai/CLIP.git")
     
     # Load CLIP model (must match training target: ViT-L/14, 768-D)
-    model, preprocess = clip.load("ViT-L/14", device=device)
-    model.eval()
+    clip_model, preprocess = clip.load("ViT-L/14", device=device)
+    clip_model.eval()
+    embed_dim = 768  # ViT-L/14 embedding dimension
     
     image_embs = []
     text_embs = []
@@ -224,11 +225,11 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
             for img in tqdm(images, desc="CLIP images"):
                 if img is not None:
                     img_tensor = preprocess(img).unsqueeze(0).to(device)
-                    emb = model.encode_image(img_tensor)
+                    emb = clip_model.encode_image(img_tensor)
                     emb = emb / emb.norm(dim=-1, keepdim=True)  # Normalize
                     image_embs.append(emb.cpu().numpy()[0])
                 else:
-                    image_embs.append(np.zeros(512, dtype=np.float32))
+                    image_embs.append(np.zeros(embed_dim, dtype=np.float32))
     
     # Process texts
     if texts:
@@ -237,11 +238,11 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
             for text in tqdm(texts, desc="CLIP texts"):
                 if text is not None and text.strip():
                     text_token = clip.tokenize([text]).to(device)
-                    emb = model.encode_text(text_token)
+                    emb = clip_model.encode_text(text_token)
                     emb = emb / emb.norm(dim=-1, keepdim=True)  # Normalize
                     text_embs.append(emb.cpu().numpy()[0])
                 else:
-                    text_embs.append(np.zeros(512, dtype=np.float32))
+                    text_embs.append(np.zeros(embed_dim, dtype=np.float32))
     
     return (np.array(image_embs) if image_embs else None, 
             np.array(text_embs) if text_embs else None)
@@ -438,6 +439,10 @@ def main():
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--cache-root', type=str, default='cache')
+    parser.add_argument('--data-root', type=str, default=None,
+                        help='Root directory for NSD-Imagery data (where betas/, metadata/, stimuli/ live)')
+    parser.add_argument('--preproc-dir', type=str, default=None,
+                        help='Path to perception preprocessing artifacts (e.g., cache/preproc/subject=subj01/subj01)')
     parser.add_argument('--retrieval-k', type=int, nargs='+', default=[1, 5, 10])
     parser.add_argument('--dry-run', action='store_true', help='Test pipeline without loading real checkpoint')
     parser.add_argument('--verbose', action='store_true')
@@ -520,12 +525,27 @@ def main():
     subject = df_peek['subject'].iloc[0]
     logger.info(f"Subject: {subject}")
     
+    # Load perception preprocessing pipeline if specified
+    preprocessor = None
+    if args.preproc_dir:
+        from fmri2img.data.preprocess import NSDPreprocessor
+        preprocessor = NSDPreprocessor(subject=subject, out_dir="__tmp__")
+        preprocessor.set_out_dir(args.preproc_dir)
+        loaded = preprocessor.load_artifacts()
+        if not loaded:
+            print(f"ERROR: Could not load preprocessing artifacts from {args.preproc_dir}", file=sys.stderr)
+            sys.exit(1)
+        logger.info(f"Loaded preprocessing: {preprocessor.mask_.sum()} masked voxels → "
+                    f"{preprocessor.pca_info_.get('k_eff', '?')} PCA dims")
+    
     dataset = NSDImageryDataset(
         index_path=str(index_path),
         subject=subject,
         condition=args.mode if args.mode != 'both' else None,
         split_filter=args.split if args.split != 'all' else None,
         cache_root=args.cache_root,
+        data_root=args.data_root,
+        preprocessor=preprocessor,
         shuffle=False,
     )
     
