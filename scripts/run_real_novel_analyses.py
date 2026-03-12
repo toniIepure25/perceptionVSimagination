@@ -60,7 +60,7 @@ def build_embedding_bundle(
     # Load model
     logger.info(f"Loading Ridge model from {checkpoint_path}")
     encoder = RidgeEncoder.load(checkpoint_path)
-    logger.info(f"Ridge loaded: alpha={encoder.alpha:.1f}, {encoder.coef_.shape}")
+    logger.info(f"Ridge loaded: alpha={encoder.alpha:.1f}")
 
     # Load preprocessor
     logger.info(f"Loading preprocessor from {preproc_dir}")
