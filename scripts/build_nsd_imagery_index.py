@@ -129,22 +129,29 @@ For more information, see:
     cache_root.mkdir(parents=True, exist_ok=True)
     
     # Check if NSD-Imagery data exists for this subject
-    subject_data_dir = data_root / args.subject
-    if not subject_data_dir.exists():
-        print(f"ERROR: Subject data directory not found: {subject_data_dir}", file=sys.stderr)
+    # Data layout: data_root/betas/{subject}/betas_nsdimagery.nii.gz
+    subject_beta_dir = data_root / "betas" / args.subject
+    if not subject_beta_dir.exists():
+        print(f"ERROR: Subject beta directory not found: {subject_beta_dir}", file=sys.stderr)
         print(f"", file=sys.stderr)
-        print(f"Available subjects:", file=sys.stderr)
-        if data_root.exists():
-            available = [d.name for d in data_root.iterdir() if d.is_dir()]
-            for subj in available:
-                print(f"  - {subj}")
-        else:
-            print(f"  (data root directory not found)")
+        print(f"Expected: {data_root}/betas/{args.subject}/betas_nsdimagery.nii.gz", file=sys.stderr)
+        betas_dir = data_root / "betas"
+        if betas_dir.exists():
+            available = [d.name for d in betas_dir.iterdir() if d.is_dir()]
+            print(f"Available subjects: {', '.join(available)}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Check metadata exists
+    metadata_dir = data_root / "metadata"
+    if not metadata_dir.exists():
+        print(f"ERROR: Metadata directory not found: {metadata_dir}", file=sys.stderr)
+        print(f"Make sure NSD-Imagery metadata is downloaded.", file=sys.stderr)
         sys.exit(1)
     
     if args.validate_only:
         print(f"✓ NSD-Imagery data found for {args.subject}")
-        print(f"  Data directory: {subject_data_dir}")
+        print(f"  Beta directory: {subject_beta_dir}")
+        print(f"  Metadata directory: {metadata_dir}")
         print(f"  Data appears valid (basic check only)")
         sys.exit(0)
     
