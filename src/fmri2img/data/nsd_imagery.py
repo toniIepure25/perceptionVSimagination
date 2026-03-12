@@ -215,6 +215,10 @@ class NSDImageryDataset(IterableDataset):
         from torch.utils.data import get_worker_info
         import random
         
+        # File caches to avoid reloading 4D NIfTI on every trial
+        _nifti_cache = {}  # path → nibabel image
+        _hdf5_cache = {}   # path → h5py File
+        
         # Worker-aware sharding
         info = get_worker_info()
         rng = random.Random(self.seed + (info.id if info else 0))
@@ -243,13 +247,35 @@ class NSDImageryDataset(IterableDataset):
                     # Try without cache_root prefix
                     fmri_path = Path(row['fmri_path'])
                 
+                beta_idx = row.get('beta_index', None)
+                
                 if fmri_path.suffix == '.npy':
                     voxels = np.load(fmri_path).astype(np.float32)
                 elif fmri_path.suffix == '.gz':
-                    # Load NIfTI
+                    # Load NIfTI (may be 4D with multiple volumes)
                     import nibabel as nib
-                    img = nib.load(fmri_path)
-                    voxels = img.get_fdata().astype(np.float32).flatten()
+                    fmri_key = str(fmri_path)
+                    if fmri_key not in _nifti_cache:
+                        _nifti_cache[fmri_key] = nib.load(fmri_path)
+                    img = _nifti_cache[fmri_key]
+                    data = img.get_fdata()
+                    
+                    if data.ndim == 4 and beta_idx is not None:
+                        # Extract single volume from 4D NIfTI
+                        voxels = data[..., int(beta_idx)].astype(np.float32).flatten()
+                    else:
+                        # 3D NIfTI or no beta_index
+                        voxels = data.astype(np.float32).flatten()
+                elif fmri_path.suffix == '.hdf5':
+                    import h5py
+                    fmri_key = str(fmri_path)
+                    if fmri_key not in _hdf5_cache:
+                        _hdf5_cache[fmri_key] = h5py.File(fmri_path, 'r')
+                    f = _hdf5_cache[fmri_key]
+                    if beta_idx is not None:
+                        voxels = f['betas'][int(beta_idx)].astype(np.float32).flatten()
+                    else:
+                        voxels = f['betas'][:].astype(np.float32).flatten()
                 else:
                     raise ValueError(f"Unsupported fMRI file format: {fmri_path.suffix}")
                 
@@ -327,12 +353,24 @@ def build_nsd_imagery_index(
     """
     Build canonical Parquet index from raw NSD-Imagery data.
     
+    Parses the GLMsingle design matrices and experiment metadata to create
+    a trial-level index for all 720 betas per subject. Each beta is labeled
+    with its task type (imagery/perception/attention), stimulus identity,
+    cue letter, NSD ID (for set B), and stimulus type.
+    
     Args:
-        data_root: Root directory containing imagery fMRI data
+        data_root: Root directory of downloaded NSD-Imagery data.
+            Expected structure:
+                data_root/
+                    betas/{subject}/betas_nsdimagery.nii.gz  (4D: 81×104×83×720)
+                    metadata/designmatrixGLMsingle.mat
+                    metadata/cue_pair_list.xlsx
+                    metadata/*_dm.mat
+                    stimuli/allstim/  (optional cue images)
         subject: Subject ID (e.g., "subj01")
-        cache_root: Cache directory for intermediate files
+        cache_root: Cache directory (unused, kept for API compat)
         output_path: Path to write Parquet index
-        stimulus_root: Optional root for stimulus files (images/text)
+        stimulus_root: Optional override for stimulus directory
         dry_run: If True, validate but don't write output
         verbose: If True, print progress messages
     
@@ -340,180 +378,137 @@ def build_nsd_imagery_index(
         Path to created index file
         
     Index Schema:
-        - trial_id: int (unique global ID)
+        - trial_id: int (= beta_index, 0-719)
         - subject: str
-        - condition: str ("imagery" or "perception")
-        - stimulus_type: str ("simple", "complex", "conceptual", "unknown")
-        - run_id: int (optional, for session/run organization)
-        - fmri_path: str (relative path to beta file)
-        - image_path: str (nullable, for complex stimuli)
+        - condition: str ("imagery", "perception", or "attention")
+        - stimulus_type: str ("simple", "complex", "conceptual")
+        - task_type: str ("imagery", "perception", "attention")
+        - run_id: int (0-11)
+        - beta_index: int (volume index in 4D NIfTI)
+        - fmri_path: str (relative path to beta file from data_root)
+        - image_path: str (nullable, path to cue/stimulus image)
         - text_prompt: str (nullable, for conceptual stimuli)
+        - nsd_id: int (nullable, NSD stimulus ID for set B)
+        - cue_letter: str (cue letter shown to subject)
+        - stimulus_set: str ("A", "B", "C")
+        - stimulus_name: str (full stimulus name)
+        - shared_id: int (nullable, shared1000 index for set B)
+        - repeat_index: int (0 or 1)
         - meta_json: str (nullable, serialized metadata dict)
         - split: str ("train", "val", "test")
     """
-    import json
-    from collections import defaultdict
+    from fmri2img.data.nsd_imagery_metadata import (
+        parse_all_trials,
+        trials_to_dataframe,
+        assign_splits,
+    )
     
     data_root = Path(data_root)
-    cache_root = Path(cache_root)
     output_path = Path(output_path)
     
     if verbose:
         logger.info("Building NSD-Imagery index for %s...", subject)
         logger.info("  Data root: %s", data_root)
-        logger.info("  Cache root: %s", cache_root)
     
-    # Discover fMRI files for this subject
-    subject_data_dir = data_root / subject
-    if not subject_data_dir.exists():
+    # Validate data structure
+    metadata_dir = data_root / "metadata"
+    if not metadata_dir.exists():
         raise FileNotFoundError(
-            f"Subject data directory not found: {subject_data_dir}\n"
-            f"Expected structure: {data_root}/{subject}/"
+            f"Metadata directory not found: {metadata_dir}\n"
+            f"Expected: {data_root}/metadata/designmatrixGLMsingle.mat"
         )
     
-    # Scan for beta files (npy or nii.gz)
-    beta_files = list(subject_data_dir.glob("**/*.npy")) + \
-                 list(subject_data_dir.glob("**/*.nii.gz"))
+    beta_file = data_root / "betas" / subject / "betas_nsdimagery.nii.gz"
+    if not beta_file.exists():
+        # Also check for HDF5
+        beta_file_hdf5 = data_root / "betas" / subject / "betas_nsdimagery.hdf5"
+        if beta_file_hdf5.exists():
+            beta_file = beta_file_hdf5
+        else:
+            raise FileNotFoundError(
+                f"Beta file not found for {subject}.\n"
+                f"Expected: {beta_file}\n"
+                f"Available subjects: {[d.name for d in (data_root / 'betas').iterdir() if d.is_dir()]}"
+            )
     
-    if not beta_files:
-        raise FileNotFoundError(
-            f"No beta files (*.npy or *.nii.gz) found in {subject_data_dir}"
-        )
-    
-    if verbose:
-        logger.info("  Found %d beta files", len(beta_files))
-    
-    # Parse metadata if available
-    metadata_file = subject_data_dir / "metadata.json"
-    metadata_dict = {}
-    if metadata_file.exists():
-        with open(metadata_file) as f:
-            metadata_dict = json.load(f)
+    # Verify 4D shape
+    if beta_file.suffix == '.gz':
+        import nibabel as nib
+        img = nib.load(str(beta_file))
+        shape = img.shape
+        if len(shape) != 4:
+            raise ValueError(
+                f"Expected 4D NIfTI but got shape {shape}: {beta_file}"
+            )
+        n_volumes = shape[3]
         if verbose:
-            logger.info("  Loaded metadata from %s", metadata_file)
+            logger.info("  Beta file: %s (shape=%s, %d volumes)", 
+                       beta_file.name, shape, n_volumes)
+    elif beta_file.suffix == '.hdf5':
+        import h5py
+        with h5py.File(str(beta_file), 'r') as f:
+            shape = f['betas'].shape
+        n_volumes = shape[0]  # HDF5 is (volumes, z, y, x)
+        if verbose:
+            logger.info("  Beta file: %s (shape=%s, %d volumes)",
+                       beta_file.name, shape, n_volumes)
     
-    # Build trial records
-    trials = []
-    trial_id_counter = 0
-    stimulus_stats = defaultdict(int)
+    # Resolve stimulus directory
+    if stimulus_root is None:
+        stimulus_root = data_root / "stimuli"
+    stimulus_root = Path(stimulus_root) if stimulus_root else None
     
-    for beta_idx, beta_file in enumerate(sorted(beta_files)):
-        # Determine relative path from cache_root
-        try:
-            rel_path = beta_file.relative_to(data_root)
-        except ValueError:
-            rel_path = beta_file
-        
-        # Infer stimulus type from filename or metadata
-        filename = beta_file.stem
-        stimulus_type = "unknown"
-        image_path = None
-        text_prompt = None
-        run_id = None
-        
-        # Try to extract run_id from filename patterns like "run01", "r01", etc.
-        import re
-        run_match = re.search(r'(?:run|r)_?(\d+)', filename, re.IGNORECASE)
-        if run_match:
-            run_id = int(run_match.group(1))
-        
-        # Check metadata for this trial
-        trial_meta = metadata_dict.get(str(beta_idx), {})
-        if 'stimulus_type' in trial_meta:
-            stimulus_type = trial_meta['stimulus_type']
-        if 'image_path' in trial_meta:
-            image_path = trial_meta['image_path']
-            stimulus_type = "complex"
-        if 'text_prompt' in trial_meta:
-            text_prompt = trial_meta['text_prompt']
-            stimulus_type = "conceptual"
-        if 'run_id' in trial_meta:
-            run_id = trial_meta['run_id']
-        
-        # Infer from stimulus_root if provided
-        if stimulus_root and not image_path:
-            potential_image = stimulus_root / f"{filename}.png"
-            if potential_image.exists():
-                image_path = str(potential_image)
-                stimulus_type = "complex"
-            else:
-                potential_image = stimulus_root / f"{filename}.jpg"
-                if potential_image.exists():
-                    image_path = str(potential_image)
-                    stimulus_type = "complex"
-        
-        # Extract nsd_id from metadata if available (critical for CLIP cache lookup)
-        nsd_id = trial_meta.get('nsd_id', trial_meta.get('nsdId', None))
-        coco_id = trial_meta.get('coco_id', trial_meta.get('cocoId', None))
-        
-        # Create trial record
-        trial = {
-            'trial_id': trial_id_counter,
-            'subject': subject,
-            'condition': 'imagery',
-            'stimulus_type': stimulus_type,
-            'run_id': run_id if run_id is not None else -1,
-            'fmri_path': str(rel_path),
-            'image_path': image_path,
-            'text_prompt': text_prompt,
-            'nsd_id': nsd_id,
-            'coco_id': coco_id,
-            'meta_json': json.dumps(trial_meta) if trial_meta else None,
-            'split': None,  # Will be assigned below
-        }
-        
-        trials.append(trial)
-        stimulus_stats[stimulus_type] += 1
-        trial_id_counter += 1
+    # Parse all trial metadata
+    if verbose:
+        logger.info("  Parsing experiment metadata...")
+    
+    trials = parse_all_trials(
+        metadata_dir=metadata_dir,
+        stimulus_root=stimulus_root,
+    )
+    
+    if len(trials) != n_volumes:
+        logger.warning(
+            "Trial count (%d) != volume count (%d). "
+            "Index will use trial count.", len(trials), n_volumes
+        )
+    
+    # Build relative path for fmri_path column
+    beta_rel_path = str(beta_file.relative_to(data_root))
     
     # Convert to DataFrame
-    df = pd.DataFrame(trials)
+    df = trials_to_dataframe(trials, subject=subject, beta_path=beta_rel_path)
     
-    # Assign splits deterministically based on run_id or trial_id
-    np.random.seed(42)
-    if 'run_id' in df.columns and df['run_id'].nunique() > 3:
-        # Split by runs if available
-        unique_runs = sorted(df['run_id'].unique())
-        n_runs = len(unique_runs)
-        n_train = max(1, int(n_runs * 0.8))
-        n_val = max(1, int(n_runs * 0.1))
-        
-        train_runs = unique_runs[:n_train]
-        val_runs = unique_runs[n_train:n_train + n_val]
-        test_runs = unique_runs[n_train + n_val:]
-        
-        df.loc[df['run_id'].isin(train_runs), 'split'] = 'train'
-        df.loc[df['run_id'].isin(val_runs), 'split'] = 'val'
-        df.loc[df['run_id'].isin(test_runs), 'split'] = 'test'
-    else:
-        # Split by trial_id
-        shuffled_ids = df['trial_id'].values.copy()
-        np.random.shuffle(shuffled_ids)
-        
-        n_total = len(shuffled_ids)
-        n_train = max(1, int(n_total * 0.8))
-        n_val = max(1, int(n_total * 0.1))
-        
-        train_ids = set(shuffled_ids[:n_train])
-        val_ids = set(shuffled_ids[n_train:n_train + n_val])
-        test_ids = set(shuffled_ids[n_train + n_val:])
-        
-        df.loc[df['trial_id'].isin(train_ids), 'split'] = 'train'
-        df.loc[df['trial_id'].isin(val_ids), 'split'] = 'val'
-        df.loc[df['trial_id'].isin(test_ids), 'split'] = 'test'
+    # Assign splits
+    df = assign_splits(df, seed=42)
     
+    # Print summary
     if verbose or dry_run:
         logger.info("=== Index Summary ===")
         logger.info("Total trials: %d", len(df))
+        logger.info("By task type:")
+        for task, count in df['task_type'].value_counts().items():
+            logger.info("  %s: %d", task, count)
         logger.info("By stimulus type:")
-        for stype, count in sorted(stimulus_stats.items()):
+        for stype, count in df['stimulus_type'].value_counts().items():
             logger.info("  %s: %d", stype, count)
+        logger.info("By stimulus set:")
+        for sset, count in df['stimulus_set'].value_counts().items():
+            logger.info("  Set %s: %d", sset, count)
         logger.info("By split:")
         for split in ['train', 'val', 'test']:
             count = (df['split'] == split).sum()
             logger.info("  %s: %d", split, count)
+        logger.info("With NSD IDs: %d", df['nsd_id'].notna().sum())
         logger.info("With images: %d", df['image_path'].notna().sum())
-        logger.info("With text: %d", df['text_prompt'].notna().sum())
+        
+        # Print imagery-specific stats
+        imagery_df = df[df['condition'] == 'imagery']
+        perception_df = df[df['condition'] == 'perception']
+        logger.info("Imagery trials: %d", len(imagery_df))
+        logger.info("Perception trials: %d", len(perception_df))
+        logger.info("NSD-linked imagery (set B): %d",
+                    imagery_df['nsd_id'].notna().sum())
     
     if dry_run:
         if verbose:
@@ -536,3 +531,24 @@ __all__ = [
     'NSDImageryDataset',
     'build_nsd_imagery_index',
 ]
+
+# Also make metadata parser accessible
+try:
+    from fmri2img.data.nsd_imagery_metadata import (
+        parse_all_trials,
+        parse_cue_pair_list,
+        trials_to_dataframe,
+        assign_splits,
+        TrialInfo,
+        RUN_INFO,
+    )
+    __all__.extend([
+        'parse_all_trials',
+        'parse_cue_pair_list',
+        'trials_to_dataframe',
+        'assign_splits',
+        'TrialInfo',
+        'RUN_INFO',
+    ])
+except ImportError:
+    pass
