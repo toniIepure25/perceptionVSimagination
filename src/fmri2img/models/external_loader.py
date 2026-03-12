@@ -70,69 +70,73 @@ class ExternalModelConfig:
 
 
 class _ResidualBlock(nn.Module):
-    """Residual block matching FMRI2images architecture."""
+    """Residual block matching FMRI2images architecture.
+    
+    Internal structure (from checkpoint keys):
+        net.0: LayerNorm(dim)
+        net.1: Linear(dim, dim)
+        net.2: GELU()          (no params)
+        net.3: Dropout()       (no params)
+        net.4: Linear(dim, dim)
+    """
 
     def __init__(self, dim: int):
         super().__init__()
-        self.norm = nn.LayerNorm(dim)
-        self.fc1 = nn.Linear(dim, dim)
-        self.fc2 = nn.Linear(dim, dim)
-        self.act = nn.GELU()
+        self.net = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Dropout(0.0),
+            nn.Linear(dim, dim),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        residual = x
-        x = self.norm(x)
-        x = self.act(self.fc1(x))
-        x = self.fc2(x)
-        return x + residual
+        return x + self.net(x)
 
 
 def _build_encoder(config: ExternalModelConfig) -> nn.Sequential:
     """
     Reconstruct the FMRI2images encoder from config.
 
-    Architecture (inferred from checkpoint keys):
-        encoder.encoder.0  = Linear(input_dim, encoder_dims[0])
-        encoder.encoder.1  = LayerNorm(encoder_dims[0])
-        encoder.encoder.2  = GELU
-        encoder.encoder.3  = Dropout                       (skipped at eval)
-        encoder.encoder.4  = ResidualBlock(encoder_dims[0])
-        ...
-        encoder.encoder.N  = Linear(encoder_dims[-2], encoder_dims[-1])
-        encoder.encoder.N+1= LayerNorm(encoder_dims[-1])
+    Architecture (inferred from checkpoint weight keys, sorted by index):
+        0: Linear(input_dim, dims[0])      # input projection
+        1: LayerNorm(dims[0])
+        2: GELU()                          # no params
+        3: Dropout()                       # no params
+        4: ResidualBlock(dims[0])          # .net = [LN, Linear, GELU, Drop, Linear]
+        ---
+        5: Linear(dims[0], dims[1])        # transition (may be same dim)
+        6: LayerNorm(dims[1])
+        7: GELU()
+        8: Dropout()
+        9: ResidualBlock(dims[1])
+        ---
+        10: Linear(dims[1], dims[2])
+        11: LayerNorm(dims[2])
+        12: GELU()
+        13: Dropout()
+        14: ResidualBlock(dims[2])
+        ---
+        15: Linear(dims[2], dims[3])
+        16: LayerNorm(dims[3])
+        17: GELU()
+        18: Dropout()
+        19: ResidualBlock(dims[3])
     """
     layers: list[nn.Module] = []
     dims = config.encoder_dims
-    # Input projection
-    layers.append(nn.Linear(config.input_dim, dims[0]))
-    layers.append(nn.LayerNorm(dims[0]))
-    layers.append(nn.GELU())
-    layers.append(nn.Dropout(0.0))  # placeholder, value from checkpoint
 
-    prev_dim = dims[0]
-    for dim in dims[1:]:
-        if dim == prev_dim:
-            # Same-dimension → residual block
-            layers.append(_ResidualBlock(dim))
-        else:
-            # Dimension change → linear projection + norm
-            layers.append(nn.Linear(prev_dim, dim))
-            layers.append(nn.LayerNorm(dim))
-            layers.append(nn.GELU())
-            layers.append(nn.Dropout(0.0))
+    # First block: input projection
+    prev_dim = config.input_dim
+    for dim in dims:
+        layers.append(nn.Linear(prev_dim, dim))     # Linear
+        layers.append(nn.LayerNorm(dim))             # LayerNorm
+        layers.append(nn.GELU())                     # GELU
+        layers.append(nn.Dropout(0.0))               # Dropout
+        layers.append(_ResidualBlock(dim))            # ResBlock
         prev_dim = dim
 
     return nn.Sequential(*layers)
-
-
-def _build_decoder_mu_head(config: ExternalModelConfig) -> nn.Module:
-    """Build the mu-head that maps latent → flattened bigG tokens."""
-    return nn.Sequential(
-        nn.Linear(config.decoder_backbone_dim, config.decoder_backbone_dim),
-        nn.LayerNorm(config.decoder_backbone_dim),
-        nn.GELU(),
-        nn.Linear(config.decoder_backbone_dim, config.token_output_dim),
-    )
 
 
 # ---------------------------------------------------------------------------
