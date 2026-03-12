@@ -220,6 +220,9 @@ def build_manifest(s3, subjects: list[str],
     manifest = [m for m in manifest if m["rel_path"].rstrip("/")]
 
     return manifest
+
+
+def print_manifest_summary(manifest: list[dict]) -> dict:
     """Print download summary grouped by category. Returns size totals."""
     categories: dict[str, dict] = {}
     for item in manifest:
