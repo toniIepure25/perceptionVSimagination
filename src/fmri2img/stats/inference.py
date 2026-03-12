@@ -22,7 +22,7 @@ References:
 """
 
 import logging
-from typing import Union, Tuple, Dict, List
+from typing import Optional, Union, Tuple, Dict, List
 
 import numpy as np
 from scipy import stats
@@ -352,3 +352,208 @@ def aggregate_across_seeds(
         "n_seeds": len(values_per_seed),
         "n_samples_per_seed": [len(v) for v in values_per_seed]
     }
+
+
+# ==========================================================================
+# Multiple Comparison Corrections — Benjamini-Hochberg & Bonferroni
+# ==========================================================================
+
+def benjamini_hochberg_correction(
+    p_values: Union[Dict[str, float], List[float]],
+    alpha: float = 0.05,
+) -> Union[Dict[str, Tuple[float, bool]], List[Tuple[float, bool]]]:
+    """
+    Benjamini-Hochberg (BH) FDR correction for multiple comparisons.
+
+    Controls the False Discovery Rate (FDR) — the expected proportion of
+    false positives among rejected hypotheses. Less conservative than
+    Holm-Bonferroni (which controls FWER), making it more suitable for
+    exploratory analyses with many tests (e.g., 15 analysis directions ×
+    multiple metrics = 150+ tests).
+
+    Algorithm:
+    1. Sort p-values in ascending order: p_(1) ≤ p_(2) ≤ ... ≤ p_(m)
+    2. Find largest k such that p_(k) ≤ (k/m) · α
+    3. Reject all H_(i) for i = 1, ..., k
+
+    Adjusted p-values: p_adj_(i) = min(p_(i) · m/i, 1.0), enforced
+    monotone (each ≥ previous).
+
+    Args:
+        p_values: Dict {test_name: p_value} or List of p-values
+        alpha: FDR significance level (default: 0.05)
+
+    Returns:
+        Same structure as input, with (adjusted_p, is_significant) tuples.
+
+    References:
+        Benjamini & Hochberg (1995). "Controlling the False Discovery Rate."
+            JRSS-B 57(1).
+
+    Example:
+        >>> pvals = {"dim_gap": 0.01, "sem_survival": 0.04, "topo": 0.15,
+        ...          "manifold": 0.03, "creative": 0.06}
+        >>> corrected = benjamini_hochberg_correction(pvals, alpha=0.05)
+        >>> for name, (adj_p, sig) in corrected.items():
+        ...     print(f"{name}: adj_p={adj_p:.4f}, significant={sig}")
+    """
+    is_dict = isinstance(p_values, dict)
+    if is_dict:
+        test_names = list(p_values.keys())
+        raw_p = np.array([p_values[k] for k in test_names])
+    else:
+        raw_p = np.array(p_values)
+
+    m = len(raw_p)
+    if m == 0:
+        return {} if is_dict else []
+
+    # Sort p-values
+    sorted_indices = np.argsort(raw_p)
+    sorted_p = raw_p[sorted_indices]
+
+    # Compute adjusted p-values: p_adj = p * m / rank
+    adjusted_p = np.zeros(m)
+    for i in range(m):
+        rank = i + 1  # 1-based rank
+        adjusted_p[sorted_indices[i]] = sorted_p[i] * m / rank
+
+    # Enforce monotonicity (working backwards from largest)
+    # Each adjusted p must be ≤ the one after it in sorted order
+    adj_sorted = adjusted_p[sorted_indices]
+    for i in range(m - 2, -1, -1):
+        adj_sorted[i] = min(adj_sorted[i], adj_sorted[i + 1])
+    for i in range(m):
+        adjusted_p[sorted_indices[i]] = min(adj_sorted[i], 1.0)
+
+    # Significance
+    is_significant = adjusted_p <= alpha
+
+    if is_dict:
+        return {
+            name: (float(adjusted_p[i]), bool(is_significant[i]))
+            for i, name in enumerate(test_names)
+        }
+    return list(zip(adjusted_p.tolist(), is_significant.tolist()))
+
+
+def bonferroni_correction(
+    p_values: Union[Dict[str, float], List[float]],
+    alpha: float = 0.05,
+) -> Union[Dict[str, Tuple[float, bool]], List[Tuple[float, bool]]]:
+    """
+    Bonferroni correction — the most conservative FWER control.
+
+    Simply multiplies each p-value by the number of tests:
+        p_adj = min(p · m, 1.0)
+
+    More conservative than both Holm-Bonferroni and BH, but simplest
+    to understand. Use as a reference point alongside BH.
+
+    Args:
+        p_values: Dict or List of p-values
+        alpha: Significance level
+
+    Returns:
+        Same structure as input with (adjusted_p, is_significant) tuples.
+    """
+    is_dict = isinstance(p_values, dict)
+    if is_dict:
+        test_names = list(p_values.keys())
+        raw_p = np.array([p_values[k] for k in test_names])
+    else:
+        raw_p = np.array(p_values)
+
+    m = len(raw_p)
+    adjusted_p = np.minimum(raw_p * m, 1.0)
+    is_significant = adjusted_p <= alpha
+
+    if is_dict:
+        return {
+            name: (float(adjusted_p[i]), bool(is_significant[i]))
+            for i, name in enumerate(test_names)
+        }
+    return list(zip(adjusted_p.tolist(), is_significant.tolist()))
+
+
+def fdr_threshold(
+    p_values: Union[List[float], np.ndarray],
+    alpha: float = 0.05,
+) -> float:
+    """
+    Compute the BH FDR threshold (the critical p-value).
+
+    Returns the largest p-value that would be rejected at level alpha.
+    Useful for drawing significance lines on volcano plots.
+
+    Args:
+        p_values: Array of p-values
+        alpha: FDR level
+
+    Returns:
+        Threshold p-value. P-values ≤ this threshold are significant.
+    """
+    p = np.sort(np.asarray(p_values))
+    m = len(p)
+    thresholds = alpha * np.arange(1, m + 1) / m
+    valid = np.where(p <= thresholds)[0]
+    if len(valid) == 0:
+        return 0.0
+    return float(p[valid[-1]])
+
+
+def multi_test_summary(
+    p_values: Dict[str, float],
+    corrections: Optional[List[str]] = None,
+    alpha: float = 0.05,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Generate comprehensive multiple-testing summary with all corrections.
+
+    Applies Holm-Bonferroni, Benjamini-Hochberg, and Bonferroni corrections
+    to the same set of p-values, returning a comparison table.
+
+    Args:
+        p_values: Dict mapping test names to raw p-values
+        corrections: List of corrections to apply
+            (default: ['holm', 'bh', 'bonferroni'])
+        alpha: Significance level
+
+    Returns:
+        Dict mapping test_name → {
+            'raw_p': float,
+            'holm_adj': float, 'holm_sig': bool,
+            'bh_adj': float, 'bh_sig': bool,
+            'bonf_adj': float, 'bonf_sig': bool,
+        }
+
+    Example:
+        >>> summary = multi_test_summary({"test_a": 0.01, "test_b": 0.04})
+        >>> for name, row in summary.items():
+        ...     print(f"{name}: raw={row['raw_p']:.3f} "
+        ...           f"BH={row['bh_adj']:.3f}{'*' if row['bh_sig'] else ''}")
+    """
+    if corrections is None:
+        corrections = ["holm", "bh", "bonferroni"]
+
+    result = {name: {"raw_p": p} for name, p in p_values.items()}
+
+    if "holm" in corrections:
+        holm = holm_bonferroni_correction(p_values, alpha=alpha)
+        for name, (adj_p, sig) in holm.items():
+            result[name]["holm_adj"] = adj_p
+            result[name]["holm_sig"] = sig
+
+    if "bh" in corrections:
+        bh = benjamini_hochberg_correction(p_values, alpha=alpha)
+        for name, (adj_p, sig) in bh.items():
+            result[name]["bh_adj"] = adj_p
+            result[name]["bh_sig"] = sig
+
+    if "bonferroni" in corrections:
+        bonf = bonferroni_correction(p_values, alpha=alpha)
+        for name, (adj_p, sig) in bonf.items():
+            result[name]["bonf_adj"] = adj_p
+            result[name]["bonf_sig"] = sig
+
+    return result

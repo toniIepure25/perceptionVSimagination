@@ -868,3 +868,390 @@ class ProbabilisticMultiLayerLoss(nn.Module):
             return total_loss, components
         
         return total_loss
+
+
+# ==========================================================================
+# Non-Contrastive Losses — VICReg & Barlow Twins
+# ==========================================================================
+
+class VICRegLoss(nn.Module):
+    """
+    VICReg (Variance-Invariance-Covariance Regularization) loss.
+
+    Non-contrastive self-supervised loss that avoids representation collapse
+    via three explicit regularization terms instead of negative pairs:
+
+    L = λ·invariance + μ·variance + ν·covariance
+
+    where:
+    - Invariance: MSE between paired representations (alignment)
+    - Variance: hinge loss on per-dimension std (prevents collapse)
+    - Covariance: penalizes off-diagonal covariance (decorrelation)
+
+    Advantages over InfoNCE for fMRI decoding:
+    1. No negative pairs → no batch-size sensitivity
+    2. No temperature hyperparameter → more stable training
+    3. Explicit variance constraint → prevents the dimension collapse
+       observed with strong InfoNCE (Section 6.2 of EXPERIMENT_RESULTS.md)
+    4. Covariance term → whitening effect promotes information spread
+
+    References:
+        Bardes, Ponce, LeCun (2022). "VICReg: Variance-Invariance-Covariance
+            Regularization for Self-Supervised Learning." ICLR.
+    """
+
+    def __init__(
+        self,
+        sim_weight: float = 25.0,
+        var_weight: float = 25.0,
+        cov_weight: float = 1.0,
+        var_target: float = 1.0,
+        eps: float = 1e-4,
+    ):
+        super().__init__()
+        self.sim_weight = sim_weight
+        self.var_weight = var_weight
+        self.cov_weight = cov_weight
+        self.var_target = var_target
+        self.eps = eps
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+        return_components: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, Dict[str, float]]:
+        """
+        Compute VICReg loss.
+
+        Args:
+            pred: Predicted embeddings (B, D)
+            target: Target embeddings (B, D)
+            return_components: If True, return (loss, components_dict)
+
+        Returns:
+            Total loss, or (total_loss, components) if return_components=True
+        """
+        batch_size, dim = pred.shape
+
+        # --- Invariance: MSE between prediction and target ---
+        sim_loss = F.mse_loss(pred, target)
+
+        # --- Variance: hinge loss on per-dimension std ---
+        # Prevents collapse by forcing each dimension to have std >= target
+        pred_std = torch.sqrt(pred.var(dim=0) + self.eps)
+        target_std = torch.sqrt(target.var(dim=0) + self.eps)
+        var_loss = (
+            F.relu(self.var_target - pred_std).mean()
+            + F.relu(self.var_target - target_std).mean()
+        )
+
+        # --- Covariance: penalize off-diagonal elements ---
+        # Decorrelates dimensions, promoting information spread
+        pred_centered = pred - pred.mean(dim=0)
+        target_centered = target - target.mean(dim=0)
+        cov_pred = (pred_centered.T @ pred_centered) / max(batch_size - 1, 1)
+        cov_target = (target_centered.T @ target_centered) / max(batch_size - 1, 1)
+
+        # Zero out diagonal (we only penalize off-diagonal)
+        cov_pred = cov_pred - torch.diag(torch.diag(cov_pred))
+        cov_target = cov_target - torch.diag(torch.diag(cov_target))
+
+        cov_loss = (cov_pred.pow(2).sum() + cov_target.pow(2).sum()) / dim
+
+        # Total
+        total = (
+            self.sim_weight * sim_loss
+            + self.var_weight * var_loss
+            + self.cov_weight * cov_loss
+        )
+
+        if return_components:
+            components = {
+                "invariance": sim_loss.item(),
+                "variance": var_loss.item(),
+                "covariance": cov_loss.item(),
+                "total": total.item(),
+            }
+            return total, components
+
+        return total
+
+
+class BarlowTwinsLoss(nn.Module):
+    """
+    Barlow Twins loss — redundancy reduction via cross-correlation identity.
+
+    Computes the cross-correlation matrix C between predicted and target
+    embeddings (both batch-normalized), and pushes C toward identity:
+
+    L = Σ_i(1 - C_ii)² + λ · Σ_{i≠j} C_ij²
+
+    The first term forces alignment (on-diagonal → 1), the second term
+    forces decorrelation (off-diagonal → 0). This is equivalent to
+    maximizing mutual information while minimizing redundancy.
+
+    Advantages for fMRI decoding:
+    1. Batch-norm on features acts as implicit whitening
+    2. No collapse without explicit variance regularization
+    3. Scale-invariant (important when CLIP embedding norms vary)
+    4. Naturally encourages full-rank representations
+
+    References:
+        Zbontar et al. (2021). "Barlow Twins: Self-Supervised Learning via
+            Redundancy Reduction." ICML.
+    """
+
+    def __init__(self, lambda_bt: float = 0.005):
+        super().__init__()
+        self.lambda_bt = lambda_bt
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+        return_components: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, Dict[str, float]]:
+        """
+        Compute Barlow Twins loss.
+
+        Args:
+            pred: Predicted embeddings (B, D)
+            target: Target embeddings (B, D)
+            return_components: If True, return (loss, components_dict)
+
+        Returns:
+            Total loss, or (total_loss, components) if return_components=True
+        """
+        batch_size, dim = pred.shape
+
+        # Batch-normalize along feature dimension
+        pred_bn = (pred - pred.mean(dim=0)) / (pred.std(dim=0) + 1e-5)
+        target_bn = (target - target.mean(dim=0)) / (target.std(dim=0) + 1e-5)
+
+        # Cross-correlation matrix C: (D, D)
+        c = (pred_bn.T @ target_bn) / batch_size
+
+        # On-diagonal: push toward 1
+        on_diag = ((1 - torch.diag(c)).pow(2)).sum()
+
+        # Off-diagonal: push toward 0
+        off_diag_mask = ~torch.eye(dim, dtype=torch.bool, device=c.device)
+        off_diag = (c[off_diag_mask].pow(2)).sum()
+
+        total = on_diag + self.lambda_bt * off_diag
+
+        if return_components:
+            components = {
+                "on_diag": on_diag.item(),
+                "off_diag": off_diag.item(),
+                "total": total.item(),
+            }
+            return total, components
+
+        return total
+
+
+# ==========================================================================
+# Triplet Loss with Hard-Negative Mining
+# ==========================================================================
+
+def triplet_margin_loss(
+    anchor: torch.Tensor,
+    positive: torch.Tensor,
+    negative: torch.Tensor,
+    margin: float = 0.2,
+) -> torch.Tensor:
+    """
+    Triplet margin loss using cosine distance.
+
+    L = max(0, d(a, p) - d(a, n) + margin)
+
+    where d(x, y) = 1 - cos(x, y).
+
+    Args:
+        anchor: Anchor embeddings (B, D)
+        positive: Positive embeddings (B, D)
+        negative: Negative embeddings (B, D)
+        margin: Minimum margin between pos and neg distances
+
+    Returns:
+        Scalar loss averaged over batch
+    """
+    d_ap = 1.0 - F.cosine_similarity(anchor, positive, dim=-1)
+    d_an = 1.0 - F.cosine_similarity(anchor, negative, dim=-1)
+    return F.relu(d_ap - d_an + margin).mean()
+
+
+class HardNegativeMiner:
+    """
+    Mines hard and semi-hard negatives from a similarity matrix.
+
+    Mining strategies:
+    - **hardest**: closest wrong match (most confusing negative)
+    - **semi-hard**: within margin of positive but further than positive
+    - **curriculum**: start random → semi-hard → hard over training
+
+    Semi-hard mining (Schroff et al., 2015) is preferred because:
+    - Hard negatives can cause training collapse early on
+    - Semi-hard negatives provide informative but stable gradients
+    - Curriculum bridges random→hard smoothly
+
+    References:
+        Schroff, Kalenichenko, Philbin (2015). "FaceNet: A Unified Embedding
+            for Face Recognition and Clustering." CVPR.
+    """
+
+    def __init__(
+        self,
+        strategy: str = "semi_hard",
+        margin: float = 0.2,
+    ):
+        self.strategy = strategy
+        self.margin = margin
+
+    def mine(
+        self,
+        anchor: torch.Tensor,
+        positive: torch.Tensor,
+        gallery: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Mine negative samples from gallery.
+
+        Args:
+            anchor: Anchor embeddings (B, D)
+            positive: Positive (matched) embeddings (B, D)
+            gallery: Full gallery of negatives (N, D)
+
+        Returns:
+            Mined negative embeddings (B, D)
+        """
+        # Similarity between anchors and all gallery items
+        sim_ag = F.cosine_similarity(
+            anchor.unsqueeze(1), gallery.unsqueeze(0), dim=-1
+        )  # (B, N)
+
+        # Positive similarity
+        sim_ap = F.cosine_similarity(anchor, positive, dim=-1)  # (B,)
+
+        if self.strategy == "hardest":
+            # Hardest negative: highest similarity to anchor (closest wrong match)
+            neg_idx = sim_ag.argmax(dim=-1)  # (B,)
+
+        elif self.strategy == "semi_hard":
+            # Semi-hard: closer than positive but beyond margin
+            # d(a,n) < d(a,p) + margin AND d(a,n) > d(a,p)
+            # In similarity space: sim(a,n) > sim(a,p) - margin AND sim(a,n) < sim(a,p)
+            upper = sim_ap.unsqueeze(1)  # (B, 1)
+            lower = sim_ap.unsqueeze(1) - self.margin
+            mask = (sim_ag < upper) & (sim_ag > lower)
+
+            # For samples with no valid semi-hard negatives, fall back to hardest
+            has_valid = mask.any(dim=-1)
+
+            # Among valid, pick the one with highest similarity (hardest semi-hard)
+            sim_masked = sim_ag.clone()
+            sim_masked[~mask] = -float("inf")
+            neg_idx = sim_masked.argmax(dim=-1)
+
+            # Fallback: hardest negative for samples with no semi-hard
+            if not has_valid.all():
+                fallback_idx = sim_ag.argmax(dim=-1)
+                neg_idx[~has_valid] = fallback_idx[~has_valid]
+
+        else:
+            # Random negatives
+            neg_idx = torch.randint(0, gallery.shape[0], (anchor.shape[0],),
+                                    device=anchor.device)
+
+        return gallery[neg_idx]
+
+
+class TripletInfoNCELoss(nn.Module):
+    """
+    Hybrid loss: InfoNCE + triplet with hard-negative mining.
+
+    Combines the breadth of InfoNCE (all-pairs within batch) with the
+    targeted precision of triplet loss (mined hard negatives). This
+    addresses the Pareto front between alignment and retrieval observed
+    in the project:
+
+    L = α · L_InfoNCE + β · L_triplet_hard
+
+    - InfoNCE provides broad discriminative signal
+    - Triplet with hard negatives focuses on decision boundary
+    - Together they improve R@1 without sacrificing cosine alignment
+
+    Args:
+        infonce_weight: Weight for InfoNCE component (default: 0.5)
+        triplet_weight: Weight for triplet component (default: 0.5)
+        temperature: InfoNCE temperature (default: 0.07)
+        margin: Triplet margin (default: 0.2)
+        mining_strategy: 'semi_hard', 'hardest', or 'random'
+    """
+
+    def __init__(
+        self,
+        infonce_weight: float = 0.5,
+        triplet_weight: float = 0.5,
+        temperature: float = 0.07,
+        margin: float = 0.2,
+        mining_strategy: str = "semi_hard",
+    ):
+        super().__init__()
+        self.infonce_weight = infonce_weight
+        self.triplet_weight = triplet_weight
+        self.temperature = temperature
+        self.margin = margin
+        self.miner = HardNegativeMiner(strategy=mining_strategy, margin=margin)
+
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+        gallery: Optional[torch.Tensor] = None,
+        return_components: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, Dict[str, float]]:
+        """
+        Compute hybrid InfoNCE + triplet loss.
+
+        Args:
+            pred: Predicted embeddings (B, D)
+            target: Target embeddings (B, D)
+            gallery: Optional external gallery for hard-negative mining.
+                     If None, uses in-batch targets as gallery.
+            return_components: If True, return (loss, components)
+
+        Returns:
+            Total loss, or (total_loss, components) if return_components=True
+        """
+        # InfoNCE component
+        loss_nce = info_nce_loss(pred, target, temperature=self.temperature)
+
+        # Triplet component with hard-negative mining
+        if gallery is None:
+            # Use in-batch targets as gallery (exclude matched pairs)
+            gallery = target.detach()
+
+        # Mine hard negatives
+        pred_norm = F.normalize(pred, p=2, dim=-1)
+        target_norm = F.normalize(target, p=2, dim=-1)
+        gallery_norm = F.normalize(gallery, p=2, dim=-1)
+
+        negatives = self.miner.mine(pred_norm, target_norm, gallery_norm)
+        loss_triplet = triplet_margin_loss(
+            pred_norm, target_norm, negatives, margin=self.margin
+        )
+
+        total = self.infonce_weight * loss_nce + self.triplet_weight * loss_triplet
+
+        if return_components:
+            components = {
+                "info_nce": loss_nce.item(),
+                "triplet": loss_triplet.item(),
+                "total": total.item(),
+            }
+            return total, components
+
+        return total

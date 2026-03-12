@@ -23,6 +23,16 @@ from .uncertainty import (
     evaluate_uncertainty_calibration,
     compute_confidence_intervals,
 )
+from .ceiling_normalized import (
+    NoiseCeilingNormalizer,
+    compute_embedding_noise_ceiling,
+    CeilingResult,
+)
+from .sota_comparison import (
+    SOTA_RESULTS,
+    generate_comparison_table,
+    generate_latex_table,
+)
 
 __all__ = [
     # Retrieval metrics
@@ -43,4 +53,11 @@ __all__ = [
     "compute_uncertainty_error_correlation",
     "evaluate_uncertainty_calibration",
     "compute_confidence_intervals",
+    # Noise-ceiling normalization
+    "NoiseCeilingNormalizer",
+    "compute_embedding_noise_ceiling",
+    # SoTA comparison
+    "SOTA_RESULTS",
+    "generate_comparison_table",
+    "generate_latex_table",
 ]

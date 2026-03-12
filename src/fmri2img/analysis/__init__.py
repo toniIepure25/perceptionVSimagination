@@ -42,6 +42,10 @@ from . import (
     manifold_geometry,
     modality_decomposition,
     creative_divergence,
+    cka,
+    embedding_visualization,
+    roi_decoding,
+    interpretability,
 )
 
 __all__ = [
@@ -68,4 +72,9 @@ __all__ = [
     "manifold_geometry",
     "modality_decomposition",
     "creative_divergence",
+    # Novel research additions
+    "cka",
+    "embedding_visualization",
+    "roi_decoding",
+    "interpretability",
 ]

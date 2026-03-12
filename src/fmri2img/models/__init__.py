@@ -46,6 +46,18 @@ from .losses import (
     ComposedLoss,
 )
 
+try:
+    from .lora_adapter import (
+        LoRALinear,
+        LoRAAdapter,
+        MultiRankLoRA,
+        LoRAAdaptedModel,
+        save_lora_adapter,
+        load_lora_adapter,
+    )
+except ImportError:
+    pass  # torch not available
+
 __all__ = [
     # Baseline decoders
     "RidgeEncoder",
@@ -87,4 +99,11 @@ __all__ = [
     "infonce_loss",
     "compose_loss",
     "ComposedLoss",
+    # LoRA adapters (parameter-efficient domain adaptation)
+    "LoRALinear",
+    "LoRAAdapter",
+    "MultiRankLoRA",
+    "LoRAAdaptedModel",
+    "save_lora_adapter",
+    "load_lora_adapter",
 ]
