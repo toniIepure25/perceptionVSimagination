@@ -130,10 +130,17 @@ def download_file(s3, key: str, dest: Path, expected_size: int,
         dest.parent.mkdir(parents=True, exist_ok=True)
         return True
 
-    # Ensure parent exists (handle case where a "dir/" object was a file)
+    # Ensure parent exists (handle case where a "dir/" object was downloaded as a file)
     parent = dest.parent
-    if parent.exists() and parent.is_file():
-        parent.unlink()
+    # Walk up to find any path component that is a file instead of a dir
+    parts_to_check = []
+    p = parent
+    while p != p.parent:
+        parts_to_check.append(p)
+        p = p.parent
+    for part in reversed(parts_to_check):
+        if part.exists() and not part.is_dir():
+            part.unlink()
     parent.mkdir(parents=True, exist_ok=True)
 
     # If dest path is itself a directory (from a prev "dir/" download), remove it
