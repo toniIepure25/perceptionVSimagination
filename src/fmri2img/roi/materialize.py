@@ -8,7 +8,6 @@ import glob
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-import nibabel as nib
 import numpy as np
 import pandas as pd
 
@@ -18,6 +17,19 @@ from fmri2img.io.s3 import NIfTILoader, get_s3_filesystem
 from .groups import ROIGroupResolver, ROIGroupSpec, project_group_features, summarize_roi_groups
 
 logger = logging.getLogger(__name__)
+
+try:
+    import nibabel as nib
+except ImportError:  # pragma: no cover - exercised in lean runtime environments
+    nib = None
+
+
+def _require_nibabel(context: str) -> None:
+    if nib is None:
+        raise RuntimeError(
+            f"nibabel is required to {context}, but it is not installed in the current environment. "
+            "Install nibabel or materialize canonical ROI features from numpy volumes instead."
+        )
 
 
 def _normalize_decoder_index(df: pd.DataFrame, default_condition: str | None = None) -> pd.DataFrame:
@@ -97,6 +109,7 @@ def _load_nifti_header(path: str):
     if path.startswith("s3://"):
         loader = NIfTILoader()
         return loader.load(path, validate=True)
+    _require_nibabel(f"read local NIfTI data from {path}")
     return nib.load(path)
 
 
@@ -333,6 +346,7 @@ def _load_volume(
             loader = NIfTILoader()
             cache[path] = loader.load(path, validate=True)
         else:
+            _require_nibabel(f"load local NIfTI volume from {path}")
             cache[path] = nib.load(path)
     image = cache[path]
     dataobj = image.dataobj

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
-import nibabel as nib
 import numpy as np
 import pandas as pd
 import torch
@@ -18,6 +17,19 @@ from fmri2img.roi import ROIGroupSpec
 from fmri2img.targets import LatentTargetStore
 
 logger = logging.getLogger(__name__)
+
+try:
+    import nibabel as nib
+except ImportError:  # pragma: no cover - exercised in lean runtime environments
+    nib = None
+
+
+def _require_nibabel(context: str) -> None:
+    if nib is None:
+        raise RuntimeError(
+            f"nibabel is required to {context}, but it is not installed in the current environment. "
+            "Install nibabel or use materialized numpy/ROI features for canonical workflows."
+        )
 
 
 @dataclass(frozen=True)
@@ -214,6 +226,7 @@ class CanonicalDecoderDataset(Dataset):
             if path.suffix == ".npy":
                 return np.load(path).astype(np.float32)
             if path.suffix == ".gz" or path.suffix == ".nii":
+                _require_nibabel(f"load local NIfTI data from {path}")
                 img = nib.load(path)
                 data = img.get_fdata().astype(np.float32)
                 beta_index = int(row.get("beta_index", 0))
