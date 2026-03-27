@@ -83,6 +83,7 @@ def canonical_fixture_dir(tmp_path):
             fmri = rng.standard_normal(12).astype(np.float32)
             fmri_path = data_dir / f"{condition}_{nsd_id}.npy"
             np.save(fmri_path, fmri)
+            relative_fmri_path = Path("fmri") / fmri_path.name
             roi_features = {
                 "early_visual": fmri[:3].tolist(),
                 "ventral_visual": fmri[3:7].tolist(),
@@ -97,7 +98,7 @@ def canonical_fixture_dir(tmp_path):
                     "nsd_id": nsd_id,
                     "pair_id": nsd_id,
                     "split": "train" if pair_idx < 2 else ("val" if pair_idx == 2 else "test"),
-                    "fmri_path": str(fmri_path),
+                    "fmri_path": str(relative_fmri_path),
                     "roi_features_json": json_dump(roi_features),
                     "vividness": float(0.2 * (pair_idx + cond_idx + 1)),
                     "confidence": float(0.5 + 0.1 * cond_idx),

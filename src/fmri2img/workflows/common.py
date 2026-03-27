@@ -161,13 +161,14 @@ def _infer_roi_input_dims(dataset: CanonicalDecoderDataset, config: ConfigDict, 
 def build_datasets(config: ConfigDict):
     validate_canonical_workflow_config(config)
     dataset_cfg = config["dataset"]
+    dataset_source: Path | pd.DataFrame
     if dataset_cfg.get("mixed_index"):
         mixed_index = Path(dataset_cfg["mixed_index"])
-        df = pd.read_parquet(mixed_index)
+        dataset_source = mixed_index
     else:
         prepared_mixed = dataset_cfg.get("mixed_output_index")
         if prepared_mixed and Path(prepared_mixed).exists():
-            df = pd.read_parquet(prepared_mixed)
+            dataset_source = Path(prepared_mixed)
         else:
             df = build_mixed_condition_index(
                 perception_index=dataset_cfg["perception_index"],
@@ -175,6 +176,7 @@ def build_datasets(config: ConfigDict):
                 output_path=dataset_cfg.get("mixed_output_index"),
                 subject=dataset_cfg.get("subject"),
             )
+            dataset_source = Path(prepared_mixed) if prepared_mixed else df
     target_spec = LatentTargetSpec(
         name=config["targets"].get("name", "vit_l14_image_768"),
         dimension=int(config["targets"].get("dimension", 768)),
@@ -186,9 +188,9 @@ def build_datasets(config: ConfigDict):
         id_column=config["targets"].get("id_column"),
     )
     roi_resolver, roi_group_spec, roi_summary = _create_roi_resolver(config)
-    train_ds = CanonicalDecoderDataset(df, target_store=target_store, roi_feature_resolver=roi_resolver, split="train")
-    val_ds = CanonicalDecoderDataset(df, target_store=target_store, roi_feature_resolver=roi_resolver, split="val")
-    test_ds = CanonicalDecoderDataset(df, target_store=target_store, roi_feature_resolver=roi_resolver, split="test")
+    train_ds = CanonicalDecoderDataset(dataset_source, target_store=target_store, roi_feature_resolver=roi_resolver, split="train")
+    val_ds = CanonicalDecoderDataset(dataset_source, target_store=target_store, roi_feature_resolver=roi_resolver, split="val")
+    test_ds = CanonicalDecoderDataset(dataset_source, target_store=target_store, roi_feature_resolver=roi_resolver, split="test")
     if len(train_ds) == 0 or len(val_ds) == 0 or len(test_ds) == 0:
         raise ValueError(
             "Canonical dataset splits are incomplete. "

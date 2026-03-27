@@ -200,8 +200,10 @@ class CanonicalDecoderDataset(Dataset):
         split: Optional[str] = None,
     ):
         if isinstance(index, (str, Path)):
-            df = pd.read_parquet(index)
+            self.index_path = Path(index).resolve()
+            df = pd.read_parquet(self.index_path)
         else:
+            self.index_path = None
             df = index.copy()
         self.df = normalize_decoder_index(df)
         if split is not None:
@@ -217,12 +219,18 @@ class CanonicalDecoderDataset(Dataset):
             paired_group_count=_count_paired_groups(self.df),
         )
 
+    def _resolve_fmri_path(self, raw_path: str | Path) -> Path:
+        path = Path(raw_path)
+        if path.is_absolute() or self.index_path is None:
+            return path
+        return (self.index_path.parent / path).resolve()
+
     def __len__(self) -> int:
         return len(self.df)
 
     def _load_fmri(self, row: pd.Series) -> np.ndarray:
         if pd.notna(row.get("fmri_path")):
-            path = Path(row["fmri_path"])
+            path = self._resolve_fmri_path(row["fmri_path"])
             if path.suffix == ".npy":
                 return np.load(path).astype(np.float32)
             if path.suffix == ".gz" or path.suffix == ".nii":

@@ -35,10 +35,10 @@ def test_canonical_forward_shapes(canonical_fixture_dir):
     assert outputs.confidence_pred.shape == (2,)
 
 
-def test_canonical_batch_without_vividness_still_works(canonical_fixture_dir, tmp_path):
+def test_canonical_batch_without_vividness_still_works(canonical_fixture_dir):
     df = pd.read_parquet(canonical_fixture_dir["mixed_index"])
     df["vividness"] = None
-    no_vivid_path = tmp_path / "no_vivid.parquet"
+    no_vivid_path = canonical_fixture_dir["root"] / "no_vivid.parquet"
     df.to_parquet(no_vivid_path, index=False)
     store = LatentTargetStore(canonical_fixture_dir["targets_path"])
 
@@ -59,10 +59,10 @@ def test_canonical_batch_without_vividness_still_works(canonical_fixture_dir, tm
     assert outputs.vividness_pred is not None
 
 
-def test_partial_vividness_labels_are_masked_not_dropped(canonical_fixture_dir, tmp_path):
+def test_partial_vividness_labels_are_masked_not_dropped(canonical_fixture_dir):
     df = pd.read_parquet(canonical_fixture_dir["mixed_index"])
     df.loc[df.index[0], "vividness"] = None
-    partial_path = tmp_path / "partial_vivid.parquet"
+    partial_path = canonical_fixture_dir["root"] / "partial_vivid.parquet"
     df.to_parquet(partial_path, index=False)
     store = LatentTargetStore(canonical_fixture_dir["targets_path"])
 
