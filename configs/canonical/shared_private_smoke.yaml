@@ -1,0 +1,58 @@
+experiment:
+  name: shared_private_smoke
+  description: Smoke-test config for canonical shared-private workflows
+
+dataset:
+  subject: subj01
+  mixed_index: tests/fixtures/canonical_smoke/mixed.parquet
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["V1", "V2", "V3"]
+    ventral_visual: ["V4", "LO", "FFA", "PPA"]
+    metacognitive: ["mPFC", "Precuneus", "IPS"]
+  roi_names: []
+  missing_policy: warn
+  fallback_policy: full_feature_vector
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: tests/fixtures/canonical_smoke/targets.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 32
+  shared_dim: 32
+  private_dim: 16
+  dropout: 0.0
+  use_domain_head: true
+  use_vividness_head: true
+  vividness_mode: evidential
+
+training:
+  batch_size: 4
+  epochs: 2
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.1
+  vividness_weight: 0.1
+  confidence_weight: 0.05
+  reconstruction_weight: 0.1
+  device: cpu
+  output_dir: outputs/canonical/train/shared_private_smoke
+  seed: 0
+
+evaluation:
+  batch_size: 4
+  output_dir: outputs/canonical/eval/shared_private_smoke
+  transfer_output_dir: outputs/canonical/transfer/shared_private_smoke
+
+analysis:
+  output_dir: outputs/canonical/analysis/shared_private_smoke
+
+export:
+  output_dir: outputs/canonical/export/shared_private_smoke

@@ -487,3 +487,15 @@ class DataLoaderFactory:
         logger.info(f"✅ Created data loader: {len(dataset)} samples")
         
         return loader
+
+
+def get_dataloader(*args, **kwargs) -> DataLoader:
+    """
+    Backward-compatible wrapper around ``DataLoaderFactory.create_single_loader``.
+
+    Older scripts imported ``get_dataloader`` directly from this module. The
+    canonical API now prefers ``DataLoaderFactory``, but we keep this thin shim
+    so legacy code keeps importing cleanly.
+    """
+
+    return DataLoaderFactory.create_single_loader(*args, **kwargs)

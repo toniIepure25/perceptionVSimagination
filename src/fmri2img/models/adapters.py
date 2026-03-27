@@ -100,22 +100,20 @@ class LinearAdapter(nn.Module):
     at initialization. Gradient descent can then adapt W and b for imagery.
     
     Args:
-        embed_dim: Embedding dimensionality (typically 768 for CLIP ViT-L/14)
+        embed_dim: Embedding dimensionality (typically 512 for CLIP)
         use_condition: Whether to use condition embeddings
         condition_mode: 'add' or 'film'
     """
     
     def __init__(
         self,
-        embed_dim: int = 768,
+        embed_dim: int = 512,
         use_condition: bool = False,
-        condition_mode: Literal['add', 'film'] = 'add',
-        normalize: bool = True
+        condition_mode: Literal['add', 'film'] = 'add'
     ):
         super().__init__()
         self.embed_dim = embed_dim
         self.use_condition = use_condition
-        self.normalize = normalize
         
         # Linear transformation
         self.linear = nn.Linear(embed_dim, embed_dim, bias=True)
@@ -158,9 +156,8 @@ class LinearAdapter(nn.Module):
         # Linear transformation
         x = self.linear(x)
         
-        # L2 normalize (if enabled)
-        if getattr(self, 'normalize', True):
-            x = torch.nn.functional.normalize(x, dim=-1)
+        # L2 normalize (preserve CLIP space properties)
+        x = torch.nn.functional.normalize(x, dim=-1)
         
         return x
 
@@ -185,17 +182,15 @@ class MLPAdapter(nn.Module):
     
     def __init__(
         self,
-        embed_dim: int = 768,
+        embed_dim: int = 512,
         hidden_scale: float = 2.0,
         dropout: float = 0.1,
         use_condition: bool = False,
-        condition_mode: Literal['add', 'film'] = 'add',
-        normalize: bool = True
+        condition_mode: Literal['add', 'film'] = 'add'
     ):
         super().__init__()
         self.embed_dim = embed_dim
         self.use_condition = use_condition
-        self.normalize = normalize
         
         hidden_dim = int(embed_dim * hidden_scale)
         
@@ -255,9 +250,8 @@ class MLPAdapter(nn.Module):
         x = self.mlp(x)
         x = residual + x
         
-        # L2 normalize (if enabled)
-        if getattr(self, 'normalize', True):
-            x = torch.nn.functional.normalize(x, dim=-1)
+        # L2 normalize (preserve CLIP space properties)
+        x = torch.nn.functional.normalize(x, dim=-1)
         
         return x
 
@@ -327,103 +321,31 @@ class AdaptedModel(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
-class MultiTargetAdapter(nn.Module):
-    """
-    Adapts multiple outputs from a MultiTargetDecoder independently.
-    Applies the chosen adapter type to each output (clip, tokens, sd_latent).
-    """
-    def __init__(
-        self,
-        adapter_type: str = 'mlp',
-        clip_dim: int = 768,
-        token_dim: int = 1024,
-        sd_latent_dim: int = 4 * 64 * 64,
-        use_condition: bool = False,
-        condition_mode: Literal['add', 'film'] = 'add',
-        **kwargs
-    ):
-        super().__init__()
-        # CLIP gets L2 normalized
-        self.clip_adapter = create_adapter(
-            adapter_type, embed_dim=clip_dim, use_condition=use_condition,
-            condition_mode=condition_mode, normalize=True, **kwargs
-        )
-        # Tokens get L2 normalized
-        self.token_adapter = create_adapter(
-            adapter_type, embed_dim=token_dim, use_condition=use_condition,
-            condition_mode=condition_mode, normalize=True, **kwargs
-        )
-        # SD latents do NOT get L2 normalized
-        self.sd_latent_adapter = create_adapter(
-            adapter_type, embed_dim=sd_latent_dim, use_condition=use_condition,
-            condition_mode=condition_mode, normalize=False, **kwargs
-        )
-        
-    def forward(
-        self, 
-        x_dict: Dict[str, torch.Tensor], 
-        condition_idx: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
-        out = {}
-        
-        if 'clip' in x_dict:
-            out['clip'] = self.clip_adapter(x_dict['clip'], condition_idx)
-            
-        if 'tokens' in x_dict:
-            b, n, d = x_dict['tokens'].shape
-            t = x_dict['tokens'].view(b * n, d)
-            c_idx = condition_idx.repeat_interleave(n) if condition_idx is not None else None
-            t_adapted = self.token_adapter(t, c_idx)
-            out['tokens'] = t_adapted.view(b, n, d)
-            
-        if 'sd_latent' in x_dict:
-            b, c, h, w = x_dict['sd_latent'].shape
-            flat = x_dict['sd_latent'].view(b, c * h * w)
-            flat_adapted = self.sd_latent_adapter(flat, condition_idx)
-            out['sd_latent'] = flat_adapted.view(b, c, h, w)
-            
-        return out
-
-
 def create_adapter(
     adapter_type: str,
-    embed_dim: int = 768,
+    embed_dim: int = 512,
     use_condition: bool = False,
     condition_mode: str = 'add',
-    normalize: bool = True,
     **kwargs
 ) -> nn.Module:
     """
     Factory function to create adapters.
     
     Args:
-        adapter_type: 'linear', 'mlp', or 'multi_target'
+        adapter_type: 'linear' or 'mlp'
         embed_dim: Embedding dimensionality
         use_condition: Whether to use condition embeddings
         condition_mode: 'add' or 'film'
-        normalize: Whether to apply L2 normalization
         **kwargs: Additional adapter-specific arguments
     
     Returns:
         Adapter module
     """
-    if adapter_type == 'multi_target':
-        return MultiTargetAdapter(
-            adapter_type=kwargs.get('base_adapter_type', 'mlp'),
-            clip_dim=kwargs.get('clip_dim', 768),
-            token_dim=kwargs.get('token_dim', 1024),
-            sd_latent_dim=kwargs.get('sd_latent_dim', 4 * 64 * 64),
-            use_condition=use_condition,
-            condition_mode=condition_mode,
-            **kwargs
-        )
-        
     if adapter_type == 'linear':
         return LinearAdapter(
             embed_dim=embed_dim,
             use_condition=use_condition,
-            condition_mode=condition_mode,
-            normalize=normalize
+            condition_mode=condition_mode
         )
     
     elif adapter_type == 'mlp':
@@ -432,22 +354,21 @@ def create_adapter(
             hidden_scale=kwargs.get('hidden_scale', 2.0),
             dropout=kwargs.get('dropout', 0.1),
             use_condition=use_condition,
-            condition_mode=condition_mode,
-            normalize=normalize
+            condition_mode=condition_mode
         )
     
     else:
-        raise ValueError(f"Unknown adapter type: {adapter_type}. Use 'linear', 'mlp', or 'multi_target'")
+        raise ValueError(f"Unknown adapter type: {adapter_type}. Use 'linear' or 'mlp'")
 
 
-def save_imagery_adapter(
+def save_adapter(
     adapter: nn.Module,
     path: str,
     meta: Dict[str, Any],
     full_model: Optional[nn.Module] = None
 ) -> None:
     """
-    Save imagery adapter checkpoint with metadata.
+    Save adapter checkpoint with metadata.
     
     Args:
         adapter: Trained adapter module
@@ -469,14 +390,14 @@ def save_imagery_adapter(
     logger.info(f"Saved adapter checkpoint to {path}")
 
 
-def load_imagery_adapter(
+def load_adapter(
     path: str,
     adapter_type: str = None,
-    embed_dim: int = 768,
+    embed_dim: int = 512,
     map_location: str = 'cpu'
 ) -> tuple[nn.Module, Dict[str, Any]]:
     """
-    Load imagery adapter checkpoint.
+    Load adapter checkpoint.
     
     Args:
         path: Checkpoint path
@@ -501,11 +422,7 @@ def load_imagery_adapter(
         use_condition=meta.get('use_condition', False),
         condition_mode=meta.get('condition_mode', 'add'),
         hidden_scale=meta.get('hidden_scale', 2.0),
-        dropout=meta.get('dropout', 0.1),
-        base_adapter_type=meta.get('base_adapter_type', 'mlp'),
-        clip_dim=meta.get('clip_dim', 768),
-        token_dim=meta.get('token_dim', 1024),
-        sd_latent_dim=meta.get('sd_latent_dim', 4 * 64 * 64)
+        dropout=meta.get('dropout', 0.1)
     )
     
     # Load weights

@@ -200,8 +200,10 @@ def test_no_breaking_changes_to_existing_imports():
     # These should all still import successfully
     try:
         from fmri2img.data.torch_dataset import NSDIterableDataset
-        from fmri2img.data.loaders import FMRIDataset
+        from fmri2img.data.nsd_index import NSDIndex
+        from fmri2img.data.loaders import get_dataloader  # If exists
     except ImportError as e:
+        # Only fail if it's an unexpected import error
         if "imagery" not in str(e).lower():
             pytest.fail(f"Existing import broken: {e}")
 

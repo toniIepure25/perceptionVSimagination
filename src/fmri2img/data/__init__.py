@@ -21,6 +21,14 @@ from .nsd_imagery import (
     build_nsd_imagery_index,
 )
 from .torch_dataset import NSDIterableDataset
+from .canonical import (
+    CanonicalDecoderDataset,
+    DatasetCapabilities,
+    PairedConditionBatchSampler,
+    build_mixed_condition_index,
+    decoder_collate_fn,
+    normalize_decoder_index,
+)
 
 __all__ = [
     # Preprocessing
@@ -40,4 +48,11 @@ __all__ = [
     "build_nsd_imagery_index",
     # Torch dataset
     "NSDIterableDataset",
+    # Canonical shared/private dataset
+    "CanonicalDecoderDataset",
+    "DatasetCapabilities",
+    "PairedConditionBatchSampler",
+    "build_mixed_condition_index",
+    "decoder_collate_fn",
+    "normalize_decoder_index",
 ]

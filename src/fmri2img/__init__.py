@@ -1,36 +1,37 @@
 """
-fmri2img -- Perception vs. Imagination: Cross-Domain Neural Decoding from fMRI
-===============================================================================
+fmri2img -- Canonical perception/imagery decoding platform
+==========================================================
 
-A framework for decoding visual content from brain activity (Natural Scenes
-Dataset) and investigating cross-domain transfer between visual perception
-and mental imagery.
+The package retains the historical ``fmri2img`` name for compatibility while
+expanding the repository into a broader research platform for disentangling
+shared content, private neural variance, and subjective experience from fMRI.
 
-Subpackages
------------
-analysis    Six novel analysis directions (dimensionality, uncertainty, etc.)
-data        Data loading, preprocessing, indexing, and imagery datasets
-eval        Evaluation metrics (retrieval, image quality, brain alignment)
-generation  Diffusion-based image reconstruction from decoded embeddings
-io          I/O layer for NSD data on S3 and local filesystems
-models      Neural and linear decoders, adapters, and loss functions
-reliability Noise-ceiling estimation and voxel reliability
-stats       Statistical inference (bootstrap CI, permutation tests)
-training    Training loops for ridge, MLP, two-stage, and adapter models
-utils       Configuration, logging, CLIP utilities, and manifests
+Canonical platform modules:
+- ``data`` / ``preprocessing`` / ``roi`` / ``targets``
+- ``models`` / ``training`` / ``evaluation`` / ``export`` / ``workflows``
+
+Legacy perception-only and reconstruction-first code paths remain available for
+comparison, but the shared/private decoder workflows are now the official path.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "analysis",
     "data",
+    "evaluation",
     "eval",
+    "export",
     "generation",
     "io",
+    "legacy",
     "models",
+    "preprocessing",
     "reliability",
+    "roi",
     "stats",
+    "targets",
     "training",
     "utils",
+    "workflows",
 ]

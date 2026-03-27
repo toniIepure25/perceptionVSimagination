@@ -14,6 +14,12 @@ from .losses import (
     compute_multiloss,
     compose_loss  # Backward compatibility
 )
+from .canonical import (
+    CanonicalLossWeights,
+    SharedPrivateTrainer,
+    compute_canonical_loss,
+    load_canonical_checkpoint,
+)
 
 __all__ = [
     # Base infrastructure
@@ -25,6 +31,10 @@ __all__ = [
     "info_nce_loss",
     "MultiLoss",
     "compute_multiloss",
-    "compose_loss"
+    "compose_loss",
+    # Canonical shared/private training
+    "CanonicalLossWeights",
+    "SharedPrivateTrainer",
+    "compute_canonical_loss",
+    "load_canonical_checkpoint",
 ]
-

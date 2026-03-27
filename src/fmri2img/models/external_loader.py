@@ -179,6 +179,14 @@ def infer_config_from_checkpoint(state_dict: Dict[str, torch.Tensor]) -> Externa
                     n_tokens=257,
                     token_dim=token_dim,
                 )
+            else:
+                config = ExternalModelConfig(
+                    input_dim=config.input_dim,
+                    encoder_dims=config.encoder_dims,
+                    token_output_dim=n_out,
+                    n_tokens=1,
+                    token_dim=n_out,
+                )
             break
 
     return config

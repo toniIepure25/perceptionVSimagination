@@ -1,0 +1,73 @@
+experiment:
+  name: shared_private_bootstrap
+  description: Canonical real-data bootstrap path for the shared-private perception/imagery decoder
+
+dataset:
+  subject: subj01
+  perception_index: data/indices/nsd_index/subject=subj01/index.parquet
+  imagery_index: outputs/canonical/prepared/imagery/subj01.parquet
+  mixed_output_index: outputs/canonical/prepared/mixed/subj01_mixed_with_roi.parquet
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["V1", "V2", "V3"]
+    ventral_visual: ["V4", "LO", "FFA", "PPA"]
+    metacognitive: ["mPFC", "Precuneus", "IPS"]
+  missing_policy: error
+  fallback_policy: error
+  min_voxels: 1
+  mask_root: ${NSD_ROI_MASK_ROOT}
+  layout_config: configs/data.yaml
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: outputs/targets/vit_l14_image_768.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 128
+  shared_dim: 128
+  private_dim: 64
+  dropout: 0.1
+  use_domain_head: true
+  use_vividness_head: true
+  vividness_mode: evidential
+
+training:
+  batch_size: 16
+  epochs: 10
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.1
+  vividness_weight: 0.1
+  confidence_weight: 0.05
+  reconstruction_weight: 0.1
+  device: cpu
+  output_dir: outputs/canonical/train/shared_private_bootstrap
+  seed: 0
+
+evaluation:
+  batch_size: 32
+  output_dir: outputs/canonical/eval/shared_private_bootstrap
+  transfer_output_dir: outputs/canonical/transfer/shared_private_bootstrap
+
+analysis:
+  output_dir: outputs/canonical/analysis/shared_private_bootstrap
+
+export:
+  output_dir: outputs/canonical/export/shared_private_bootstrap
+
+preparation:
+  imagery:
+    data_root: ${NSD_IMAGERY_ROOT}
+    cache_root: cache
+  targets:
+    model_id: openai/clip-vit-large-patch14
+    batch_size: 128
+    inference_batch_size: 32
+  roi:
+    provenance_path: outputs/canonical/prepared/mixed/subj01_roi_summary.json

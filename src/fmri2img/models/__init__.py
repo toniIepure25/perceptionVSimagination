@@ -1,9 +1,8 @@
 """
-Models Package
-==============
+fMRI-to-Image Models
+===================
 
-Neural and linear decoders for mapping fMRI activity to image
-representations, plus imagery adapters for cross-domain transfer.
+Neural and linear models for mapping fMRI activity to image representations.
 """
 
 from .ridge import RidgeEncoder
@@ -15,67 +14,63 @@ from .adapters import (
     ConditionEmbedding,
     AdaptedModel,
     create_adapter,
-    save_imagery_adapter,
-    load_imagery_adapter,
+    save_adapter as save_imagery_adapter,
+    load_adapter as load_imagery_adapter
 )
 from .encoders import (
+    ResidualBlock,
     ResidualMLPEncoder,
+    CLIPMappingHead,
     TwoStageEncoder,
     MultiLayerTwoStageEncoder,
     SelfSupervisedPretrainer,
     save_two_stage_encoder,
-    load_two_stage_encoder,
+    load_two_stage_encoder
 )
 from .multi_target_decoder import (
+    IPAdapterTokenHead,
+    SDLatentHead,
     MultiTargetDecoder,
     MultiTaskLoss,
     save_multi_target_decoder,
-    load_multi_target_decoder,
+    load_multi_target_decoder
 )
 from .encoding_model import (
+    ImageEncoder,
     EncodingModel,
     save_encoding_model,
-    load_encoding_model,
+    load_encoding_model
 )
+from .interfaces import (
+    ArtifactSpec,
+    BaseDecoderModel,
+    DecoderBatch,
+    DecoderConfig,
+    DecoderOutputs,
+    DecoderTargets,
+)
+from .canonical_encoders import ROISpecificHierarchicalEncoder, ShallowBranchEncoder
+from .canonical_decoder import SharedPrivateMultitaskDecoder
+from .latent import SharedPrivateDisentanglementLayer, orthogonality_penalty
+from .heads import ContentHead, DomainHead, MultiTaskHeads, VividnessHead
 from .losses import (
     cosine_loss,
     mse_loss,
-    info_nce_loss,
     infonce_loss,
     compose_loss,
-    ComposedLoss,
+    ComposedLoss
 )
-
-from .external_loader import (
-    ExternalModelLoader,
-    ExternalModelConfig,
-    load_fmri2images_model,
-    compare_predictions,
-)
-
-try:
-    from .lora_adapter import (
-        LoRALinear,
-        LoRAAdapter,
-        MultiRankLoRA,
-        LoRAAdaptedModel,
-        save_lora_adapter,
-        load_lora_adapter,
-    )
-except ImportError:
-    pass  # torch not available
 
 __all__ = [
-    # Baseline decoders
+    # Baseline models
     "RidgeEncoder",
     "MLPEncoder",
     "save_mlp",
     "load_mlp",
-    # CLIP adapter
     "CLIPAdapter",
     "save_adapter",
     "load_adapter",
-    # Imagery adapters (perception -> imagination transfer)
+    # Imagery adapters
     "LinearAdapter",
     "MLPAdapter",
     "ConditionEmbedding",
@@ -84,38 +79,46 @@ __all__ = [
     "save_imagery_adapter",
     "load_imagery_adapter",
     # Two-stage encoder
+    "ResidualBlock",
     "ResidualMLPEncoder",
+    "CLIPMappingHead",
     "TwoStageEncoder",
     "MultiLayerTwoStageEncoder",
     "SelfSupervisedPretrainer",
     "save_two_stage_encoder",
     "load_two_stage_encoder",
-    # Multi-target decoder (semantic-structural dissociation)
+    # Multi-target decoder (novel)
+    "IPAdapterTokenHead",
+    "SDLatentHead",
     "MultiTargetDecoder",
     "MultiTaskLoss",
     "save_multi_target_decoder",
     "load_multi_target_decoder",
-    # Encoding model
+    # Encoding model (for BOI-lite)
+    "ImageEncoder",
     "EncodingModel",
     "save_encoding_model",
     "load_encoding_model",
-    # Loss functions
+    # Canonical shared/private decoder
+    "ArtifactSpec",
+    "BaseDecoderModel",
+    "DecoderBatch",
+    "DecoderConfig",
+    "DecoderOutputs",
+    "DecoderTargets",
+    "ShallowBranchEncoder",
+    "ROISpecificHierarchicalEncoder",
+    "SharedPrivateDisentanglementLayer",
+    "SharedPrivateMultitaskDecoder",
+    "orthogonality_penalty",
+    "ContentHead",
+    "DomainHead",
+    "MultiTaskHeads",
+    "VividnessHead",
+    # Loss functions (novel)
     "cosine_loss",
     "mse_loss",
-    "info_nce_loss",
     "infonce_loss",
     "compose_loss",
-    "ComposedLoss",
-    # External model loader (FMRI2images bridge)
-    "ExternalModelLoader",
-    "ExternalModelConfig",
-    "load_fmri2images_model",
-    "compare_predictions",
-    # LoRA adapters (parameter-efficient domain adaptation)
-    "LoRALinear",
-    "LoRAAdapter",
-    "MultiRankLoRA",
-    "LoRAAdaptedModel",
-    "save_lora_adapter",
-    "load_lora_adapter",
+    "ComposedLoss"
 ]

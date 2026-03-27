@@ -296,6 +296,7 @@ def expand_env_vars(config: Union[Dict, str, Any]) -> Any:
 def resolve_paths(
     config: Dict[str, Any],
     base_path: Path,
+    project_root: Optional[Path] = None,
     path_keys: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -320,6 +321,41 @@ def resolve_paths(
             "data_path", "index_path", "output_path", "cache_path"
         ]
     
+    project_root = project_root.resolve() if project_root is not None else None
+
+    def _resolve_path(path_str: str) -> str:
+        path = Path(path_str)
+        if path.is_absolute():
+            return str(path)
+
+        candidates = []
+        config_candidate = (base_path / path).resolve()
+        candidates.append(config_candidate)
+        if project_root is not None:
+            project_candidate = (project_root / path).resolve()
+            candidates.append(project_candidate)
+
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+        # Prefer project-root semantics for repo-local resources when the path
+        # clearly targets a top-level project directory.
+        repo_like_prefixes = {
+            "cache",
+            "configs",
+            "data",
+            "docs",
+            "outputs",
+            "scripts",
+            "src",
+            "tests",
+        }
+        if project_root is not None and path.parts and path.parts[0] in repo_like_prefixes:
+            return str((project_root / path).resolve())
+
+        return str(config_candidate)
+
     def _resolve(obj: Any) -> Any:
         """Recursively resolve paths"""
         if isinstance(obj, dict):
@@ -331,15 +367,31 @@ def resolve_paths(
         elif isinstance(obj, str):
             # Check if this looks like a relative path
             if "/" in obj or "\\" in obj:
-                path = Path(obj)
-                if not path.is_absolute():
-                    return str((base_path / path).resolve())
+                return _resolve_path(obj)
             return obj
         
         else:
             return obj
     
     return _resolve(config)
+
+
+def find_project_root(start_path: Union[str, Path]) -> Path:
+    """
+    Best-effort project root detection for config path resolution.
+
+    Prefers the nearest ancestor containing ``pyproject.toml`` or ``.git`` and
+    falls back to the current working directory if neither is found.
+    """
+
+    start = Path(start_path).resolve()
+    if start.is_file():
+        start = start.parent
+
+    for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").exists() or (candidate / ".git").exists():
+            return candidate
+    return Path.cwd().resolve()
 
 
 def load_yaml(yaml_path: Path) -> Dict[str, Any]:
@@ -417,6 +469,7 @@ def load_config(
     """
     config_path = Path(config_path)
     config_dir = config_path.parent
+    project_root = find_project_root(config_path)
     
     # Load main config
     logger.debug(f"Loading config from {config_path}")
@@ -452,7 +505,7 @@ def load_config(
     
     # Resolve relative paths
     if resolve_relative_paths:
-        config = ConfigDict(resolve_paths(config, config_dir))
+        config = ConfigDict(resolve_paths(config, config_dir, project_root=project_root))
     
     # Apply overrides
     if overrides:

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fmri2img"
-version = "0.3.0"
-description = "Perception vs. Imagination: cross-domain neural decoding from fMRI"
+version = "0.4.0"
+description = "Canonical perception/imagery shared-private fMRI decoding platform"
 authors = [{name = "NSD Team", email = "nsd@example.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -65,6 +65,11 @@ all = [
 ]
 
 [project.scripts]
+fmri2img-train-decoder = "fmri2img.workflows.train_decoder:main"
+fmri2img-eval-decoder = "fmri2img.workflows.eval_decoder:main"
+fmri2img-eval-transfer = "fmri2img.workflows.eval_transfer:main"
+fmri2img-run-analysis = "fmri2img.workflows.run_analysis:main"
+fmri2img-export-animus = "fmri2img.workflows.export_for_animus:main"
 fmri2img-train-ridge = "fmri2img.training.train_ridge:main"
 fmri2img-train-mlp = "fmri2img.training.train_mlp:main"
 fmri2img-train-two-stage = "fmri2img.training.train_two_stage:main"

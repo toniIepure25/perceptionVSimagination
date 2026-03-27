@@ -1,0 +1,60 @@
+experiment:
+  name: shared_private_mvp
+  description: Canonical shared-private perception/imagery decoder
+
+dataset:
+  subject: subj01
+  perception_index: data/indices/nsd_index/subject=subj01/index.parquet
+  imagery_index: cache/indices/imagery/subj01.parquet
+  mixed_output_index: outputs/canonical/indices/subj01_mixed.parquet
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["V1", "V2", "V3"]
+    ventral_visual: ["V4", "LO", "FFA", "PPA"]
+    metacognitive: ["mPFC", "Precuneus", "IPS"]
+  roi_names: []
+  missing_policy: error
+  fallback_policy: error
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: outputs/targets/vit_l14_image_768.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 128
+  shared_dim: 128
+  private_dim: 64
+  dropout: 0.1
+  use_domain_head: true
+  use_vividness_head: true
+  vividness_mode: evidential
+
+training:
+  batch_size: 16
+  epochs: 10
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.1
+  vividness_weight: 0.1
+  confidence_weight: 0.05
+  reconstruction_weight: 0.1
+  device: cpu
+  output_dir: outputs/canonical/train/shared_private_mvp
+  seed: 0
+
+evaluation:
+  batch_size: 32
+  output_dir: outputs/canonical/eval/shared_private_mvp
+  transfer_output_dir: outputs/canonical/transfer/shared_private_mvp
+
+analysis:
+  output_dir: outputs/canonical/analysis/shared_private_mvp
+
+export:
+  output_dir: outputs/canonical/export/shared_private_mvp

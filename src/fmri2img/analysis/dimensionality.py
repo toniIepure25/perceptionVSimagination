@@ -178,3 +178,78 @@ def analyze_dimensionality_gap(
                 f"perception={dim95_perc}, imagery={dim95_imag}")
 
     return results
+
+
+def analyze_token_dimensionality(
+    perception_tokens: np.ndarray,
+    imagery_tokens: np.ndarray,
+    grid_size: int = 16,
+) -> Dict:
+    """Token-level dimensionality analysis for ViT spatial tokens.
+
+    Computes participation ratio per spatial position, producing a
+    "dimensionality map" that shows where imagery compresses most.
+
+    Parameters
+    ----------
+    perception_tokens : (N_p, 257, 1280) perception token predictions
+    imagery_tokens : (N_i, 257, 1280) imagery token predictions
+    grid_size : int, spatial grid size (default 16 for ViT-bigG/14)
+
+    Returns
+    -------
+    dict with per-token and aggregate dimensionality metrics
+    """
+    n_patches = grid_size * grid_size  # 256
+
+    perc_pr = np.zeros(n_patches)
+    imag_pr = np.zeros(n_patches)
+
+    # Skip CLS token (index 0), analyze patch tokens (indices 1:257)
+    for t in range(n_patches):
+        perc_data = perception_tokens[:, t + 1, :]  # (N_p, 1280)
+        imag_data = imagery_tokens[:, t + 1, :]  # (N_i, 1280)
+
+        perc_pr[t] = participation_ratio(perc_data)
+        imag_pr[t] = participation_ratio(imag_data)
+
+    # Reshape to spatial grid
+    perc_pr_grid = perc_pr.reshape(grid_size, grid_size)
+    imag_pr_grid = imag_pr.reshape(grid_size, grid_size)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio_grid = np.where(perc_pr_grid > 0.01, imag_pr_grid / perc_pr_grid, 1.0)
+
+    # CLS token dimensionality
+    cls_perc_pr = participation_ratio(perception_tokens[:, 0, :])
+    cls_imag_pr = participation_ratio(imagery_tokens[:, 0, :])
+
+    # Aggregate: does imagery compress more at periphery?
+    center_mask = np.zeros((grid_size, grid_size), dtype=bool)
+    center_mask[6:10, 6:10] = True
+    periphery_mask = ~center_mask
+
+    center_ratio = float(ratio_grid[center_mask].mean())
+    periphery_ratio = float(ratio_grid[periphery_mask].mean())
+
+    results = {
+        "perception_pr_grid": perc_pr_grid.tolist(),
+        "imagery_pr_grid": imag_pr_grid.tolist(),
+        "pr_ratio_grid": ratio_grid.tolist(),
+        "cls_perception_pr": float(cls_perc_pr),
+        "cls_imagery_pr": float(cls_imag_pr),
+        "cls_pr_ratio": float(cls_imag_pr / max(cls_perc_pr, 1e-8)),
+        "mean_perception_pr": float(perc_pr.mean()),
+        "mean_imagery_pr": float(imag_pr.mean()),
+        "mean_pr_ratio": float(ratio_grid.mean()),
+        "center_pr_ratio": center_ratio,
+        "periphery_pr_ratio": periphery_ratio,
+        "center_more_preserved": center_ratio > periphery_ratio,
+    }
+
+    logger.info(
+        f"Token dimensionality: mean PR ratio={results['mean_pr_ratio']:.3f}, "
+        f"center={center_ratio:.3f}, periphery={periphery_ratio:.3f}"
+    )
+
+    return results

@@ -40,6 +40,26 @@ class EmbeddingBundle:
     multilayer_perception: Optional[Dict[str, np.ndarray]] = None
     multilayer_imagery: Optional[Dict[str, np.ndarray]] = None
 
+    # High-fidelity predictions (FMRI2images, 1280-d ViT-bigG/14)
+    perception_hifi: Optional[np.ndarray] = None  # (N_p, 1280)
+    imagery_hifi: Optional[np.ndarray] = None  # (N_i, 1280)
+    perception_hifi_targets: Optional[np.ndarray] = None  # (N_p, 1280)
+    imagery_hifi_targets: Optional[np.ndarray] = None  # (N_i, 1280)
+
+    # Token-level predictions (257 spatial tokens × 1280-d, FMRI2images only)
+    perception_tokens: Optional[np.ndarray] = None  # (N_p, 257, 1280)
+    imagery_tokens: Optional[np.ndarray] = None  # (N_i, 257, 1280)
+    perception_token_targets: Optional[np.ndarray] = None  # (N_p, 257, 1280)
+    imagery_token_targets: Optional[np.ndarray] = None  # (N_i, 257, 1280)
+
+    # Latent representations (2048-d encoder output, FMRI2images)
+    perception_latents: Optional[np.ndarray] = None  # (N_p, 2048)
+    imagery_latents: Optional[np.ndarray] = None  # (N_i, 2048)
+
+    # Model metadata
+    model_capacity: Optional[str] = None  # "6M" or "825M"
+    clip_backbone: Optional[str] = None  # "ViT-L/14" or "ViT-bigG/14"
+
     @property
     def perception_cosines(self) -> np.ndarray:
         p = _l2(self.perception)
@@ -59,6 +79,30 @@ class EmbeddingBundle:
     @property
     def imagery_norms(self) -> np.ndarray:
         return np.linalg.norm(self.imagery, axis=1)
+
+    @property
+    def hifi_perception_cosines(self) -> Optional[np.ndarray]:
+        """Per-trial cosine similarity for high-fidelity (FMRI2images) perception predictions."""
+        if self.perception_hifi is None or self.perception_hifi_targets is None:
+            return None
+        return np.sum(_l2(self.perception_hifi) * _l2(self.perception_hifi_targets), axis=1)
+
+    @property
+    def hifi_imagery_cosines(self) -> Optional[np.ndarray]:
+        """Per-trial cosine similarity for high-fidelity (FMRI2images) imagery predictions."""
+        if self.imagery_hifi is None or self.imagery_hifi_targets is None:
+            return None
+        return np.sum(_l2(self.imagery_hifi) * _l2(self.imagery_hifi_targets), axis=1)
+
+    @property
+    def has_hifi(self) -> bool:
+        """Whether high-fidelity (FMRI2images) predictions are available."""
+        return self.perception_hifi is not None and self.imagery_hifi is not None
+
+    @property
+    def has_tokens(self) -> bool:
+        """Whether token-level predictions are available."""
+        return self.perception_tokens is not None and self.imagery_tokens is not None
 
     def get_shared_stimulus_pairs(self) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """Return (shared_nsd_ids, perc_indices, imag_indices) for matched stimuli."""

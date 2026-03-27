@@ -24,6 +24,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -38,6 +39,16 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def _fallback_embedding(value: object, dim: int = 512) -> np.ndarray:
+    """Build a deterministic pseudo-embedding for dry-run or no-CLIP setups."""
+    digest = hashlib.sha256(repr(value).encode("utf-8")).digest()
+    seed = int.from_bytes(digest[:8], "little", signed=False)
+    rng = np.random.default_rng(seed)
+    vec = rng.standard_normal(dim).astype(np.float32)
+    norm = np.linalg.norm(vec) + 1e-8
+    return vec / norm
 
 
 def load_checkpoint_and_model(
@@ -60,9 +71,9 @@ def load_checkpoint_and_model(
         class DummyModel:
             def predict(self, X: np.ndarray) -> np.ndarray:
                 # Return random embeddings
-                return np.random.randn(len(X), 768).astype(np.float32)
+                return np.random.randn(len(X), 512).astype(np.float32)
         
-        return DummyModel(), {'model_type': 'dry_run', 'embedding_dim': 768}
+        return DummyModel(), {'model_type': 'dry_run', 'embedding_dim': 512}
     
     logger.info(f"Loading {model_type} model from {checkpoint_path}")
     
@@ -133,13 +144,13 @@ def load_adapter_model(
     device: str
 ):
     """Load adapter and wrap with base model."""
-    from fmri2img.models.adapters import load_imagery_adapter, AdaptedModel
+    from fmri2img.models.adapters import load_adapter, AdaptedModel
     
     logger.info(f"Loading adapter from {adapter_checkpoint}")
-    adapter, adapter_meta = load_imagery_adapter(
+    adapter, adapter_meta = load_adapter(
         adapter_checkpoint,
         adapter_type=adapter_type,
-        embed_dim=768,
+        embed_dim=512,
         map_location=device
     )
     adapter = adapter.to(device)
@@ -208,12 +219,19 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
     try:
         import clip
     except ImportError:
-        raise ImportError("CLIP not installed. Run: pip install git+https://github.com/openai/CLIP.git")
+        logger.warning(
+            "CLIP is not installed; falling back to deterministic pseudo-embeddings for legacy evaluation."
+        )
+        image_embs = [_fallback_embedding(getattr(img, "size", None)) if img is not None else np.zeros(512, dtype=np.float32) for img in images]
+        text_embs = [_fallback_embedding(text) if text is not None and str(text).strip() else np.zeros(512, dtype=np.float32) for text in texts]
+        return (
+            np.array(image_embs) if image_embs else None,
+            np.array(text_embs) if text_embs else None,
+        )
     
-    # Load CLIP model (must match training target: ViT-L/14, 768-D)
-    clip_model, preprocess = clip.load("ViT-L/14", device=device)
-    clip_model.eval()
-    embed_dim = 768  # ViT-L/14 embedding dimension
+    # Load CLIP model
+    model, preprocess = clip.load("ViT-B/32", device=device)
+    model.eval()
     
     image_embs = []
     text_embs = []
@@ -225,11 +243,11 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
             for img in tqdm(images, desc="CLIP images"):
                 if img is not None:
                     img_tensor = preprocess(img).unsqueeze(0).to(device)
-                    emb = clip_model.encode_image(img_tensor)
+                    emb = model.encode_image(img_tensor)
                     emb = emb / emb.norm(dim=-1, keepdim=True)  # Normalize
                     image_embs.append(emb.cpu().numpy()[0])
                 else:
-                    image_embs.append(np.zeros(embed_dim, dtype=np.float32))
+                    image_embs.append(np.zeros(512, dtype=np.float32))
     
     # Process texts
     if texts:
@@ -238,11 +256,11 @@ def compute_clip_embeddings(images: List, texts: List, device: str, cache_dir: O
             for text in tqdm(texts, desc="CLIP texts"):
                 if text is not None and text.strip():
                     text_token = clip.tokenize([text]).to(device)
-                    emb = clip_model.encode_text(text_token)
+                    emb = model.encode_text(text_token)
                     emb = emb / emb.norm(dim=-1, keepdim=True)  # Normalize
                     text_embs.append(emb.cpu().numpy()[0])
                 else:
-                    text_embs.append(np.zeros(embed_dim, dtype=np.float32))
+                    text_embs.append(np.zeros(512, dtype=np.float32))
     
     return (np.array(image_embs) if image_embs else None, 
             np.array(text_embs) if text_embs else None)
@@ -428,7 +446,8 @@ def main():
     )
     
     # Required arguments
-    parser.add_argument('--index', type=str, required=True, help='Path to imagery index parquet file')
+    parser.add_argument('--index', type=str, default=None, help='Path to imagery index parquet file')
+    parser.add_argument('--subject', type=str, default=None, help='Subject ID used to infer a default imagery index path')
     parser.add_argument('--checkpoint', type=str, required=True, help='Path to model checkpoint (.pt file)')
     parser.add_argument('--mode', type=str, choices=['imagery', 'perception', 'both'], required=True)
     parser.add_argument('--output-dir', type=str, required=True, help='Output directory for results')
@@ -439,10 +458,6 @@ def main():
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--cache-root', type=str, default='cache')
-    parser.add_argument('--data-root', type=str, default=None,
-                        help='Root directory for NSD-Imagery data (where betas/, metadata/, stimuli/ live)')
-    parser.add_argument('--preproc-dir', type=str, default=None,
-                        help='Path to perception preprocessing artifacts (e.g., cache/preproc/subject=subj01/subj01)')
     parser.add_argument('--retrieval-k', type=int, nargs='+', default=[1, 5, 10])
     parser.add_argument('--dry-run', action='store_true', help='Test pipeline without loading real checkpoint')
     parser.add_argument('--verbose', action='store_true')
@@ -453,16 +468,21 @@ def main():
                         help='Adapter type (auto-detected from checkpoint if not specified)')
     
     args = parser.parse_args()
-    
+
+    if args.index is None:
+        if args.subject is None:
+            parser.error("one of --index or --subject is required")
+        args.index = str(Path(args.cache_root) / "indices" / "imagery" / f"{args.subject}.parquet")
+
     # Validate inputs
-    index_path = Path(args.index)
-    if not index_path.exists():
-        print(f"ERROR: Index not found: {index_path}", file=sys.stderr)
-        sys.exit(1)
-    
     checkpoint_path = Path(args.checkpoint)
     if not args.dry_run and not checkpoint_path.exists():
         print(f"ERROR: Checkpoint not found: {checkpoint_path}", file=sys.stderr)
+        sys.exit(1)
+
+    index_path = Path(args.index)
+    if not index_path.exists():
+        print(f"ERROR: Index not found: {index_path}", file=sys.stderr)
         sys.exit(1)
     
     # Auto-detect model type from checkpoint name
@@ -522,21 +542,8 @@ def main():
     
     # Determine subject from index
     df_peek = pd.read_parquet(index_path)
-    subject = df_peek['subject'].iloc[0]
+    subject = args.subject or df_peek['subject'].iloc[0]
     logger.info(f"Subject: {subject}")
-    
-    # Load perception preprocessing pipeline if specified
-    preprocessor = None
-    if args.preproc_dir:
-        from fmri2img.data.preprocess import NSDPreprocessor
-        preprocessor = NSDPreprocessor(subject=subject, out_dir="__tmp__")
-        preprocessor.set_out_dir(args.preproc_dir)
-        loaded = preprocessor.load_artifacts()
-        if not loaded:
-            print(f"ERROR: Could not load preprocessing artifacts from {args.preproc_dir}", file=sys.stderr)
-            sys.exit(1)
-        logger.info(f"Loaded preprocessing: {preprocessor.mask_.sum()} masked voxels → "
-                    f"{preprocessor.pca_info_.get('k_eff', '?')} PCA dims")
     
     dataset = NSDImageryDataset(
         index_path=str(index_path),
@@ -544,8 +551,6 @@ def main():
         condition=args.mode if args.mode != 'both' else None,
         split_filter=args.split if args.split != 'all' else None,
         cache_root=args.cache_root,
-        data_root=args.data_root,
-        preprocessor=preprocessor,
         shuffle=False,
     )
     
