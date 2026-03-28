@@ -25,6 +25,8 @@ def main() -> int:
         imagery_index=dataset_cfg["imagery_index"],
         output_path=output_path,
         subject=config_subject(config),
+        perception_conditions=dataset_cfg.get("perception_conditions", ["perception"]),
+        imagery_conditions=dataset_cfg.get("imagery_conditions", ["imagery"]),
     )
 
     output = Path(output_path)

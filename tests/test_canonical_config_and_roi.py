@@ -111,3 +111,31 @@ def test_build_mixed_condition_index_reassigns_splits_jointly(tmp_path):
     mixed = build_mixed_condition_index(perception_path, imagery_path)
     per_pair_splits = mixed.groupby("pair_id")["split"].nunique().to_dict()
     assert per_pair_splits == {1: 1, 2: 1}
+
+
+def test_build_mixed_condition_index_filters_noncanonical_imagery_conditions(tmp_path):
+    perception = pd.DataFrame(
+        [
+            {"subject": "subj01", "condition": "perception", "nsdId": 1, "pair_id": 1, "beta_path": "/tmp/a.nii.gz", "beta_index": 0},
+        ]
+    )
+    imagery = pd.DataFrame(
+        [
+            {"subject": "subj01", "condition": "imagery", "nsdId": 1, "pair_id": 1, "fmri_path": "/tmp/b.nii.gz"},
+            {"subject": "subj01", "condition": "attention", "nsdId": 1, "pair_id": 1, "fmri_path": "/tmp/c.nii.gz"},
+            {"subject": "subj01", "condition": "perception", "nsdId": 1, "pair_id": 1, "fmri_path": "/tmp/d.nii.gz"},
+        ]
+    )
+    perception_path = tmp_path / "perception.parquet"
+    imagery_path = tmp_path / "imagery.parquet"
+    perception.to_parquet(perception_path, index=False)
+    imagery.to_parquet(imagery_path, index=False)
+
+    mixed = build_mixed_condition_index(
+        perception_path,
+        imagery_path,
+        perception_conditions=["perception"],
+        imagery_conditions=["imagery"],
+    )
+
+    assert mixed["condition"].value_counts().to_dict() == {"perception": 1, "imagery": 1}

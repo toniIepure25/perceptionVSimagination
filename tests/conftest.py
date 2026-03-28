@@ -218,6 +218,10 @@ def canonical_volume_fixture(tmp_path):
     imagery_root = root / "imagery_raw"
     imagery_run = imagery_root / subject / "imagery" / "run01"
     imagery_run.mkdir(parents=True)
+    attention_run = imagery_root / subject / "attention" / "run02"
+    attention_run.mkdir(parents=True)
+    perception_run = imagery_root / subject / "perception" / "run03"
+    perception_run.mkdir(parents=True)
     imagery_trials = []
     for idx, nsd_id in enumerate(nsd_ids):
         trial_id = f"trial_{idx + 1:03d}"
@@ -237,6 +241,26 @@ def canonical_volume_fixture(tmp_path):
         import json
 
         json.dump({"trials": imagery_trials}, handle, indent=2)
+
+    extra_trials = []
+    for run_dir, prefix in ((attention_run, "attention"), (perception_run, "perception")):
+        trial_id = f"{prefix}_trial_001"
+        trial_path = run_dir / f"{trial_id}_beta.nii.gz"
+        trial_volume = rng.standard_normal(shape).astype(np.float32)
+        nib.save(nib.Nifti1Image(trial_volume, np.eye(4)), trial_path)
+        extra_trials.append(
+            {
+                "trial_id": trial_id,
+                "stimulus_type": "complex",
+                "nsdId": nsd_ids[0],
+                "pair_id": nsd_ids[0],
+                "text_prompt": f"{prefix} stimulus",
+            }
+        )
+        with open(run_dir / "metadata.json", "w") as handle:
+            import json
+
+            json.dump({"trials": extra_trials[-1:]}, handle, indent=2)
 
     # ROI masks
     mask_root = root / "roi_masks"
@@ -272,7 +296,9 @@ def canonical_volume_fixture(tmp_path):
         "dataset": {
             "subject": subject,
             "perception_index": str(raw_perception_index),
+            "perception_conditions": ["perception"],
             "imagery_index": str(prepared_dir / "imagery.parquet"),
+            "imagery_conditions": ["imagery"],
             "mixed_output_index": str(prepared_dir / "mixed.parquet"),
         },
         "preprocessing": {"enabled": False},

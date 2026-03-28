@@ -14,13 +14,21 @@ from fmri2img.workflows.common import load_workflow_config, validate_canonical_w
 from fmri2img.workflows.prep_common import config_subject, json_safe, write_report
 
 
-def _load_index_summary(path: str | Path, default_condition: str | None = None) -> tuple[dict[str, Any], pd.DataFrame | None]:
+def _load_index_summary(
+    path: str | Path,
+    default_condition: str | None = None,
+    allowed_conditions: list[str] | None = None,
+) -> tuple[dict[str, Any], pd.DataFrame | None]:
     target = Path(path)
     if not target.exists():
         return {"path": str(target), "exists": False}, None
     try:
         raw = pd.read_parquet(target)
-        normalized = normalize_decoder_index(raw, default_condition=default_condition)
+        normalized = normalize_decoder_index(
+            raw,
+            default_condition=default_condition,
+            allowed_conditions=allowed_conditions,
+        )
         paired_groups = (
             normalized.groupby("pair_id")["condition"].nunique().ge(2).sum()
             if "pair_id" in normalized.columns
@@ -188,13 +196,21 @@ def main() -> int:
     perception_path = dataset_cfg.get("perception_index")
     imagery_path = dataset_cfg.get("imagery_index")
     if perception_path:
-        perception_summary, perception_df = _load_index_summary(perception_path, default_condition="perception")
+        perception_summary, perception_df = _load_index_summary(
+            perception_path,
+            default_condition="perception",
+            allowed_conditions=dataset_cfg.get("perception_conditions", ["perception"]),
+        )
         if perception_df is None:
             blocked.append(f"Perception index is not ready: {perception_summary.get('error', 'missing file')}")
     else:
         perception_summary, perception_df = {"configured": False}, None
     if imagery_path:
-        imagery_summary, imagery_df = _load_index_summary(imagery_path, default_condition="imagery")
+        imagery_summary, imagery_df = _load_index_summary(
+            imagery_path,
+            default_condition="imagery",
+            allowed_conditions=dataset_cfg.get("imagery_conditions", ["imagery"]),
+        )
         if imagery_df is None:
             blocked.append(f"Imagery index is not ready: {imagery_summary.get('error', 'missing file')}")
     else:

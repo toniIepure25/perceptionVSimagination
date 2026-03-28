@@ -128,11 +128,29 @@ def _assign_pair_splits(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def normalize_decoder_index(df: pd.DataFrame, default_condition: Optional[str] = None) -> pd.DataFrame:
+def normalize_decoder_index(
+    df: pd.DataFrame,
+    default_condition: Optional[str] = None,
+    allowed_conditions: Optional[Sequence[str]] = None,
+) -> pd.DataFrame:
     out = df.copy()
     if "condition" not in out.columns:
         out["condition"] = default_condition or "perception"
     out["condition"] = out["condition"].map(_normalize_condition)
+    if allowed_conditions is not None:
+        normalized_allowed = {_normalize_condition(value) for value in allowed_conditions}
+        invalid_allowed = sorted(normalized_allowed - {"perception", "imagery"})
+        if invalid_allowed:
+            raise ValueError(
+                "Canonical decoder indices only support allowed_conditions drawn from "
+                f"['perception', 'imagery']; got {invalid_allowed}."
+            )
+        out = out[out["condition"].isin(normalized_allowed)].copy()
+        if out.empty:
+            raise ValueError(
+                "Canonical decoder index contains no rows after filtering for allowed conditions "
+                f"{sorted(normalized_allowed)}."
+            )
     invalid_conditions = sorted(set(out["condition"]) - {"perception", "imagery"})
     if invalid_conditions:
         raise ValueError(
@@ -169,9 +187,19 @@ def build_mixed_condition_index(
     imagery_index: str | Path,
     output_path: str | Path | None = None,
     subject: Optional[str] = None,
+    perception_conditions: Optional[Sequence[str]] = ("perception",),
+    imagery_conditions: Optional[Sequence[str]] = ("imagery",),
 ) -> pd.DataFrame:
-    perception_df = normalize_decoder_index(pd.read_parquet(perception_index), default_condition="perception")
-    imagery_df = normalize_decoder_index(pd.read_parquet(imagery_index), default_condition="imagery")
+    perception_df = normalize_decoder_index(
+        pd.read_parquet(perception_index),
+        default_condition="perception",
+        allowed_conditions=perception_conditions,
+    )
+    imagery_df = normalize_decoder_index(
+        pd.read_parquet(imagery_index),
+        default_condition="imagery",
+        allowed_conditions=imagery_conditions,
+    )
     if subject is not None:
         perception_df = perception_df[perception_df["subject"] == subject]
         imagery_df = imagery_df[imagery_df["subject"] == subject]

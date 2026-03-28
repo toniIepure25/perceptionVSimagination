@@ -5,7 +5,9 @@ experiment:
 dataset:
   subject: subj01
   perception_index: data/indices/nsd_index/subject=subj01/index.parquet
+  perception_conditions: ["perception"]
   imagery_index: outputs/canonical/prepared/imagery/subj01.parquet
+  imagery_conditions: ["imagery"]
   mixed_output_index: outputs/canonical/prepared/mixed/subj01_mixed_with_roi.parquet
 
 preprocessing:

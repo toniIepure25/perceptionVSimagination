@@ -29,7 +29,12 @@ def main() -> int:
     else:
         df = pd.read_parquet(output_path)
 
-    prepared = normalize_decoder_index(df, default_condition="perception")
+    allowed_conditions = config["dataset"].get("perception_conditions", ["perception"])
+    prepared = normalize_decoder_index(
+        df,
+        default_condition="perception",
+        allowed_conditions=allowed_conditions,
+    )
     prepared = prepared[prepared["subject"] == subject].reset_index(drop=True)
     prepared.to_parquet(output_path, index=False)
 

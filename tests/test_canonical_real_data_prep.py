@@ -55,6 +55,10 @@ def test_canonical_prep_pipeline_reaches_bootstrap_ready_and_trains(canonical_vo
         result = subprocess.run([sys.executable, *command], capture_output=True, text=True, env=env)
         assert result.returncode == 0, result.stderr
 
+    imagery_index = canonical_volume_fixture["prepared_dir"] / "imagery.parquet"
+    imagery_df = pd.read_parquet(imagery_index)
+    assert sorted(imagery_df["condition"].unique().tolist()) == ["imagery"]
+
     mixed_index = canonical_volume_fixture["prepared_dir"] / "mixed.parquet"
     mixed_df = pd.read_parquet(mixed_index)
     assert mixed_df["roi_features_json"].notna().all()

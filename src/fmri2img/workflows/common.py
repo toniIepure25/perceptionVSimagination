@@ -175,6 +175,8 @@ def build_datasets(config: ConfigDict):
                 imagery_index=dataset_cfg["imagery_index"],
                 output_path=dataset_cfg.get("mixed_output_index"),
                 subject=dataset_cfg.get("subject"),
+                perception_conditions=dataset_cfg.get("perception_conditions", ["perception"]),
+                imagery_conditions=dataset_cfg.get("imagery_conditions", ["imagery"]),
             )
             dataset_source = Path(prepared_mixed) if prepared_mixed else df
     target_spec = LatentTargetSpec(

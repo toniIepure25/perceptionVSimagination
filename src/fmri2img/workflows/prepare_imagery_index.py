@@ -43,7 +43,12 @@ def main() -> int:
         return 0
 
     df = pd.read_parquet(result_path)
-    prepared = normalize_decoder_index(df, default_condition="imagery")
+    allowed_conditions = prep_cfg.get("conditions", config["dataset"].get("imagery_conditions", ["imagery"]))
+    prepared = normalize_decoder_index(
+        df,
+        default_condition="imagery",
+        allowed_conditions=allowed_conditions,
+    )
     prepared.to_parquet(result_path, index=False)
 
     print(f"Prepared imagery index: {result_path}")
