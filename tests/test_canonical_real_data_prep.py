@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+import torch
+from PIL import Image
 
 
 def _workflow_env():
@@ -181,3 +183,37 @@ def test_optional_nibabel_reports_clear_runtime_errors(canonical_volume_fixture,
         subject="subj01",
     )
     assert any("nibabel" in issue for issue in inspection["issues"])
+
+
+def test_compute_embeddings_batch_accepts_structured_clip_outputs():
+    from fmri2img.data.build_target_clip_cache_robust import compute_embeddings_batch
+
+    class DummyProcessor:
+        def __call__(self, images, return_tensors="pt"):
+            assert return_tensors == "pt"
+            batch = len(images)
+            return {"pixel_values": torch.ones(batch, 3, 2, 2)}
+
+    class StructuredOutput:
+        def __init__(self, tensor):
+            self.pooler_output = tensor
+
+    class DummyModel:
+        def get_image_features(self, **inputs):
+            batch = inputs["pixel_values"].shape[0]
+            base = torch.tensor([[3.0, 4.0]] * batch)
+            return StructuredOutput(base)
+
+    images = {123: Image.new("RGB", (2, 2), color="white")}
+    embeddings = compute_embeddings_batch(
+        images=images,
+        clip_model=DummyModel(),
+        processor=DummyProcessor(),
+        device="cpu",
+        batch_size=1,
+    )
+
+    assert set(embeddings) == {123}
+    vector = embeddings[123]
+    assert vector.shape == (2,)
+    assert pytest.approx(float((vector ** 2).sum()), rel=1e-6) == 1.0

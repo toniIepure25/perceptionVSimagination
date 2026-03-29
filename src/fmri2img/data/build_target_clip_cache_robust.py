@@ -130,7 +130,21 @@ def compute_embeddings_batch(
         # Encode using full CLIP model to get projected embeddings
         with torch.no_grad():
             # Use get_image_features which applies vision encoder + projection
-            batch_embeddings = clip_model.get_image_features(**inputs).cpu().numpy()
+            outputs = clip_model.get_image_features(**inputs)
+            if isinstance(outputs, torch.Tensor):
+                batch_tensor = outputs
+            elif hasattr(outputs, "image_embeds") and isinstance(outputs.image_embeds, torch.Tensor):
+                batch_tensor = outputs.image_embeds
+            elif hasattr(outputs, "pooler_output") and isinstance(outputs.pooler_output, torch.Tensor):
+                batch_tensor = outputs.pooler_output
+            elif isinstance(outputs, (tuple, list)) and outputs and isinstance(outputs[0], torch.Tensor):
+                batch_tensor = outputs[0]
+            else:
+                raise TypeError(
+                    "CLIP image encoder returned an unsupported output type for canonical target preparation: "
+                    f"{type(outputs)!r}"
+                )
+            batch_embeddings = batch_tensor.cpu().numpy()
             
             # L2 normalize
             norms = np.linalg.norm(batch_embeddings, axis=1, keepdims=True)
