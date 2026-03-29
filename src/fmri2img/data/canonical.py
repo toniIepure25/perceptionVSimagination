@@ -92,10 +92,14 @@ def _assign_pair_splits(df: pd.DataFrame) -> pd.DataFrame:
         if not known_splits:
             continue
         if len(known_splits) > 1:
-            raise ValueError(
-                f"Canonical pair_id={pair_id} spans multiple splits {known_splits}. "
-                "Pairing must not cross train/val/test boundaries."
+            logger.warning(
+                "Canonical pair_id=%s spans multiple source splits %s; clearing them and "
+                "reassigning a pair-consistent split for canonical decoding.",
+                pair_id,
+                known_splits,
             )
+            out.loc[group.index, "split"] = None
+            continue
         out.loc[group.index, "split"] = known_splits[0]
 
     unresolved_pair_ids = [pair_id for pair_id, group in out.groupby("pair_id") if group["split"].isna().all()]
