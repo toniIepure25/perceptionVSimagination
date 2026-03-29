@@ -4,113 +4,146 @@
 
 - Python `>=3.10`
 - Install with `pip install -e ".[all]"`
-- The canonical workflow expects a 768-D target cache and mixed perception/imagery index or separate condition indices
-- The checked-in smoke fixture is runnable without external data:
+- The canonical shared/private path expects 768-D ViT-L/14 targets
+- Runtime device selection is now automatic: if a config requests `cuda` but no GPU is available, canonical workflows fall back to `cpu`
+
+Useful environment variables for real runs:
+
+```bash
+export PYTHONPATH=src
+export NSD_IMAGERY_ROOT=/abs/path/to/nsd_imagery
+export NSD_ROI_MASK_ROOT=/abs/path/to/roi_masks_parent
+export NSD_HDF5=/abs/path/to/nsd_stimuli.hdf5
+```
+
+`NSD_HDF5` is optional if `cache/nsd_hdf5/nsd_stimuli.hdf5` already exists or remote NSD stimulus access is available.
+
+## Smoke Fixture
+
+The checked-in smoke fixture remains the fastest sanity check:
 
 ```bash
 python -m fmri2img.workflows.train_decoder \
   --config configs/canonical/shared_private_smoke.yaml
 ```
 
-## Known-good workflow order
+## Official Real Bootstrap Baseline
 
-The official bootstrap sequence is now:
+The official checked-in real-data baseline is:
 
-1. Normalize or rebuild the perception index if needed:
+- config: `configs/canonical/multisubj_overlap_bootstrap.yaml`
+- run type: real mixed-condition bootstrap
+- subjects: `subj02`, `subj05`, `subj07`
+- ROI grouping: atlas-union bootstrap fallback groups
+- vividness head: disabled, because this bootstrap dataset has no vividness/confidence labels
+
+This is a real bootstrap baseline, not a paper-scale result.
+
+### Bootstrap Prep Order
+
+1. Prepare imagery indices for each subject:
+
+```bash
+for subject in subj02 subj05 subj07; do
+  python -m fmri2img.workflows.prepare_imagery_index \
+    --config configs/canonical/multisubj_overlap_bootstrap.yaml \
+    --override dataset.subject="\"${subject}\""
+done
+```
+
+2. Assemble the overlap-only mixed-condition bootstrap index and materialize ROI features:
+
+```bash
+python -m fmri2img.workflows.prepare_overlap_bootstrap \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+3. Build the exact 768-D target cache for the prepared overlap dataset:
+
+```bash
+python -m fmri2img.workflows.prepare_targets \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+4. Preflight the real run:
+
+```bash
+python -m fmri2img.workflows.preflight_data \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+5. Train:
+
+```bash
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+6. Evaluate:
+
+```bash
+python -m fmri2img.workflows.eval_decoder \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml \
+  --checkpoint outputs/canonical/train/multisubj_overlap_bootstrap/best_decoder.pt
+```
+
+7. Evaluate transfer:
+
+```bash
+python -m fmri2img.workflows.eval_transfer \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml \
+  --checkpoint outputs/canonical/train/multisubj_overlap_bootstrap/best_decoder.pt
+```
+
+8. Export for Animus:
+
+```bash
+python -m fmri2img.workflows.export_for_animus \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml \
+  --checkpoint outputs/canonical/train/multisubj_overlap_bootstrap/best_decoder.pt
+```
+
+## Artifact Contract
+
+The official real bootstrap path now expects or produces:
+
+- imagery indices at `cache/indices/imagery/{subject}.parquet`
+- combined ROI-ready mixed index at `outputs/canonical/prepared/overlap_bootstrap/multisubj_overlap_mixed_with_roi.parquet`
+- overlap report at `outputs/canonical/prepared/overlap_bootstrap/report.json`
+- overlap stimulus ids at `outputs/canonical/prepared/overlap_bootstrap/overlap_nsd_ids.json`
+- target cache at `outputs/targets/overlap_multisubj_vit_l14_image_768.parquet`
+- preflight report at `outputs/canonical/prepared/overlap_bootstrap/preflight.json` unless `--output` is provided
+- train/eval/transfer/export artifacts under `outputs/canonical/*/multisubj_overlap_bootstrap/`
+
+## Readiness Labels
+
+- `smoke_only`: synthetic or fallback-only path
+- `bootstrap_ready`: real-data path is runnable, but still too small or provisional for paper-scale claims
+- `paper_ready`: real-data path exceeds the configured pair threshold and does not depend on smoke fallbacks
+- `blocked`: required artifacts or metadata are missing
+
+The checked-in real bootstrap config sets `preparation.preflight.paper_pair_threshold: 32`, so small overlap runs remain honestly classified as `bootstrap_ready`.
+
+## Single-Subject Canonical Prep
+
+The single-subject config remains useful when you already have one subject's artifacts and want to build a canonical subject-local baseline:
 
 ```bash
 python -m fmri2img.workflows.prepare_perception_index \
   --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-2. Build the imagery index from raw imagery data:
-
-```bash
 python -m fmri2img.workflows.prepare_imagery_index \
   --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-3. Prepare the canonical 768-D ViT-L/14 target cache:
-
-```bash
 python -m fmri2img.workflows.prepare_targets \
   --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-4. Build the mixed perception/imagery index:
-
-```bash
 python -m fmri2img.workflows.prepare_mixed_index \
   --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-5. Materialize canonical ROI features from real ROI masks:
-
-```bash
 python -m fmri2img.workflows.prepare_roi_features \
   --config configs/canonical/shared_private_bootstrap.yaml
 ```
 
-6. Preflight the run and classify whether it is blocked, smoke-only, bootstrap-ready, or paper-ready:
+## Scientific Honesty Rules
 
-```bash
-python -m fmri2img.workflows.preflight_data \
-  --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-7. Train:
-
-```bash
-python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/shared_private_bootstrap.yaml
-```
-
-8. Evaluate:
-
-```bash
-python -m fmri2img.workflows.eval_decoder \
-  --config configs/canonical/shared_private_bootstrap.yaml \
-  --checkpoint outputs/canonical/train/shared_private_bootstrap/best_decoder.pt
-```
-
-9. Export:
-
-```bash
-python -m fmri2img.workflows.export_for_animus \
-  --config configs/canonical/shared_private_bootstrap.yaml \
-  --checkpoint outputs/canonical/train/shared_private_bootstrap/best_decoder.pt
-```
-
-## Bootstrap artifact contract
-
-The canonical bootstrap config expects or produces:
-
-- `dataset.perception_index`
-- `dataset.imagery_index`
-- `dataset.mixed_output_index`
-- `targets.cache_path`
-- `roi.mask_root` or `roi.mask_patterns`
-- per-row `roi_features_json`, `roi_values_json`, and `roi_names_json` after ROI preparation
-
-`train_decoder` now automatically consumes `dataset.mixed_output_index` when it exists, so the ROI-enriched mixed index becomes the canonical train/eval/export input.
-
-## Artifact contract
-
-Canonical outputs include:
-
-- config snapshot
-- ROI summary
-- target summary
-- checkpoint
-- metrics bundle
-- export manifest for Animus
-
-The canonical export manifest is the supported handoff surface for downstream systems.
-
-## Scientific honesty rules
-
-- Do not train vividness/confidence heads without real labels.
-- Do not claim stimulus-vs-percept dissociation is solved by the current dataset.
-- Do not silently swap between 512-D and 768-D target spaces.
-- If ROI masks are absent, use explicit fallback only for smoke tests, not for bootstrap or benchmark claims.
-- Do not treat the canonical ROI branch summaries as full ROI ablation evidence; that remains future work.
+- Do not claim paper-scale performance from the overlap bootstrap baseline.
+- Do not enable vividness/confidence supervision without real labels.
+- Do not silently mix 512-D and 768-D target caches.
+- Do not treat atlas-union bootstrap ROI groups as the final paper-grade ROI decomposition.

@@ -6,7 +6,13 @@ import torch
 from fmri2img.evaluation import collect_predictions, compute_decoder_metrics, compute_roi_summary
 from fmri2img.export import export_decoder_bundle
 from fmri2img.training import CanonicalLossWeights, SharedPrivateTrainer, load_canonical_checkpoint
-from fmri2img.workflows.common import build_datasets, build_loaders, instantiate_model_from_dataset, load_workflow_config
+from fmri2img.workflows.common import (
+    build_datasets,
+    build_loaders,
+    instantiate_model_from_dataset,
+    load_workflow_config,
+    resolve_runtime_device,
+)
 
 
 def test_trainer_fit_and_eval_bundle(canonical_fixture_dir):
@@ -28,10 +34,20 @@ def test_trainer_fit_and_eval_bundle(canonical_fixture_dir):
         config_snapshot=config.to_dict(),
     )
     assert "val_content_cosine" in best
+    assert -1.0 <= best["val_content_cosine"] <= 1.0
     checkpoint = canonical_fixture_dir["root"] / "train_outputs" / "best_decoder.pt"
     assert checkpoint.exists()
 
+    original_to = model.to
+    seen_devices = []
+
+    def tracking_to(device, *args, **kwargs):
+        seen_devices.append(str(device))
+        return original_to(device, *args, **kwargs)
+
+    model.to = tracking_to  # type: ignore[assignment]
     bundle = collect_predictions(model, test_loader, device="cpu")
+    assert "cpu" in seen_devices
     metrics = compute_decoder_metrics(bundle)
     roi_table = compute_roi_summary(bundle)
     assert metrics["target_space"] == "vit_l14_image_768"
@@ -114,3 +130,8 @@ def test_export_manifest_requires_canonical_keys(canonical_fixture_dir, tmp_path
             checkpoint_path=checkpoint,
             artifact_spec={"artifact_version": "1.0"},
         )
+
+
+def test_resolve_runtime_device_falls_back_to_cpu_when_cuda_unavailable(monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    assert resolve_runtime_device("cuda") == "cpu"

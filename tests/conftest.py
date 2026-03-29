@@ -374,3 +374,186 @@ def canonical_volume_fixture(tmp_path):
         "raw_targets": raw_targets,
         "prepared_dir": prepared_dir,
     }
+
+
+@pytest.fixture
+def canonical_multisubj_overlap_fixture(tmp_path):
+    """Create a tiny multi-subject overlap bootstrap fixture."""
+    root = tmp_path / "canonical_multisubj_overlap"
+    root.mkdir()
+
+    prepared_root = root / "prepared"
+    imagery_root = root / "imagery_raw"
+    perception_root = root / "perception_indices"
+    mask_root = root / "roi_masks"
+    prepared_root.mkdir()
+    imagery_root.mkdir()
+    perception_root.mkdir()
+    mask_root.mkdir()
+
+    shape = (4, 4, 4)
+    rng = np.random.default_rng(7)
+    subjects = ["subj02", "subj05"]
+    overlap_ids = [3101, 3102]
+    all_target_ids = sorted(overlap_ids + [4101, 4201])
+
+    for subject in subjects:
+        subject_dir = perception_root / f"subject={subject}"
+        subject_dir.mkdir(parents=True)
+        perception_volume = rng.standard_normal(shape + (len(overlap_ids) + 1,)).astype(np.float32)
+        perception_nii = subject_dir / "betas_session01.nii.gz"
+        nib.save(nib.Nifti1Image(perception_volume, np.eye(4)), perception_nii)
+        perception_rows = []
+        for idx, nsd_id in enumerate(overlap_ids + [4101]):
+            perception_rows.append(
+                {
+                    "subject": subject,
+                    "session": 1,
+                    "trial_in_session": idx,
+                    "global_trial_index": idx,
+                    "nsdId": nsd_id,
+                    "beta_path": str(perception_nii.resolve()),
+                    "beta_index": idx,
+                }
+            )
+        pd.DataFrame(perception_rows).to_parquet(subject_dir / "index.parquet", index=False)
+
+        imagery_run = imagery_root / subject / "imagery" / "run01"
+        imagery_run.mkdir(parents=True)
+        imagery_trials = []
+        for idx, nsd_id in enumerate(overlap_ids + [4201]):
+            trial_id = f"trial_{idx + 1:03d}"
+            trial_path = imagery_run / f"{trial_id}_beta.nii.gz"
+            trial_volume = rng.standard_normal(shape).astype(np.float32)
+            nib.save(nib.Nifti1Image(trial_volume, np.eye(4)), trial_path)
+            imagery_trials.append(
+                {
+                    "trial_id": trial_id,
+                    "stimulus_type": "complex",
+                    "nsdId": nsd_id,
+                    "pair_id": nsd_id,
+                    "text_prompt": f"{subject} stimulus {nsd_id}",
+                }
+            )
+        with open(imagery_run / "metadata.json", "w") as handle:
+            import json
+
+            json.dump({"trials": imagery_trials}, handle, indent=2)
+
+        subject_mask_root = mask_root / subject
+        subject_mask_root.mkdir(parents=True)
+        roi_coords = {
+            "lh.prf-visualrois": (0, 0, 0),
+            "rh.prf-visualrois": (0, 1, 0),
+            "lh.floc-faces": (1, 0, 0),
+            "rh.floc-faces": (1, 1, 0),
+            "lh.floc-places": (1, 2, 0),
+            "rh.floc-places": (1, 3, 0),
+            "lh.Kastner2015": (2, 0, 0),
+            "rh.Kastner2015": (2, 1, 0),
+            "lh.HCP_MMP1": (2, 2, 0),
+            "rh.HCP_MMP1": (2, 3, 0),
+            "lh.streams": (3, 0, 0),
+            "rh.streams": (3, 1, 0),
+        }
+        for name, coord in roi_coords.items():
+            mask = np.zeros(shape, dtype=np.float32)
+            mask[coord] = 1.0
+            nib.save(nib.Nifti1Image(mask, np.eye(4)), subject_mask_root / f"{name}.nii.gz")
+
+    raw_target_rows = []
+    for nsd_id in all_target_ids:
+        emb = rng.standard_normal(768).astype(np.float32)
+        emb = emb / (np.linalg.norm(emb) + 1e-8)
+        raw_target_rows.append({"nsdId": nsd_id, "embedding": emb.tolist()})
+    raw_targets = root / "targets_raw.parquet"
+    pd.DataFrame(raw_target_rows).to_parquet(raw_targets, index=False)
+
+    config = {
+        "dataset": {
+            "subject": "subj02",
+            "mixed_index": str(prepared_root / "multisubj_overlap_mixed_with_roi.parquet"),
+            "perception_conditions": ["perception"],
+            "imagery_conditions": ["imagery"],
+        },
+        "preprocessing": {"enabled": False},
+        "roi": {
+            "groups": {
+                "early_visual": ["lh.prf-visualrois", "rh.prf-visualrois"],
+                "ventral_visual": ["lh.floc-faces", "rh.floc-faces", "lh.floc-places", "rh.floc-places"],
+                "metacognitive": ["lh.Kastner2015", "rh.Kastner2015", "lh.HCP_MMP1", "rh.HCP_MMP1", "lh.streams", "rh.streams"],
+            },
+            "missing_policy": "error",
+            "fallback_policy": "error",
+            "mask_root": str(mask_root),
+            "min_voxels": 1,
+        },
+        "targets": {
+            "name": "vit_l14_image_768",
+            "dimension": 768,
+            "cache_path": str(prepared_root / "overlap_targets.parquet"),
+            "id_column": "nsdId",
+        },
+        "model": {
+            "branch_embedding_dim": 16,
+            "shared_dim": 16,
+            "private_dim": 8,
+            "dropout": 0.0,
+            "use_domain_head": True,
+            "use_vividness_head": False,
+            "vividness_mode": "evidential",
+        },
+        "training": {
+            "batch_size": 4,
+            "epochs": 1,
+            "learning_rate": 0.001,
+            "weight_decay": 0.0001,
+            "domain_weight": 0.1,
+            "vividness_weight": 0.1,
+            "confidence_weight": 0.05,
+            "reconstruction_weight": 0.1,
+            "device": "cpu",
+            "output_dir": str(root / "train_outputs"),
+            "seed": 0,
+        },
+        "evaluation": {
+            "batch_size": 4,
+            "output_dir": str(root / "eval_outputs"),
+            "transfer_output_dir": str(root / "transfer_outputs"),
+        },
+        "analysis": {"output_dir": str(root / "analysis_outputs")},
+        "export": {"output_dir": str(root / "export_outputs")},
+        "preparation": {
+            "imagery": {
+                "data_root": str(imagery_root),
+                "cache_root": str(root / "cache"),
+            },
+            "overlap": {
+                "subjects": subjects,
+                "output_root": str(prepared_root),
+                "report_path": str(prepared_root / "overlap_report.json"),
+                "overlap_ids_path": str(prepared_root / "overlap_ids.json"),
+                "perception_index_template": str(perception_root / "subject={subject}" / "index.parquet"),
+                "imagery_index_template": str(root / "cache" / "indices" / "imagery" / "{subject}.parquet"),
+                "mask_root_template": str(mask_root / "{subject}"),
+                "materialize_roi": True,
+                "cache_root": str(root / "cache"),
+            },
+            "targets": {
+                "input_cache": str(raw_targets),
+            },
+            "preflight": {
+                "paper_pair_threshold": 8,
+            },
+        },
+    }
+    config_path = root / "multisubj_overlap_config.yaml"
+    with open(config_path, "w") as handle:
+        yaml.safe_dump(config, handle)
+
+    return {
+        "root": root,
+        "config_path": config_path,
+        "subjects": subjects,
+        "prepared_root": prepared_root,
+    }

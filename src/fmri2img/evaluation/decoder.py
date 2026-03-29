@@ -24,6 +24,7 @@ def _json_safe(value: Any) -> Any:
 
 
 def collect_predictions(model, loader, device: str = "cpu") -> dict[str, Any]:
+    model.to(device)
     model.eval()
     preds = []
     targets = []

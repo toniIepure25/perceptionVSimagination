@@ -163,11 +163,12 @@ class SharedPrivateTrainer:
         for epoch in range(1, epochs + 1):
             train_metrics = self.run_epoch(train_loader, training=True)
             val_metrics = self.run_epoch(val_loader, training=False)
+            val_content_cosine = 1.0 - val_metrics.get("content_cosine", float("nan"))
             summary = {
                 "epoch": epoch,
                 "train_loss": train_metrics.get("loss", float("nan")),
                 "val_loss": val_metrics.get("loss", float("nan")),
-                "val_content_cosine": -val_metrics.get("content_cosine", float("nan")),
+                "val_content_cosine": val_content_cosine,
             }
             history.append(summary)
             logger.info(
@@ -194,7 +195,12 @@ class SharedPrivateTrainer:
         return best_summary
 
 
-def load_canonical_checkpoint(model: torch.nn.Module, checkpoint_path: str | Path, map_location: str = "cpu") -> dict:
+def load_canonical_checkpoint(
+    model: torch.nn.Module,
+    checkpoint_path: str | Path,
+    map_location: str = "cpu",
+    device: str | None = None,
+) -> dict:
     checkpoint = torch.load(checkpoint_path, map_location=map_location)
     checkpoint_config = checkpoint.get("config", {}).get("model", {})
     if hasattr(model, "config"):
@@ -216,4 +222,10 @@ def load_canonical_checkpoint(model: torch.nn.Module, checkpoint_path: str | Pat
                 + "; ".join(mismatches)
             )
     model.load_state_dict(checkpoint["state_dict"])
+    if device is not None:
+        model.to(device)
     return checkpoint
+
+
+def inspect_canonical_checkpoint(checkpoint_path: str | Path, map_location: str = "cpu") -> dict:
+    return torch.load(checkpoint_path, map_location=map_location)

@@ -30,6 +30,19 @@ python -m fmri2img.workflows.prepare_roi_features --config configs/canonical/sha
 python -m fmri2img.workflows.preflight_data --config configs/canonical/shared_private_bootstrap.yaml
 ```
 
+The checked-in official real bootstrap baseline also has a canonical overlap assembly path:
+
+```bash
+for subject in subj02 subj05 subj07; do
+  python -m fmri2img.workflows.prepare_imagery_index \
+    --config configs/canonical/multisubj_overlap_bootstrap.yaml \
+    --override dataset.subject="\"${subject}\""
+done
+python -m fmri2img.workflows.prepare_overlap_bootstrap --config configs/canonical/multisubj_overlap_bootstrap.yaml
+python -m fmri2img.workflows.prepare_targets --config configs/canonical/multisubj_overlap_bootstrap.yaml
+python -m fmri2img.workflows.preflight_data --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
 This path is now covered by an end-to-end volumetric fixture test that:
 
 - starts from a raw perception index
@@ -55,8 +68,12 @@ The following failure-oriented cases are now covered:
 - export manifest validation
 - mixed-index split collisions across perception and imagery sources
 - blocked vs bootstrap-ready preflight classification
+- paper-ready threshold enforcement so tiny overlap runs remain classified as `bootstrap_ready`
 - canonical ROI materialization from volumetric data + ROI masks
 - non-canonical target-cache rejection during `prepare_targets`
+- canonical overlap-bootstrap assembly across multiple subjects
+- inference-device fallback and checkpoint/device alignment during eval/transfer/analysis
+- truthful `train_history.json` validation cosine logging
 
 ## Real repo context validation
 
@@ -101,3 +118,19 @@ Not yet fully validated end-to-end on real research artifacts:
 - real mixed perception/imagery training on local subject voxel data
 - vividness/confidence learning on a real labeled dataset
 - the target-cache build path against real NSD image access in this workspace
+
+## Live bootstrap run status
+
+The first real mixed-condition bootstrap run was executed on the live `orchestraiq-jupyter` pod and is now represented by the checked-in config:
+
+- `configs/canonical/multisubj_overlap_bootstrap.yaml`
+
+That live run used:
+
+- subjects `subj02`, `subj05`, `subj07`
+- 4 shared `nsdId` pairs
+- atlas-union bootstrap ROI groups
+- a real 768-D ViT-L/14 target cache
+- canonical train/eval/transfer/export workflows
+
+The eval-device workaround required during that first live run is no longer necessary; canonical eval, transfer, and analysis workflows now resolve runtime devices explicitly and move the model onto the chosen device before inference.

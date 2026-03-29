@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from fmri2img.targets import LatentTargetSpec, build_target_cache_from_index, canonicalize_target_cache
-from fmri2img.workflows.common import load_workflow_config
+from fmri2img.workflows.common import load_workflow_config, resolve_runtime_device
 from fmri2img.workflows.prep_common import get_preparation_section
 
 
@@ -16,6 +16,7 @@ def main() -> int:
     args = parser.parse_args()
 
     config = load_workflow_config(args.config, args.override)
+    runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))
     prep_cfg = get_preparation_section(config, "targets")
     spec = LatentTargetSpec(
         name=config["targets"].get("name", "vit_l14_image_768"),
@@ -59,7 +60,7 @@ def main() -> int:
                 model_id=prep_cfg.get("model_id", "openai/clip-vit-large-patch14"),
                 batch_size=int(prep_cfg.get("batch_size", 128)),
                 inference_batch_size=int(prep_cfg.get("inference_batch_size", 32)),
-                device=prep_cfg.get("device", config["training"].get("device", "cpu")),
+                device=resolve_runtime_device(prep_cfg.get("device", runtime_device)),
                 limit=prep_cfg.get("limit"),
                 resume=bool(prep_cfg.get("resume", True)) and not args.rebuild,
             )

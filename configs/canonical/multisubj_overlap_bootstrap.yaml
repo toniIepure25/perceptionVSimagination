@@ -1,0 +1,85 @@
+experiment:
+  name: multisubj_overlap_bootstrap
+  description: >
+    Canonical checked-in real bootstrap baseline matching the first successful
+    shared-private mixed-condition pod run across subj02/subj05/subj07.
+
+dataset:
+  subject: subj02
+  mixed_index: outputs/canonical/prepared/overlap_bootstrap/multisubj_overlap_mixed_with_roi.parquet
+  perception_conditions: ["perception"]
+  imagery_conditions: ["imagery"]
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["lh.prf-visualrois", "rh.prf-visualrois"]
+    ventral_visual: ["lh.floc-faces", "rh.floc-faces", "lh.floc-places", "rh.floc-places"]
+    metacognitive: ["lh.Kastner2015", "rh.Kastner2015", "lh.HCP_MMP1", "rh.HCP_MMP1", "lh.streams", "rh.streams"]
+  missing_policy: error
+  fallback_policy: error
+  min_voxels: 1
+  mask_root: ${NSD_ROI_MASK_ROOT}
+  layout_config: configs/data.yaml
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: outputs/targets/overlap_multisubj_vit_l14_image_768.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 128
+  shared_dim: 128
+  private_dim: 64
+  dropout: 0.1
+  use_domain_head: true
+  use_vividness_head: false
+  vividness_mode: evidential
+
+training:
+  batch_size: 8
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.1
+  vividness_weight: 0.1
+  confidence_weight: 0.05
+  reconstruction_weight: 0.1
+  device: cuda
+  output_dir: outputs/canonical/train/multisubj_overlap_bootstrap
+  seed: 0
+
+evaluation:
+  batch_size: 16
+  output_dir: outputs/canonical/eval/multisubj_overlap_bootstrap
+  transfer_output_dir: outputs/canonical/transfer/multisubj_overlap_bootstrap
+
+analysis:
+  output_dir: outputs/canonical/analysis/multisubj_overlap_bootstrap
+
+export:
+  output_dir: outputs/canonical/export/multisubj_overlap_bootstrap
+
+preparation:
+  imagery:
+    data_root: ${NSD_IMAGERY_ROOT}
+    cache_root: cache
+  overlap:
+    subjects: ["subj02", "subj05", "subj07"]
+    output_root: outputs/canonical/prepared/overlap_bootstrap
+    report_path: outputs/canonical/prepared/overlap_bootstrap/report.json
+    overlap_ids_path: outputs/canonical/prepared/overlap_bootstrap/overlap_nsd_ids.json
+    perception_index_template: data/indices/nsd_index/subject={subject}/index.parquet
+    imagery_index_template: cache/indices/imagery/{subject}.parquet
+    mask_root_template: ${NSD_ROI_MASK_ROOT}/{subject}
+    materialize_roi: true
+    cache_root: cache
+  targets:
+    model_id: openai/clip-vit-large-patch14
+    batch_size: 128
+    inference_batch_size: 32
+  preflight:
+    paper_pair_threshold: 32

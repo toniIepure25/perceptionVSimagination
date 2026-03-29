@@ -6,7 +6,13 @@ from pathlib import Path
 
 from fmri2img.evaluation import collect_predictions, compute_roi_summary
 from fmri2img.training.canonical import load_canonical_checkpoint
-from fmri2img.workflows.common import build_datasets, build_loaders, instantiate_model_from_dataset, load_workflow_config
+from fmri2img.workflows.common import (
+    build_datasets,
+    build_loaders,
+    instantiate_model_from_dataset,
+    load_workflow_config,
+    resolve_runtime_device,
+)
 
 
 def main() -> int:
@@ -17,11 +23,12 @@ def main() -> int:
     args = parser.parse_args()
 
     config = load_workflow_config(args.config, args.override)
+    runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))
     train_ds, val_ds, test_ds, _, _, _ = build_datasets(config)
     _, _, test_loader = build_loaders(config, train_ds, val_ds, test_ds)
     model = instantiate_model_from_dataset(config, train_ds)
-    load_canonical_checkpoint(model, args.checkpoint, map_location=config["training"].get("device", "cpu"))
-    bundle = collect_predictions(model, test_loader, device=config["training"].get("device", "cpu"))
+    load_canonical_checkpoint(model, args.checkpoint, map_location=runtime_device, device=runtime_device)
+    bundle = collect_predictions(model, test_loader, device=runtime_device)
     roi_summary = compute_roi_summary(bundle)
     output_dir = Path(config["analysis"].get("output_dir", "outputs/canonical/analysis"))
     output_dir.mkdir(parents=True, exist_ok=True)

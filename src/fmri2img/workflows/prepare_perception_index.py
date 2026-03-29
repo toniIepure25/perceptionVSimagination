@@ -21,7 +21,13 @@ def main() -> int:
 
     config = load_workflow_config(args.config, args.override)
     subject = config_subject(config)
-    output_path = Path(config["dataset"]["perception_index"])
+    output_template = config["dataset"].get("perception_index") or config.get("preparation.overlap.perception_index_template")
+    if not output_template:
+        raise KeyError(
+            "Canonical perception preparation requires dataset.perception_index or "
+            "preparation.overlap.perception_index_template."
+        )
+    output_path = Path(str(output_template).format(subject=subject))
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if args.rebuild_from_s3 or not output_path.exists():

@@ -129,6 +129,82 @@ def test_canonical_prep_pipeline_reaches_bootstrap_ready_and_trains(canonical_vo
     assert export.returncode == 0, export.stderr
 
 
+def test_multisubject_overlap_bootstrap_workflow_builds_real_ready_index(canonical_multisubj_overlap_fixture):
+    env = _workflow_env()
+    config_path = str(canonical_multisubj_overlap_fixture["config_path"])
+
+    for subject in canonical_multisubj_overlap_fixture["subjects"]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fmri2img.workflows.prepare_imagery_index",
+                "--config",
+                config_path,
+                "--override",
+                f"dataset.subject={json.dumps(subject)}",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+
+    overlap = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_overlap_bootstrap",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert overlap.returncode == 0, overlap.stderr
+
+    mixed_index = canonical_multisubj_overlap_fixture["prepared_root"] / "multisubj_overlap_mixed_with_roi.parquet"
+    mixed_df = pd.read_parquet(mixed_index)
+    assert sorted(mixed_df["subject"].unique().tolist()) == ["subj02", "subj05"]
+    assert mixed_df["pair_id"].nunique() == 2
+    assert mixed_df["roi_features_json"].notna().all()
+
+    targets = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_targets",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert targets.returncode == 0, targets.stderr
+
+    report_path = canonical_multisubj_overlap_fixture["root"] / "multisubj_preflight.json"
+    preflight = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.preflight_data",
+            "--config",
+            config_path,
+            "--output",
+            str(report_path),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert preflight.returncode == 0, preflight.stderr
+    report = json.loads(report_path.read_text())
+    assert report["readiness"]["status"] == "bootstrap_ready"
+    assert report["readiness"]["paper_pair_threshold"] == 8
+
+
 def test_prepare_targets_rejects_noncanonical_dimension(canonical_volume_fixture, tmp_path):
     env = _workflow_env()
     wrong_targets = tmp_path / "wrong_targets.parquet"

@@ -27,7 +27,12 @@ def main() -> int:
             "Canonical imagery preparation requires preparation.imagery.data_root or dataset.imagery_data_root."
         )
 
-    output_path = Path(config["dataset"]["imagery_index"])
+    output_template = config["dataset"].get("imagery_index") or config.get("preparation.overlap.imagery_index_template")
+    if not output_template:
+        raise KeyError(
+            "Canonical imagery preparation requires dataset.imagery_index or preparation.overlap.imagery_index_template."
+        )
+    output_path = Path(str(output_template).format(subject=subject))
     cache_root = Path(prep_cfg.get("cache_root", "cache"))
     stimulus_root = prep_cfg.get("stimulus_root")
     result_path = build_nsd_imagery_index(

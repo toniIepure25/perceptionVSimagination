@@ -159,7 +159,15 @@ def _roi_summary(config, candidate_df: pd.DataFrame | None) -> tuple[dict[str, A
     return summary, warnings, blocked
 
 
-def _readiness_status(*, blocked: list[str], warnings: list[str], roi_summary: dict[str, Any], labels: dict[str, Any], pairing_count: int) -> str:
+def _readiness_status(
+    *,
+    blocked: list[str],
+    warnings: list[str],
+    roi_summary: dict[str, Any],
+    labels: dict[str, Any],
+    pairing_count: int,
+    paper_pair_threshold: int,
+) -> str:
     if blocked:
         return "blocked"
     if roi_summary.get("fallback_policy") == "full_feature_vector":
@@ -167,7 +175,7 @@ def _readiness_status(*, blocked: list[str], warnings: list[str], roi_summary: d
     vividness_enabled = labels.get("requested_vividness_head", False)
     if vividness_enabled and labels.get("vividness_coverage", 0.0) <= 0.0 and labels.get("confidence_coverage", 0.0) <= 0.0:
         return "bootstrap_ready"
-    if pairing_count > 0:
+    if pairing_count >= paper_pair_threshold:
         return "paper_ready"
     return "bootstrap_ready"
 
@@ -187,6 +195,7 @@ def main() -> int:
     warnings: list[str] = []
     blocked: list[str] = []
     validation_notes: list[str] = []
+    paper_pair_threshold = int(config.get("preparation.preflight.paper_pair_threshold", 32))
     try:
         validate_canonical_workflow_config(config)
         validation_notes.append("Canonical workflow config passed static validation.")
@@ -268,10 +277,12 @@ def main() -> int:
             roi_summary=roi_summary,
             labels=labels,
             pairing_count=int(mixed_summary.get("prepared_pairing_groups", mixed_summary.get("source_pairing_groups", 0))),
+            paper_pair_threshold=paper_pair_threshold,
         ),
         "blocked_reasons": blocked,
         "warnings": warnings,
         "notes": validation_notes,
+        "paper_pair_threshold": paper_pair_threshold,
     }
 
     report = {

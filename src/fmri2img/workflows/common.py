@@ -43,6 +43,21 @@ def load_workflow_config(config_path: str, overrides: list[str] | None = None) -
     return load_config(config_path, overrides=override_dict)
 
 
+def resolve_runtime_device(requested_device: str | None) -> str:
+    requested = str(requested_device or "cpu").strip().lower()
+    if requested.startswith("cuda"):
+        if torch.cuda.is_available():
+            return requested
+        logger.warning("Requested runtime device '%s' is unavailable; falling back to cpu.", requested)
+        return "cpu"
+    if requested == "mps":
+        if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+            return "mps"
+        logger.warning("Requested runtime device 'mps' is unavailable; falling back to cpu.")
+        return "cpu"
+    return requested
+
+
 def validate_canonical_workflow_config(config: ConfigDict) -> None:
     required_sections = ("dataset", "roi", "targets", "model", "training", "evaluation", "analysis", "export")
     missing_sections = [section for section in required_sections if section not in config]
@@ -245,7 +260,16 @@ def instantiate_model_from_dataset(config: ConfigDict, dataset: CanonicalDecoder
     return SharedPrivateMultitaskDecoder(roi_input_dims=roi_input_dims, config=decoder_config)
 
 
-def checkpoint_artifact_spec(config: ConfigDict, checkpoint_path: str, target_spec: dict, roi_summary: dict) -> dict[str, Any]:
+def checkpoint_artifact_spec(
+    config: ConfigDict,
+    checkpoint_path: str,
+    target_spec: dict,
+    roi_summary: dict,
+    *,
+    effective_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    effective_config = effective_config or {}
+    effective_model_cfg = effective_config.get("model", config["model"])
     return {
         "artifact_version": "1.0",
         "target_spec": target_spec,
@@ -259,10 +283,11 @@ def checkpoint_artifact_spec(config: ConfigDict, checkpoint_path: str, target_sp
             "project": "fmri2img",
             "workflow": "shared_private_decoder",
             "compatibility_version": "animus-decoder-v1",
+            "dataset_capabilities": effective_config.get("dataset_capabilities", {}),
             "heads": {
                 "content": {"target_dim": int(config["targets"].get("dimension", 768))},
-                "domain": {"enabled": bool(config["model"].get("use_domain_head", True))},
-                "vividness": {"enabled": bool(config["model"].get("use_vividness_head", True))},
+                "domain": {"enabled": bool(effective_model_cfg.get("use_domain_head", True))},
+                "vividness": {"enabled": bool(effective_model_cfg.get("use_vividness_head", True))},
             },
         },
     }

@@ -14,6 +14,7 @@ from fmri2img.workflows.common import (
     build_loaders,
     instantiate_model_from_dataset,
     load_workflow_config,
+    resolve_runtime_device,
 )
 
 
@@ -36,6 +37,7 @@ def main() -> int:
     args = parser.parse_args()
 
     config = load_workflow_config(args.config, args.override)
+    runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))
     train_ds, val_ds, test_ds, _, roi_summary, target_summary = build_datasets(config)
     train_loader, val_loader, _ = build_loaders(config, train_ds, val_ds, test_ds)
     model = instantiate_model_from_dataset(config, train_ds)
@@ -54,7 +56,7 @@ def main() -> int:
         model=model,
         optimizer=optimizer,
         loss_weights=loss_weights,
-        device=config["training"].get("device", "cpu"),
+        device=runtime_device,
     )
     output_dir = Path(config["training"].get("output_dir", "outputs/canonical/train"))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +69,10 @@ def main() -> int:
         "paired_group_count": train_ds.capabilities.paired_group_count,
         "has_vividness": bool(train_ds.capabilities.has_vividness),
         "has_confidence": bool(train_ds.capabilities.has_confidence),
+    }
+    config_snapshot["runtime"] = {
+        "requested_device": config["training"].get("device", "cpu"),
+        "resolved_device": runtime_device,
     }
     with open(output_dir / "config_snapshot.json", "w") as f:
         json.dump(_json_safe(config_snapshot), f, indent=2)
