@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import json
 import logging
 import re
-from typing import Dict, Iterator, Literal, Optional
+from typing import Any, Dict, Iterator, Literal, Optional
 from pathlib import Path
 
 import pandas as pd
@@ -23,6 +23,15 @@ import numpy as np
 from torch.utils.data import IterableDataset
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_optional_path(value: str | Path | None) -> Path | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return Path(text)
 
 
 @dataclass
@@ -349,6 +358,10 @@ def build_nsd_imagery_index(
     cache_root: Path,
     output_path: Path,
     stimulus_root: Optional[Path] = None,
+    metadata_root: Optional[Path] = None,
+    beta_root: Optional[Path] = None,
+    beta_path: Optional[Path] = None,
+    report_path: Optional[Path] = None,
     dry_run: bool = False,
     verbose: bool = True,
 ) -> Path:
@@ -380,42 +393,8 @@ def build_nsd_imagery_index(
         - split: str ("train", "val", "test")
     """
     from collections import defaultdict
-    
-    if data_root is None:
-        raise NotImplementedError(
-            f"build_nsd_imagery_index for {subject} is not yet implemented without an explicit data_root.\n"
-            "TODO: pass the canonical NSD-Imagery data root so the builder can discover raw trials."
-        )
 
-    data_root = Path(data_root)
-    cache_root = Path(cache_root)
-    output_path = Path(output_path)
-    
-    if verbose:
-        print(f"Building NSD-Imagery index for {subject}...")
-        print(f"  Data root: {data_root}")
-        print(f"  Cache root: {cache_root}")
-    
-    # Discover fMRI files for this subject
-    subject_data_dir = data_root / subject
-    if not subject_data_dir.exists():
-        raise FileNotFoundError(
-            f"NSD-Imagery data directory not found: {subject_data_dir}\n"
-            f"Expected structure: {data_root}/{subject}/"
-        )
-    
-    # Scan for beta files (npy or nii.gz)
-    beta_files = list(subject_data_dir.glob("**/*.npy")) + list(subject_data_dir.glob("**/*.nii.gz"))
-    
-    if not beta_files:
-        raise FileNotFoundError(
-            f"No beta files (*.npy or *.nii.gz) found in {subject_data_dir}"
-        )
-    
-    if verbose:
-        print(f"  Found {len(beta_files)} beta files")
-    
-    metadata_files = sorted(subject_data_dir.glob("**/metadata.json"))
+    from fmri2img.data.nsd_imagery_metadata import assign_splits, parse_all_trials, trials_to_dataframe
 
     def _detect_condition(path: Path) -> str:
         lowered_parts = [part.lower() for part in path.parts]
@@ -468,88 +447,227 @@ def build_nsd_imagery_index(
         df.loc[values.isin(test_ids), "split"] = "test"
         return df
 
+    def _discover_metadata_dir(data_root_path: Path | None, metadata_root_path: Path | None) -> Path | None:
+        candidates: list[Path] = []
+        for base in (metadata_root_path, data_root_path):
+            if base is None:
+                continue
+            candidates.extend([base, base / "metadata"])
+        for candidate in candidates:
+            if candidate.exists() and (
+                (candidate / "designmatrixGLMsingle.mat").exists()
+                or (candidate / "cue_pair_list.xlsx").exists()
+                or any(candidate.glob("*_pair_list.mat"))
+            ):
+                return candidate
+        return None
+
+    def _discover_beta_path(
+        *,
+        subject: str,
+        data_root_path: Path | None,
+        beta_root_path: Path | None,
+        explicit_beta_path: Path | None,
+    ) -> Path | None:
+        candidates: list[Path] = []
+        if explicit_beta_path is not None:
+            candidates.append(explicit_beta_path)
+        if beta_root_path is not None:
+            if beta_root_path.is_file():
+                candidates.append(beta_root_path)
+            else:
+                candidates.extend(
+                    [
+                        beta_root_path / subject / "betas_nsdimagery.nii.gz",
+                        beta_root_path / subject / "betas_nsdimagery.nii",
+                    ]
+                )
+                candidates.extend(sorted((beta_root_path / subject).glob("**/betas_nsdimagery.nii*")))
+        if data_root_path is not None:
+            candidates.extend(
+                [
+                    data_root_path / "betas" / subject / "betas_nsdimagery.nii.gz",
+                    data_root_path / "betas" / subject / "betas_nsdimagery.nii",
+                    data_root_path / subject / "betas_nsdimagery.nii.gz",
+                    data_root_path / subject / "betas_nsdimagery.nii",
+                ]
+            )
+        seen: set[Path] = set()
+        for candidate in candidates:
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            if candidate.exists():
+                return candidate
+        return None
+
+    if data_root is None and metadata_root is None and beta_root is None and beta_path is None:
+        raise NotImplementedError(
+            f"build_nsd_imagery_index for {subject} is not yet implemented without an explicit data_root.\n"
+            "TODO: pass a canonical NSD-Imagery data root or provide metadata_root/beta_root so the builder "
+            "can discover real trials."
+        )
+
+    data_root = _coerce_optional_path(data_root)
+    metadata_root = _coerce_optional_path(metadata_root)
+    beta_root = _coerce_optional_path(beta_root)
+    beta_path = _coerce_optional_path(beta_path)
+    stimulus_root = _coerce_optional_path(stimulus_root)
+    cache_root = Path(cache_root)
+    output_path = Path(output_path)
+    report_path = _coerce_optional_path(report_path)
+    
+    if verbose:
+        print(f"Building NSD-Imagery index for {subject}...")
+        if data_root is not None:
+            print(f"  Data root: {data_root}")
+        if metadata_root is not None:
+            print(f"  Metadata root: {metadata_root}")
+        if beta_root is not None:
+            print(f"  Beta root: {beta_root}")
+        if beta_path is not None:
+            print(f"  Beta path: {beta_path}")
+        print(f"  Cache root: {cache_root}")
+    
+    layout_summary: dict[str, Any] = {"subject": subject}
+
+    # Discover fMRI files for this subject
+    subject_data_dir = data_root / subject if data_root is not None else None
+    subject_root_available = subject_data_dir is not None and subject_data_dir.exists()
+    beta_files = []
+    metadata_files = []
+    if subject_root_available:
+        beta_files = list(subject_data_dir.glob("**/*.npy")) + list(subject_data_dir.glob("**/*.nii.gz"))
+        metadata_files = sorted(subject_data_dir.glob("**/metadata.json"))
+
     # Build trial records
     trials = []
     trial_id_counter = 0
     stimulus_stats = defaultdict(int)
 
     metadata_used = False
-    for metadata_file in metadata_files:
-        with open(metadata_file) as f:
-            metadata = json.load(f)
-        trials_meta = metadata.get("trials", metadata if isinstance(metadata, list) else [])
-        if not isinstance(trials_meta, list):
-            continue
-        beta_dir = metadata_file.parent
-        run_match = re.search(r"(?:run|session)_?(\d+)", beta_dir.name, re.IGNORECASE)
-        run_id = int(run_match.group(1)) if run_match else -1
-        condition = _detect_condition(metadata_file)
-        directory_beta_files = sorted(
-            list(beta_dir.glob("*.npy")) + list(beta_dir.glob("*.nii.gz"))
-        )
-        for trial_meta in trials_meta:
-            trial_identifier = str(trial_meta.get("trial_id", f"trial_{trial_id_counter:05d}"))
-            matching_beta = None
-            for beta_file in directory_beta_files:
-                if trial_identifier in beta_file.name:
-                    matching_beta = beta_file
-                    break
-            if matching_beta is None and directory_beta_files:
-                matching_beta = directory_beta_files[min(trial_id_counter, len(directory_beta_files) - 1)]
-            if matching_beta is None:
+    if metadata_files:
+        layout_summary["layout"] = "subject_rooted"
+        layout_summary["data_root"] = str(data_root) if data_root is not None else None
+        if verbose:
+            print(f"  Found {len(beta_files)} beta files in subject-rooted layout")
+        for metadata_file in metadata_files:
+            with open(metadata_file) as f:
+                metadata = json.load(f)
+            trials_meta = metadata.get("trials", metadata if isinstance(metadata, list) else [])
+            if not isinstance(trials_meta, list):
                 continue
-            image_path = trial_meta.get("image_path")
-            if image_path is not None:
-                image_path = str((beta_dir / image_path).resolve()) if not Path(image_path).is_absolute() else image_path
-            elif stimulus_root is not None:
-                possible = stimulus_root / f"{trial_identifier}.png"
-                if possible.exists():
-                    image_path = str(possible)
-            if image_path is None:
-                sibling_candidates = (
-                    sorted(beta_dir.glob(f"{trial_identifier}*image.png"))
-                    + sorted(beta_dir.glob(f"{trial_identifier}*.png"))
-                    + sorted(beta_dir.glob(f"{trial_identifier}*image.jpg"))
-                    + sorted(beta_dir.glob(f"{trial_identifier}*.jpg"))
-                )
-                for candidate in sibling_candidates:
-                    if candidate.is_file():
-                        image_path = str(candidate.resolve())
-                        break
-            stimulus_type = trial_meta.get("stimulus_type", "unknown")
-            if image_path and stimulus_type == "unknown":
-                stimulus_type = "complex"
-            if trial_meta.get("text_prompt") and stimulus_type == "unknown":
-                stimulus_type = "conceptual"
-
-            nsd_id = _maybe_int(trial_meta.get("nsd_id", trial_meta.get("nsdId")))
-            pair_id = _maybe_int(trial_meta.get("pair_id"))
-            if pair_id is None and nsd_id is not None:
-                pair_id = nsd_id
-
-            trials.append(
-                {
-                    "trial_id": trial_id_counter,
-                    "subject": subject,
-                    "condition": condition,
-                    "stimulus_type": stimulus_type,
-                    "run_id": _maybe_int(trial_meta.get("run_id")) or run_id,
-                    "fmri_path": _build_relative(matching_beta),
-                    "image_path": image_path,
-                    "text_prompt": trial_meta.get("text_prompt"),
-                    "meta_json": json.dumps(trial_meta) if trial_meta else None,
-                    "split": None,
-                    "nsd_id": nsd_id,
-                    "nsdId": nsd_id,
-                    "pair_id": pair_id,
-                    "vividness": trial_meta.get("vividness"),
-                    "confidence": trial_meta.get("confidence"),
-                    "beta_index": _maybe_int(trial_meta.get("beta_index")) or 0,
-                }
+            beta_dir = metadata_file.parent
+            run_match = re.search(r"(?:run|session)_?(\d+)", beta_dir.name, re.IGNORECASE)
+            run_id = int(run_match.group(1)) if run_match else -1
+            condition = _detect_condition(metadata_file)
+            directory_beta_files = sorted(
+                list(beta_dir.glob("*.npy")) + list(beta_dir.glob("*.nii.gz"))
             )
-            stimulus_stats[stimulus_type] += 1
-            trial_id_counter += 1
-        metadata_used = True
+            for trial_meta in trials_meta:
+                trial_identifier = str(trial_meta.get("trial_id", f"trial_{trial_id_counter:05d}"))
+                matching_beta = None
+                for beta_file in directory_beta_files:
+                    if trial_identifier in beta_file.name:
+                        matching_beta = beta_file
+                        break
+                if matching_beta is None and directory_beta_files:
+                    matching_beta = directory_beta_files[min(trial_id_counter, len(directory_beta_files) - 1)]
+                if matching_beta is None:
+                    continue
+                image_path = trial_meta.get("image_path")
+                if image_path is not None:
+                    image_path = str((beta_dir / image_path).resolve()) if not Path(image_path).is_absolute() else image_path
+                elif stimulus_root is not None:
+                    possible = stimulus_root / f"{trial_identifier}.png"
+                    if possible.exists():
+                        image_path = str(possible)
+                if image_path is None:
+                    sibling_candidates = (
+                        sorted(beta_dir.glob(f"{trial_identifier}*image.png"))
+                        + sorted(beta_dir.glob(f"{trial_identifier}*.png"))
+                        + sorted(beta_dir.glob(f"{trial_identifier}*image.jpg"))
+                        + sorted(beta_dir.glob(f"{trial_identifier}*.jpg"))
+                    )
+                    for candidate in sibling_candidates:
+                        if candidate.is_file():
+                            image_path = str(candidate.resolve())
+                            break
+                stimulus_type = trial_meta.get("stimulus_type", "unknown")
+                if image_path and stimulus_type == "unknown":
+                    stimulus_type = "complex"
+                if trial_meta.get("text_prompt") and stimulus_type == "unknown":
+                    stimulus_type = "conceptual"
+
+                nsd_id = _maybe_int(trial_meta.get("nsd_id", trial_meta.get("nsdId")))
+                pair_id = _maybe_int(trial_meta.get("pair_id"))
+                if pair_id is None and nsd_id is not None:
+                    pair_id = nsd_id
+
+                trials.append(
+                    {
+                        "trial_id": trial_id_counter,
+                        "subject": subject,
+                        "condition": condition,
+                        "stimulus_type": stimulus_type,
+                        "run_id": _maybe_int(trial_meta.get("run_id")) or run_id,
+                        "fmri_path": _build_relative(matching_beta),
+                        "image_path": image_path,
+                        "text_prompt": trial_meta.get("text_prompt"),
+                        "meta_json": json.dumps(trial_meta) if trial_meta else None,
+                        "split": None,
+                        "nsd_id": nsd_id,
+                        "nsdId": nsd_id,
+                        "pair_id": pair_id,
+                        "vividness": trial_meta.get("vividness"),
+                        "confidence": trial_meta.get("confidence"),
+                        "beta_index": _maybe_int(trial_meta.get("beta_index")) or 0,
+                    }
+                )
+                stimulus_stats[stimulus_type] += 1
+                trial_id_counter += 1
+            metadata_used = True
+
+    if not metadata_used:
+        metadata_dir = _discover_metadata_dir(data_root, metadata_root)
+        split_beta_path = _discover_beta_path(
+            subject=subject,
+            data_root_path=data_root,
+            beta_root_path=beta_root,
+            explicit_beta_path=beta_path,
+        )
+        if metadata_dir is not None and split_beta_path is not None:
+            layout_summary["layout"] = "split_metadata_beta"
+            layout_summary["metadata_root"] = str(metadata_dir.resolve())
+            layout_summary["beta_path"] = str(split_beta_path.resolve())
+            trials_df = trials_to_dataframe(
+                parse_all_trials(metadata_dir, stimulus_root=stimulus_root),
+                subject=subject,
+                beta_path=str(split_beta_path.resolve()),
+            )
+            df = assign_splits(trials_df)
+            for stimulus_type, count in df["stimulus_type"].value_counts().to_dict().items():
+                stimulus_stats[stimulus_type] = int(count)
+            metadata_used = True
+        elif subject_root_available:
+            if not beta_files:
+                raise FileNotFoundError(
+                    f"No beta files (*.npy or *.nii.gz) found in {subject_data_dir}"
+                )
+        else:
+            details = []
+            if data_root is not None:
+                details.append(f"data_root={data_root}")
+            if metadata_root is not None:
+                details.append(f"metadata_root={metadata_root}")
+            if beta_root is not None:
+                details.append(f"beta_root={beta_root}")
+            if beta_path is not None:
+                details.append(f"beta_path={beta_path}")
+            raise FileNotFoundError(
+                f"Could not discover a supported NSD-Imagery layout for {subject}. "
+                f"Tried subject-rooted and split metadata/beta layouts with: {', '.join(details) or 'no paths'}."
+            )
 
     if not metadata_used:
         for beta_idx, beta_file in enumerate(sorted(beta_files)):
@@ -590,8 +708,19 @@ def build_nsd_imagery_index(
             trial_id_counter += 1
 
     # Convert to DataFrame
-    df = pd.DataFrame(trials)
-    df = _infer_split(df)
+    if not metadata_used or trials:
+        df = pd.DataFrame(trials)
+        df = _infer_split(df)
+    layout_summary.setdefault("layout", "beta_only_fallback")
+    layout_summary["output_path"] = str(output_path)
+    layout_summary["rows"] = int(len(df))
+    if "condition" in df.columns:
+        layout_summary["conditions"] = df["condition"].value_counts().to_dict()
+    if "stimulus_set" in df.columns:
+        layout_summary["stimulus_sets"] = df["stimulus_set"].value_counts().to_dict()
+    if "nsdId" in df.columns:
+        layout_summary["rows_with_nsd_id"] = int(df["nsdId"].notna().sum())
+        layout_summary["unique_nsd_ids"] = int(df["nsdId"].dropna().nunique())
     
     if verbose or dry_run:
         print(f"\n=== Index Summary ===")
@@ -617,9 +746,16 @@ def build_nsd_imagery_index(
     # Write to parquet
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(output_path, index=False)
+
+    if report_path is not None:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, "w") as handle:
+            json.dump(layout_summary, handle, indent=2)
     
     if verbose:
         print(f"\n✓ Index saved to: {output_path}")
+        if report_path is not None:
+            print(f"✓ Layout report saved to: {report_path}")
     
     return output_path
 

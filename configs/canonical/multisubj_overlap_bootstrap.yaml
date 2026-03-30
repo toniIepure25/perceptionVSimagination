@@ -66,7 +66,15 @@ export:
 preparation:
   imagery:
     data_root: ${NSD_IMAGERY_ROOT}
+    metadata_root: ${NSD_IMAGERY_METADATA_ROOT}
+    beta_root: ${NSD_IMAGERY_BETA_ROOT}
+    beta_path_template: ${NSD_IMAGERY_BETA_ROOT}/{subject}/betas_nsdimagery.nii.gz
     cache_root: cache
+    conditions: ["imagery"]
+    stimulus_sets: ["B"]
+    require_nsd_id: true
+    source_report_template: outputs/canonical/prepared/imagery/{subject}.source_report.json
+    report_template: outputs/canonical/prepared/imagery/{subject}.report.json
   overlap:
     subjects: ["subj02", "subj05", "subj07"]
     output_root: outputs/canonical/prepared/overlap_bootstrap

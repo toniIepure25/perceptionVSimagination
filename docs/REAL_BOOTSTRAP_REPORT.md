@@ -39,6 +39,8 @@ The live pod output locations were:
 - transfer metrics: `outputs/canonical/transfer/multisubj_overlap_bootstrap/transfer_metrics.json`
 - export manifest: `outputs/canonical/export/multisubj_overlap_bootstrap/manifest.json`
 
+As of the current repository state, the bootstrap prep path has been hardened so this run no longer depends on previously prepared overlap-era imagery parquet files. The official `prepare_imagery_index` workflow can now rebuild the subject imagery indices from the live pod's split metadata/beta layout and record source provenance alongside the canonical filtered outputs.
+
 ## Observed Metrics
 
 Observed metrics from the live bootstrap run:

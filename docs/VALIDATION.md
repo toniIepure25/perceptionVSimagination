@@ -43,10 +43,22 @@ python -m fmri2img.workflows.prepare_targets --config configs/canonical/multisub
 python -m fmri2img.workflows.preflight_data --config configs/canonical/multisubj_overlap_bootstrap.yaml
 ```
 
+`prepare_imagery_index` now supports both:
+
+- a subject-rooted raw imagery layout
+- the split pod layout with shared GLMsingle metadata plus per-subject beta volumes
+
+For the split layout, canonical prep produces:
+
+- `cache/indices/imagery/{subject}.parquet`
+- `outputs/canonical/prepared/imagery/{subject}.source_report.json`
+- `outputs/canonical/prepared/imagery/{subject}.report.json`
+
 This path is now covered by an end-to-end volumetric fixture test that:
 
 - starts from a raw perception index
 - builds an imagery index from raw imagery metadata + NIfTI files
+- rebuilds imagery from the split metadata/beta layout that mirrors the live pod
 - canonicalizes a 768-D target cache
 - builds a mixed perception/imagery index
 - materializes ROI features from real ROI masks
@@ -72,6 +84,7 @@ The following failure-oriented cases are now covered:
 - canonical ROI materialization from volumetric data + ROI masks
 - non-canonical target-cache rejection during `prepare_targets`
 - canonical overlap-bootstrap assembly across multiple subjects
+- canonical imagery-index rebuild from split metadata/beta layout
 - inference-device fallback and checkpoint/device alignment during eval/transfer/analysis
 - truthful `train_history.json` validation cosine logging
 
@@ -134,3 +147,5 @@ That live run used:
 - canonical train/eval/transfer/export workflows
 
 The eval-device workaround required during that first live run is no longer necessary; canonical eval, transfer, and analysis workflows now resolve runtime devices explicitly and move the model onto the chosen device before inference.
+
+The remaining reproducibility gap from that live run has also been closed in code: canonical imagery prep no longer depends on stale cached parquet files that were missing `nsdId`, and can rebuild the official overlap bootstrap inputs directly from the pod-style imagery metadata/beta layout.

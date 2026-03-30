@@ -66,8 +66,8 @@ For more information, see:
     parser.add_argument(
         '--data-root',
         type=str,
-        required=True,
-        help='Root directory containing NSD-Imagery fMRI data (subject subdirectories)'
+        required=False,
+        help='Root directory containing NSD-Imagery data. Supports subject-rooted or split metadata/beta layouts.'
     )
     parser.add_argument(
         '--subject',
@@ -92,6 +92,30 @@ For more information, see:
         type=str,
         default=None,
         help='Optional root directory for stimulus files (images/text)'
+    )
+    parser.add_argument(
+        '--metadata-root',
+        type=str,
+        default=None,
+        help='Optional metadata root for split layouts (contains designmatrixGLMsingle.mat / pair lists)'
+    )
+    parser.add_argument(
+        '--beta-root',
+        type=str,
+        default=None,
+        help='Optional beta root for split layouts (expects {beta_root}/{subject}/betas_nsdimagery.nii.gz)'
+    )
+    parser.add_argument(
+        '--beta-path',
+        type=str,
+        default=None,
+        help='Optional explicit beta NIfTI path for split layouts'
+    )
+    parser.add_argument(
+        '--report-path',
+        type=str,
+        default=None,
+        help='Optional JSON sidecar describing the discovered imagery layout and source provenance'
     )
     
     # Optional arguments
@@ -119,8 +143,16 @@ For more information, see:
     args = parser.parse_args()
     
     # Validate paths
-    data_root = Path(args.data_root)
-    if not data_root.exists():
+    if not any([args.data_root, args.metadata_root, args.beta_root, args.beta_path]):
+        print(
+            "ERROR: NSD-Imagery data location (nsd_imagery) is required. Provide --data-root for a subject-rooted layout "
+            "or --metadata-root with --beta-root/--beta-path for the split imagery layout.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    data_root = Path(args.data_root) if args.data_root else None
+    if data_root is not None and not data_root.exists():
         print(f"ERROR: Data root does not exist: {data_root}", file=sys.stderr)
         print(f"Please specify correct path with --data-root", file=sys.stderr)
         sys.exit(1)
@@ -128,23 +160,34 @@ For more information, see:
     cache_root = Path(args.cache_root)
     cache_root.mkdir(parents=True, exist_ok=True)
     
-    # Check if NSD-Imagery data exists for this subject
-    subject_data_dir = data_root / args.subject
-    if not subject_data_dir.exists():
-        print(f"ERROR: Subject data directory not found: {subject_data_dir}", file=sys.stderr)
-        print(f"", file=sys.stderr)
-        print(f"Available subjects:", file=sys.stderr)
-        if data_root.exists():
-            available = [d.name for d in data_root.iterdir() if d.is_dir()]
-            for subj in available:
-                print(f"  - {subj}")
-        else:
-            print(f"  (data root directory not found)")
+    # Check if NSD-Imagery data exists for this subject or split metadata/beta layout.
+    if data_root is not None:
+        subject_data_dir = data_root / args.subject
+        if not subject_data_dir.exists():
+            print(f"ERROR: Subject data directory not found: {subject_data_dir}", file=sys.stderr)
+            print(f"", file=sys.stderr)
+            print(f"Available subjects:", file=sys.stderr)
+            if data_root.exists():
+                available = [d.name for d in data_root.iterdir() if d.is_dir()]
+                for subj in available:
+                    print(f"  - {subj}")
+            else:
+                print(f"  (data root directory not found)")
+            sys.exit(1)
+    elif args.metadata_root is None:
+        print("ERROR: split-layout mode requires --metadata-root.", file=sys.stderr)
         sys.exit(1)
     
     if args.validate_only:
         print(f"✓ NSD-Imagery data found for {args.subject}")
-        print(f"  Data directory: {subject_data_dir}")
+        if data_root is not None:
+            print(f"  Data directory: {subject_data_dir}")
+        if args.metadata_root:
+            print(f"  Metadata root: {args.metadata_root}")
+        if args.beta_root:
+            print(f"  Beta root: {args.beta_root}")
+        if args.beta_path:
+            print(f"  Beta path: {args.beta_path}")
         print(f"  Data appears valid (basic check only)")
         sys.exit(0)
     
@@ -165,7 +208,14 @@ For more information, see:
     
     # Call the index building function
     print(f"Building NSD-Imagery index for {args.subject}...")
-    print(f"  Data root: {data_root}")
+    if data_root is not None:
+        print(f"  Data root: {data_root}")
+    if args.metadata_root:
+        print(f"  Metadata root: {args.metadata_root}")
+    if args.beta_root:
+        print(f"  Beta root: {args.beta_root}")
+    if args.beta_path:
+        print(f"  Beta path: {args.beta_path}")
     print(f"  Cache root: {cache_root}")
     print(f"  Output: {output_path}")
     print(f"  Dry run: {args.dry_run}")
@@ -180,6 +230,10 @@ For more information, see:
             cache_root=cache_root,
             output_path=output_path,
             stimulus_root=stimulus_root,
+            metadata_root=Path(args.metadata_root) if args.metadata_root else None,
+            beta_root=Path(args.beta_root) if args.beta_root else None,
+            beta_path=Path(args.beta_path) if args.beta_path else None,
+            report_path=Path(args.report_path) if args.report_path else None,
             dry_run=args.dry_run,
             verbose=args.verbose,
         )

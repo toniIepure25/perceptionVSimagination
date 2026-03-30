@@ -205,6 +205,84 @@ def test_multisubject_overlap_bootstrap_workflow_builds_real_ready_index(canonic
     assert report["readiness"]["paper_pair_threshold"] == 8
 
 
+def test_prepare_imagery_index_supports_split_metadata_beta_layout(canonical_split_layout_fixture):
+    env = _workflow_env()
+    config_path = str(canonical_split_layout_fixture["config_path"])
+    subject = canonical_split_layout_fixture["subject"]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_imagery_index",
+            "--config",
+            config_path,
+            "--override",
+            f"dataset.subject={json.dumps(subject)}",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == 0, result.stderr
+
+    imagery_index = canonical_split_layout_fixture["cache_root"] / "indices" / "imagery" / f"{subject}.parquet"
+    imagery_df = pd.read_parquet(imagery_index)
+    assert imagery_df["condition"].unique().tolist() == ["imagery"]
+    assert imagery_df["stimulus_set"].unique().tolist() == ["B"]
+    assert imagery_df["nsdId"].unique().tolist() == [30857]
+
+    source_report = canonical_split_layout_fixture["prepared_root"] / f"{subject}.source_report.json"
+    prepared_report = canonical_split_layout_fixture["prepared_root"] / f"{subject}.report.json"
+    source_payload = json.loads(source_report.read_text())
+    prepared_payload = json.loads(prepared_report.read_text())
+    assert source_payload["layout"] == "split_metadata_beta"
+    assert prepared_payload["rows_after_filter"] == 2
+    assert prepared_payload["filters"]["require_nsd_id"] is True
+
+
+def test_overlap_bootstrap_can_consume_split_layout_imagery_indices(canonical_split_layout_fixture):
+    env = _workflow_env()
+    config_path = str(canonical_split_layout_fixture["config_path"])
+    subject = canonical_split_layout_fixture["subject"]
+
+    prep = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_imagery_index",
+            "--config",
+            config_path,
+            "--override",
+            f"dataset.subject={json.dumps(subject)}",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert prep.returncode == 0, prep.stderr
+
+    overlap = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_overlap_bootstrap",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert overlap.returncode == 0, overlap.stderr
+
+    mixed_index = canonical_split_layout_fixture["prepared_root"] / "overlap_mixed_with_roi.parquet"
+    mixed_df = pd.read_parquet(mixed_index)
+    assert set(mixed_df["condition"].tolist()) == {"imagery", "perception"}
+    assert mixed_df["pair_id"].nunique() == 1
+    assert mixed_df["roi_features_json"].notna().all()
+
+
 def test_prepare_targets_rejects_noncanonical_dimension(canonical_volume_fixture, tmp_path):
     env = _workflow_env()
     wrong_targets = tmp_path / "wrong_targets.parquet"

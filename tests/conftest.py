@@ -557,3 +557,199 @@ def canonical_multisubj_overlap_fixture(tmp_path):
         "subjects": subjects,
         "prepared_root": prepared_root,
     }
+
+
+@pytest.fixture
+def canonical_split_layout_fixture(tmp_path):
+    """Create a tiny split metadata/beta imagery layout matching the pod-style prep path."""
+    import scipy.io as sio
+
+    root = tmp_path / "canonical_split_layout"
+    root.mkdir()
+
+    metadata_root = root / "imagery_metadata"
+    beta_root = root / "imagery_betas"
+    cache_root = root / "cache"
+    perception_root = root / "perception_indices"
+    prepared_root = root / "prepared"
+    mask_root = root / "roi_masks"
+    metadata_root.mkdir()
+    beta_root.mkdir()
+    cache_root.mkdir()
+    perception_root.mkdir()
+    prepared_root.mkdir()
+    mask_root.mkdir()
+
+    subject = "subj02"
+    shape = (4, 4, 4)
+    rng = np.random.default_rng(17)
+
+    # Pair list metadata fallback: A/C are non-NSD, B is the shared NSD photo used for overlap.
+    def _pair_row(index: int, target: str, cue: str):
+        return np.array([[index, target, cue]], dtype=object)
+
+    sio.savemat(str(metadata_root / "A_pair_list.mat"), {"pair_list": _pair_row(1, "bar_000.0deg_450L_43W.png", "H")})
+    sio.savemat(str(metadata_root / "B_pair_list.mat"), {"pair_list": _pair_row(1, "shared0413_nsd30857.png", "K")})
+    sio.savemat(str(metadata_root / "C_pair_list.mat"), {"pair_list": _pair_row(1, "banana.png", "B")})
+
+    # Minimal GLMsingle layout: one onset per run at TR=1, one condition column.
+    stimulus_cell = np.empty((1, 12), dtype=object)
+    dm_files = ["imgA_1", "attA", "visA", "imgB_1", "attB", "visB", "imgC_1", "attC", "visC", "imgA_2", "imgB_2", "imgC_2"]
+    cue_by_dm = {
+        "imgA_1": "H",
+        "attA": "H_1",
+        "visA": "H_1",
+        "imgB_1": "K",
+        "attB": "K_1",
+        "visB": "K_1",
+        "imgC_1": "B",
+        "attC": "B_1",
+        "visC": "B_1",
+        "imgA_2": "H",
+        "imgB_2": "K",
+        "imgC_2": "B",
+    }
+    for run_idx, dm_name in enumerate(dm_files):
+        glm = np.zeros((4, 1), dtype=np.float32)
+        glm[1, 0] = 1.0
+        stimulus_cell[0, run_idx] = glm
+
+        dm = np.zeros((4, 1), dtype=np.float32)
+        dm[1, 0] = 1.0
+        condit_list = np.empty((1, 1), dtype=object)
+        condit_list[0, 0] = cue_by_dm[dm_name]
+        sio.savemat(str(metadata_root / f"{dm_name}_dm.mat"), {"dm": dm, "condit_list": condit_list})
+
+    sio.savemat(str(metadata_root / "designmatrixGLMsingle.mat"), {"stimulus": stimulus_cell})
+
+    # Shared beta volume for the subject.
+    beta_dir = beta_root / subject
+    beta_dir.mkdir(parents=True)
+    beta_path = beta_dir / "betas_nsdimagery.nii.gz"
+    beta_volume = rng.standard_normal(shape + (12,)).astype(np.float32)
+    nib.save(nib.Nifti1Image(beta_volume, np.eye(4)), beta_path)
+
+    # Perception index with the same Set B nsdId for overlap bootstrap.
+    perception_subject_dir = perception_root / f"subject={subject}"
+    perception_subject_dir.mkdir(parents=True)
+    perception_path = perception_subject_dir / "betas_session01.nii.gz"
+    perception_volume = rng.standard_normal(shape + (1,)).astype(np.float32)
+    nib.save(nib.Nifti1Image(perception_volume, np.eye(4)), perception_path)
+    pd.DataFrame(
+        [
+            {
+                "subject": subject,
+                "session": 1,
+                "trial_in_session": 0,
+                "global_trial_index": 0,
+                "nsdId": 30857,
+                "beta_path": str(perception_path.resolve()),
+                "beta_index": 0,
+            }
+        ]
+    ).to_parquet(perception_subject_dir / "index.parquet", index=False)
+
+    subject_mask_root = mask_root / subject
+    subject_mask_root.mkdir(parents=True)
+    roi_coords = {
+        "lh.prf-visualrois": (0, 0, 0),
+        "rh.prf-visualrois": (0, 1, 0),
+        "lh.floc-faces": (1, 0, 0),
+        "rh.floc-faces": (1, 1, 0),
+        "lh.Kastner2015": (2, 0, 0),
+        "rh.Kastner2015": (2, 1, 0),
+    }
+    for name, coord in roi_coords.items():
+        mask = np.zeros(shape, dtype=np.float32)
+        mask[coord] = 1.0
+        nib.save(nib.Nifti1Image(mask, np.eye(4)), subject_mask_root / f"{name}.nii.gz")
+
+    config = {
+        "dataset": {
+            "subject": subject,
+            "mixed_index": str(prepared_root / "overlap_mixed_with_roi.parquet"),
+            "perception_conditions": ["perception"],
+            "imagery_conditions": ["imagery"],
+        },
+        "preprocessing": {"enabled": False},
+        "roi": {
+            "groups": {
+                "early_visual": ["lh.prf-visualrois", "rh.prf-visualrois"],
+                "ventral_visual": ["lh.floc-faces", "rh.floc-faces"],
+                "metacognitive": ["lh.Kastner2015", "rh.Kastner2015"],
+            },
+            "missing_policy": "error",
+            "fallback_policy": "error",
+            "mask_root": str(mask_root),
+            "min_voxels": 1,
+        },
+        "targets": {
+            "name": "vit_l14_image_768",
+            "dimension": 768,
+            "cache_path": str(prepared_root / "targets.parquet"),
+            "id_column": "nsdId",
+        },
+        "model": {
+            "branch_embedding_dim": 16,
+            "shared_dim": 16,
+            "private_dim": 8,
+            "dropout": 0.0,
+            "use_domain_head": True,
+            "use_vividness_head": False,
+            "vividness_mode": "evidential",
+        },
+        "training": {
+            "batch_size": 2,
+            "epochs": 1,
+            "learning_rate": 0.001,
+            "weight_decay": 0.0001,
+            "domain_weight": 0.1,
+            "vividness_weight": 0.1,
+            "confidence_weight": 0.05,
+            "reconstruction_weight": 0.1,
+            "device": "cpu",
+            "output_dir": str(root / "train_outputs"),
+            "seed": 0,
+        },
+        "evaluation": {
+            "batch_size": 2,
+            "output_dir": str(root / "eval_outputs"),
+            "transfer_output_dir": str(root / "transfer_outputs"),
+        },
+        "analysis": {"output_dir": str(root / "analysis_outputs")},
+        "export": {"output_dir": str(root / "export_outputs")},
+        "preparation": {
+            "imagery": {
+                "metadata_root": str(metadata_root),
+                "beta_root": str(beta_root),
+                "cache_root": str(cache_root),
+                "conditions": ["imagery"],
+                "stimulus_sets": ["B"],
+                "require_nsd_id": True,
+                "source_report_template": str(prepared_root / "{subject}.source_report.json"),
+                "report_template": str(prepared_root / "{subject}.report.json"),
+            },
+            "overlap": {
+                "subjects": [subject],
+                "output_root": str(prepared_root),
+                "report_path": str(prepared_root / "overlap_report.json"),
+                "overlap_ids_path": str(prepared_root / "overlap_ids.json"),
+                "perception_index_template": str(perception_root / "subject={subject}" / "index.parquet"),
+                "imagery_index_template": str(cache_root / "indices" / "imagery" / "{subject}.parquet"),
+                "mask_root_template": str(mask_root / "{subject}"),
+                "materialize_roi": True,
+                "cache_root": str(cache_root),
+            },
+        },
+    }
+    config_path = root / "split_layout_config.yaml"
+    with open(config_path, "w") as handle:
+        yaml.safe_dump(config, handle)
+
+    return {
+        "root": root,
+        "config_path": config_path,
+        "subject": subject,
+        "prepared_root": prepared_root,
+        "cache_root": cache_root,
+    }

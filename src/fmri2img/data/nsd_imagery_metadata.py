@@ -142,8 +142,19 @@ def parse_cue_pair_list(metadata_dir: Path) -> pd.DataFrame:
     """
     xlsx_path = metadata_dir / "cue_pair_list.xlsx"
     if xlsx_path.exists():
-        df = pd.read_excel(xlsx_path)
+        try:
+            df = pd.read_excel(xlsx_path)
+        except Exception as exc:
+            logger.warning(
+                "Failed to read %s directly (%s); falling back to MATLAB pair_list files.",
+                xlsx_path,
+                exc,
+            )
+            df = None
     else:
+        df = None
+
+    if df is None:
         # Fallback: reconstruct from .mat pair_lists
         rows = []
         for set_name in ["A", "B", "C"]:
@@ -151,6 +162,7 @@ def parse_cue_pair_list(metadata_dir: Path) -> pd.DataFrame:
             if not mat_path.exists():
                 continue
             import scipy.io as sio
+
             mat = sio.loadmat(str(mat_path))
             pl = mat["pair_list"]
             for i in range(pl.shape[0]):

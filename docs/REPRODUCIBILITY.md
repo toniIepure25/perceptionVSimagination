@@ -11,12 +11,21 @@ Useful environment variables for real runs:
 
 ```bash
 export PYTHONPATH=src
-export NSD_IMAGERY_ROOT=/abs/path/to/nsd_imagery
+export NSD_IMAGERY_ROOT=/abs/path/to/nsd_imagery            # subject-rooted layout, if available
+export NSD_IMAGERY_METADATA_ROOT=/abs/path/to/nsd_imagery/metadata
+export NSD_IMAGERY_BETA_ROOT=/abs/path/to/nsd_imagery_betas
 export NSD_ROI_MASK_ROOT=/abs/path/to/roi_masks_parent
 export NSD_HDF5=/abs/path/to/nsd_stimuli.hdf5
 ```
 
 `NSD_HDF5` is optional if `cache/nsd_hdf5/nsd_stimuli.hdf5` already exists or remote NSD stimulus access is available.
+
+For the live `orchestraiq-jupyter` pod, the canonical imagery prep path now supports the split layout that is actually mounted there:
+
+- shared GLMsingle metadata under `NSD_IMAGERY_METADATA_ROOT`
+- subject beta volumes under `NSD_IMAGERY_BETA_ROOT/{subject}/betas_nsdimagery.nii.gz`
+
+`prepare_imagery_index` automatically detects this split layout and writes both a source-layout report and a filtered canonical report per subject.
 
 ## Smoke Fixture
 
@@ -50,6 +59,16 @@ for subject in subj02 subj05 subj07; do
     --override dataset.subject="\"${subject}\""
 done
 ```
+
+This step now rebuilds the subject imagery indices from the canonical raw metadata/beta layout rather than relying on stale cached overlap-era parquet files. The checked-in config filters to the true MVP slice:
+
+- condition: `imagery`
+- stimulus set: `B`
+- `nsdId` required
+- output: `cache/indices/imagery/{subject}.parquet`
+- reports:
+  - `outputs/canonical/prepared/imagery/{subject}.source_report.json`
+  - `outputs/canonical/prepared/imagery/{subject}.report.json`
 
 2. Assemble the overlap-only mixed-condition bootstrap index and materialize ROI features:
 
@@ -108,6 +127,8 @@ python -m fmri2img.workflows.export_for_animus \
 The official real bootstrap path now expects or produces:
 
 - imagery indices at `cache/indices/imagery/{subject}.parquet`
+- imagery provenance reports at `outputs/canonical/prepared/imagery/{subject}.source_report.json`
+- filtered imagery prep reports at `outputs/canonical/prepared/imagery/{subject}.report.json`
 - combined ROI-ready mixed index at `outputs/canonical/prepared/overlap_bootstrap/multisubj_overlap_mixed_with_roi.parquet`
 - overlap report at `outputs/canonical/prepared/overlap_bootstrap/report.json`
 - overlap stimulus ids at `outputs/canonical/prepared/overlap_bootstrap/overlap_nsd_ids.json`
