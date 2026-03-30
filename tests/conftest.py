@@ -394,7 +394,7 @@ def canonical_multisubj_overlap_fixture(tmp_path):
     shape = (4, 4, 4)
     rng = np.random.default_rng(7)
     subjects = ["subj02", "subj05"]
-    overlap_ids = [3101, 3102]
+    overlap_ids = [3101, 3102, 3103, 3104]
     all_target_ids = sorted(overlap_ids + [4101, 4201])
 
     for subject in subjects:

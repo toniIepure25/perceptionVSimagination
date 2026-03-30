@@ -167,7 +167,10 @@ def main() -> int:
             "prepare_overlap_bootstrap did not find any overlapping perception/imagery subjects to assemble."
         )
 
-    combined = normalize_decoder_index(pd.concat(per_subject_indices, ignore_index=True))
+    combined = pd.concat(per_subject_indices, ignore_index=True)
+    if "split" in combined.columns:
+        combined["split"] = None
+    combined = normalize_decoder_index(combined)
     combined_output.parent.mkdir(parents=True, exist_ok=True)
     combined.to_parquet(combined_output, index=False)
 

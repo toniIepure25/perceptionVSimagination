@@ -245,6 +245,14 @@ def main() -> int:
         mixed_summary["prepared_pairing_groups"] = int(
             prepared_mixed_df.groupby("pair_id")["condition"].nunique().ge(2).sum()
         )
+        prepared_splits = prepared_mixed_df["split"].value_counts().to_dict() if "split" in prepared_mixed_df.columns else {}
+        mixed_summary["prepared_splits"] = prepared_splits
+        missing_splits = [split for split in ("train", "val", "test") if int(prepared_splits.get(split, 0)) <= 0]
+        if missing_splits:
+            blocked.append(
+                "Canonical mixed index is missing required train/val/test coverage for "
+                f"{missing_splits}. Rebuild the mixed index so global pair splits are reassigned jointly."
+            )
 
     current_df = prepared_mixed_df if prepared_mixed_df is not None else source_mixed_df
     target_summary, target_problems = _target_summary(config, current_df)

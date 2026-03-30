@@ -167,8 +167,10 @@ def test_multisubject_overlap_bootstrap_workflow_builds_real_ready_index(canonic
     mixed_index = canonical_multisubj_overlap_fixture["prepared_root"] / "multisubj_overlap_mixed_with_roi.parquet"
     mixed_df = pd.read_parquet(mixed_index)
     assert sorted(mixed_df["subject"].unique().tolist()) == ["subj02", "subj05"]
-    assert mixed_df["pair_id"].nunique() == 2
+    assert mixed_df["pair_id"].nunique() == 4
     assert mixed_df["roi_features_json"].notna().all()
+    split_counts = mixed_df["split"].value_counts().to_dict()
+    assert all(int(split_counts.get(name, 0)) > 0 for name in ("train", "val", "test"))
 
     targets = subprocess.run(
         [
@@ -203,6 +205,82 @@ def test_multisubject_overlap_bootstrap_workflow_builds_real_ready_index(canonic
     report = json.loads(report_path.read_text())
     assert report["readiness"]["status"] == "bootstrap_ready"
     assert report["readiness"]["paper_pair_threshold"] == 8
+
+
+def test_preflight_blocks_when_prepared_mixed_index_lacks_validation_split(canonical_multisubj_overlap_fixture):
+    env = _workflow_env()
+    config_path = str(canonical_multisubj_overlap_fixture["config_path"])
+
+    for subject in canonical_multisubj_overlap_fixture["subjects"]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fmri2img.workflows.prepare_imagery_index",
+                "--config",
+                config_path,
+                "--override",
+                f"dataset.subject={json.dumps(subject)}",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+
+    overlap = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_overlap_bootstrap",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert overlap.returncode == 0, overlap.stderr
+
+    targets = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_targets",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert targets.returncode == 0, targets.stderr
+
+    mixed_index = canonical_multisubj_overlap_fixture["prepared_root"] / "multisubj_overlap_mixed_with_roi.parquet"
+    mixed_df = pd.read_parquet(mixed_index)
+    mixed_df.loc[mixed_df["split"] == "val", "split"] = "train"
+    mixed_df.to_parquet(mixed_index, index=False)
+
+    report_path = canonical_multisubj_overlap_fixture["root"] / "multisubj_preflight_blocked.json"
+    preflight = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.preflight_data",
+            "--config",
+            config_path,
+            "--output",
+            str(report_path),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert preflight.returncode == 0, preflight.stderr
+    report = json.loads(report_path.read_text())
+    assert report["readiness"]["status"] == "blocked"
+    reasons = "\n".join(report["readiness"]["blocked_reasons"])
+    assert "train/val/test coverage" in reasons
 
 
 def test_prepare_imagery_index_supports_split_metadata_beta_layout(canonical_split_layout_fixture):
