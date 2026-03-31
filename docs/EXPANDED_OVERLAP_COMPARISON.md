@@ -24,6 +24,10 @@ The live `orchestraiq-jupyter` pod currently exposes:
 
 The stale `subj01` imagery parquet still contains many rows without usable `nsdId`, so it fails the canonical mixed-condition requirement. It also has no rebuildable imagery beta package mounted in the pod, so it cannot currently be promoted into the canonical overlap path.
 
+The checked-in config `configs/canonical/max_available_overlap.yaml` therefore targets the largest **fully canonical** subject set directly:
+
+- `subj02`, `subj05`, `subj07`
+
 ## Maximum Overlap Currently Achievable
 
 The largest fully canonical overlap dataset currently rebuildable in the pod is still:

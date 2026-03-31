@@ -149,10 +149,15 @@ This config is meant to answer a specific question:
 
 - what is the largest fully canonical overlap dataset currently rebuildable in the mounted environment?
 
-In the live pod where this audit was executed, that config still resolved to the same 3-subject, 4-pair overlap ceiling because:
+In the live pod where this audit was executed, that checked-in config intentionally resolves to the current fully canonical ceiling:
+
+- subjects: `subj02`, `subj05`, `subj07`
+- shared pairs: `4`
+
+The broader audit also inspected `subj01`, but it is not included in the checked-in max-available config because:
 
 - `subj01` did not have a rebuildable imagery beta package mounted
-- the stale `subj01` imagery parquet was not canonical enough to expand the overlap set
+- the stale `subj01` imagery parquet was not canonical enough to enlarge the overlap set
 
 The official commands remain:
 

@@ -76,7 +76,7 @@ preparation:
     source_report_template: outputs/canonical/prepared/imagery/{subject}.source_report.json
     report_template: outputs/canonical/prepared/imagery/{subject}.report.json
   overlap:
-    subjects: ["subj01", "subj02", "subj05", "subj07"]
+    subjects: ["subj02", "subj05", "subj07"]
     output_root: outputs/canonical/prepared/max_available_overlap
     report_path: outputs/canonical/prepared/max_available_overlap/report.json
     overlap_ids_path: outputs/canonical/prepared/max_available_overlap/overlap_nsd_ids.json
