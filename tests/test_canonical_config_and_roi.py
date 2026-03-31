@@ -64,6 +64,15 @@ def test_multisubject_overlap_config_loads_with_env_templates(monkeypatch):
     assert config["preparation"]["overlap"]["mask_root_template"] == "/tmp/roi/{subject}"
 
 
+def test_max_available_overlap_config_loads_with_env_templates(monkeypatch):
+    monkeypatch.setenv("NSD_IMAGERY_ROOT", "/tmp/imagery")
+    monkeypatch.setenv("NSD_ROI_MASK_ROOT", "/tmp/roi")
+    config = load_workflow_config("configs/canonical/max_available_overlap.yaml")
+    assert config["dataset"]["mixed_index"].endswith("max_available_overlap_mixed_with_roi.parquet")
+    assert config["preparation"]["overlap"]["subjects"] == ["subj01", "subj02", "subj05", "subj07"]
+    assert config["preparation"]["overlap"]["mask_root_template"] == "/tmp/roi/{subject}"
+
+
 def test_validate_canonical_workflow_config_surfaces_missing_inputs(tmp_path):
     config_path = tmp_path / "bad.yaml"
     config_path.write_text(

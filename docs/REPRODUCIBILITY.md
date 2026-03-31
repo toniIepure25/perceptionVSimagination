@@ -122,6 +122,53 @@ python -m fmri2img.workflows.export_for_animus \
   --checkpoint outputs/canonical/train/multisubj_overlap_bootstrap/best_decoder.pt
 ```
 
+### Simple Legacy Comparison Baseline
+
+To reproduce the tiny-overlap comparison baseline on the same prepared dataset and target cache:
+
+```bash
+python -m fmri2img.workflows.run_legacy_ridge_baseline \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+This writes the comparison baseline to:
+
+- `outputs/canonical/baselines/multisubj_overlap_ridge_legacy/`
+
+The current scaling status of that comparison is documented in:
+
+- `docs/EXPANDED_OVERLAP_COMPARISON.md`
+
+## Maximum Available Overlap Audit
+
+The repository also includes a checked-in scaling-audit config:
+
+- `configs/canonical/max_available_overlap.yaml`
+
+This config is meant to answer a specific question:
+
+- what is the largest fully canonical overlap dataset currently rebuildable in the mounted environment?
+
+In the live pod where this audit was executed, that config still resolved to the same 3-subject, 4-pair overlap ceiling because:
+
+- `subj01` did not have a rebuildable imagery beta package mounted
+- the stale `subj01` imagery parquet was not canonical enough to expand the overlap set
+
+The official commands remain:
+
+```bash
+python -m fmri2img.workflows.prepare_overlap_bootstrap \
+  --config configs/canonical/max_available_overlap.yaml
+python -m fmri2img.workflows.prepare_targets \
+  --config configs/canonical/max_available_overlap.yaml
+python -m fmri2img.workflows.preflight_data \
+  --config configs/canonical/max_available_overlap.yaml
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/max_available_overlap.yaml
+python -m fmri2img.workflows.run_legacy_ridge_baseline \
+  --config configs/canonical/max_available_overlap.yaml
+```
+
 ## Artifact Contract
 
 The official real bootstrap path now expects or produces:
@@ -135,6 +182,7 @@ The official real bootstrap path now expects or produces:
 - target cache at `outputs/targets/overlap_multisubj_vit_l14_image_768.parquet`
 - preflight report at `outputs/canonical/prepared/overlap_bootstrap/preflight.json` unless `--output` is provided
 - train/eval/transfer/export artifacts under `outputs/canonical/*/multisubj_overlap_bootstrap/`
+- comparison baseline artifacts under `outputs/canonical/baselines/multisubj_overlap_ridge_legacy/`
 
 ## Readiness Labels
 
@@ -168,3 +216,4 @@ python -m fmri2img.workflows.prepare_roi_features \
 - Do not enable vividness/confidence supervision without real labels.
 - Do not silently mix 512-D and 768-D target caches.
 - Do not treat atlas-union bootstrap ROI groups as the final paper-grade ROI decomposition.
+- Do not interpret the tiny-overlap Ridge comparison as a final model ranking; it is a low-data sanity baseline.

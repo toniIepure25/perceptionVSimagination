@@ -149,3 +149,39 @@ That live run used:
 The eval-device workaround required during that first live run is no longer necessary; canonical eval, transfer, and analysis workflows now resolve runtime devices explicitly and move the model onto the chosen device before inference.
 
 The remaining reproducibility gap from that live run has also been closed in code: canonical imagery prep no longer depends on stale cached parquet files that were missing `nsdId`, and can rebuild the official overlap bootstrap inputs directly from the pod-style imagery metadata/beta layout.
+
+## Fresh canonical baseline and tiny legacy comparison
+
+After the prep reproducibility fix, the overlap bootstrap path was retrained again from rebuilt canonical artifacts and evaluated end to end. That fresh baseline is now documented in:
+
+- `docs/REAL_BOOTSTRAP_REPORT.md`
+
+The same rebuilt overlap dataset was also used for a simple legacy-style Ridge comparison baseline, documented in:
+
+- `docs/TINY_OVERLAP_BASELINE_COMPARISON.md`
+
+The next scaling audit was also executed on the live pod with the fixed comparison held constant. Its outcome is documented in:
+
+- `docs/EXPANDED_OVERLAP_COMPARISON.md`
+
+That audit established an important trust boundary:
+
+- the platform can rerun the comparison on the largest fully canonical overlap dataset currently rebuildable
+- but the mounted environment still tops out at 4 shared `nsdId` pairs, so the data-scale question is not answerable yet
+
+The comparison baseline is now rerunnable through the official workflow surface:
+
+```bash
+python -m fmri2img.workflows.run_legacy_ridge_baseline \
+  --config configs/canonical/multisubj_overlap_bootstrap.yaml
+```
+
+That comparison is intentionally small and honest:
+
+- it validates that the canonical overlap index can support a simple linear reference model
+- it does not yet constitute a meaningful benchmark matrix
+- it should be interpreted as a tiny-data sanity baseline only
+
+The follow-up scaling audit is tracked in:
+
+- `docs/EXPANDED_OVERLAP_COMPARISON.md`

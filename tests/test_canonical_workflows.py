@@ -109,6 +109,30 @@ def test_docs_reference_canonical_workflows():
         assert command in start_here
 
 
+def test_bootstrap_docs_reference_ridge_comparison_workflow():
+    reproducibility = open("docs/REPRODUCIBILITY.md").read()
+    validation = open("docs/VALIDATION.md").read()
+    comparison = open("docs/TINY_OVERLAP_BASELINE_COMPARISON.md").read()
+    command = "fmri2img.workflows.run_legacy_ridge_baseline"
+    assert command in reproducibility
+    assert command in validation
+    assert command in comparison
+
+
+def test_expanded_overlap_docs_reference_max_available_config():
+    reproducibility = open("docs/REPRODUCIBILITY.md").read()
+    expanded = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
+    config_name = "configs/canonical/max_available_overlap.yaml"
+    assert config_name in reproducibility
+    assert config_name in expanded
+
+
+def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
+    scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
+    assert "4 shared `nsdId` pairs" in scaling
+    assert "further data expansion" in scaling
+
+
 def test_checked_in_smoke_config_runs(tmp_path):
     env = _workflow_env()
     output_dir = tmp_path / "smoke_outputs"

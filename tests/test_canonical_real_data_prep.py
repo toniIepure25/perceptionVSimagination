@@ -385,6 +385,86 @@ def test_prepare_targets_rejects_noncanonical_dimension(canonical_volume_fixture
     assert "not canonical 768-D" in result.stderr
 
 
+def test_legacy_ridge_baseline_runs_on_canonical_overlap_fixture(canonical_multisubj_overlap_fixture):
+    env = _workflow_env()
+    config_path = str(canonical_multisubj_overlap_fixture["config_path"])
+
+    for subject in canonical_multisubj_overlap_fixture["subjects"]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fmri2img.workflows.prepare_imagery_index",
+                "--config",
+                config_path,
+                "--override",
+                f"dataset.subject={json.dumps(subject)}",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+
+    overlap = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_overlap_bootstrap",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert overlap.returncode == 0, overlap.stderr
+
+    targets = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.prepare_targets",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert targets.returncode == 0, targets.stderr
+
+    output_dir = canonical_multisubj_overlap_fixture["root"] / "ridge_baseline_outputs"
+    baseline = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.run_legacy_ridge_baseline",
+            "--config",
+            config_path,
+            "--output-dir",
+            str(output_dir),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert baseline.returncode == 0, baseline.stderr
+
+    metrics_path = output_dir / "metrics.json"
+    scores_path = output_dir / "test_scores.json"
+    checkpoint_path = output_dir / "ridge.pkl"
+    assert metrics_path.exists()
+    assert scores_path.exists()
+    assert checkpoint_path.exists()
+
+    metrics = json.loads(metrics_path.read_text())
+    assert metrics["baseline_name"] == "legacy_ridge_on_roi_values"
+    assert metrics["feature_space"]["dimension"] > 0
+    assert metrics["split_counts"]["train"] > 0
+    assert metrics["test"]["overall"]["mse"] >= 0.0
+
+
 def test_optional_nibabel_reports_clear_runtime_errors(canonical_volume_fixture, monkeypatch):
     from fmri2img.data.canonical import CanonicalDecoderDataset, normalize_decoder_index
     from fmri2img.data import canonical as canonical_data
