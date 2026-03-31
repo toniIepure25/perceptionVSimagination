@@ -26,7 +26,7 @@ class DecoderTargets:
 
 @dataclass
 class DecoderBatch:
-    fmri: torch.Tensor
+    fmri: Optional[torch.Tensor]
     roi_features: dict[str, torch.Tensor]
     condition: torch.Tensor
     nsd_ids: torch.Tensor
@@ -36,7 +36,7 @@ class DecoderBatch:
 
     def to_device(self, device: str | torch.device) -> "DecoderBatch":
         return DecoderBatch(
-            fmri=self.fmri.to(device),
+            fmri=None if self.fmri is None else self.fmri.to(device),
             roi_features={k: v.to(device) for k, v in self.roi_features.items()},
             condition=self.condition.to(device),
             nsd_ids=self.nsd_ids.to(device),

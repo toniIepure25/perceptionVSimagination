@@ -1,7 +1,11 @@
 import json
+from pathlib import Path
 
 import pytest
 import torch
+import yaml
+import numpy as np
+import pandas as pd
 
 from fmri2img.evaluation import collect_predictions, compute_decoder_metrics, compute_roi_summary
 from fmri2img.export import export_decoder_bundle
@@ -135,3 +139,132 @@ def test_export_manifest_requires_canonical_keys(canonical_fixture_dir, tmp_path
 def test_resolve_runtime_device_falls_back_to_cpu_when_cuda_unavailable(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
     assert resolve_runtime_device("cuda") == "cpu"
+
+
+def test_trainer_supports_multisubject_roi_materialized_batches_with_unequal_raw_shapes(tmp_path):
+    root = Path(tmp_path)
+    fmri_dir = root / "fmri"
+    fmri_dir.mkdir()
+
+    rows = []
+    target_rows = []
+    target_ids = [9001, 9002, 9003]
+    raw_lengths = {"subj02": 11, "subj03": 17}
+
+    for nsd_id in target_ids:
+        target = np.zeros(768, dtype=np.float32)
+        target[nsd_id % 7] = 1.0
+        target_rows.append({"nsdId": nsd_id, "clip_target_768": target.tolist()})
+
+    assignments = [
+        ("subj02", "perception", 9001, "train"),
+        ("subj03", "imagery", 9001, "train"),
+        ("subj02", "perception", 9002, "val"),
+        ("subj03", "imagery", 9002, "val"),
+        ("subj02", "perception", 9003, "test"),
+        ("subj03", "imagery", 9003, "test"),
+    ]
+
+    for idx, (subject, condition, nsd_id, split) in enumerate(assignments):
+        raw = np.linspace(0.0, 1.0, raw_lengths[subject], dtype=np.float32) + idx
+        fmri_path = fmri_dir / f"{subject}_{condition}_{nsd_id}.npy"
+        np.save(fmri_path, raw)
+        rows.append(
+            {
+                "trial_id": idx,
+                "subject": subject,
+                "condition": condition,
+                "nsdId": nsd_id,
+                "pair_id": nsd_id,
+                "split": split,
+                "fmri_path": str(fmri_path),
+                "roi_features_json": json.dumps(
+                    {
+                        "early_visual": [0.1 + idx, 0.2 + idx],
+                        "ventral_visual": [0.3 + idx, 0.4 + idx, 0.5 + idx],
+                        "metacognitive": [0.6 + idx, 0.7 + idx],
+                    }
+                ),
+            }
+        )
+
+    mixed_index = root / "mixed.parquet"
+    targets_path = root / "targets.parquet"
+    pd.DataFrame(rows).to_parquet(mixed_index, index=False)
+    pd.DataFrame(target_rows).to_parquet(targets_path, index=False)
+
+    config = {
+        "dataset": {
+            "subject": "subj02",
+            "mixed_index": str(mixed_index),
+        },
+        "preprocessing": {"enabled": False},
+        "roi": {
+            "groups": {
+                "early_visual": ["V1", "V2", "V3"],
+                "ventral_visual": ["V4", "LO", "FFA", "PPA"],
+                "metacognitive": ["mPFC", "Precuneus", "IPS"],
+            },
+            "roi_names": [],
+            "missing_policy": "warn",
+            "fallback_policy": "full_feature_vector",
+        },
+        "targets": {
+            "name": "vit_l14_image_768",
+            "dimension": 768,
+            "cache_path": str(targets_path),
+            "embedding_column": "clip_target_768",
+            "id_column": "nsdId",
+        },
+        "model": {
+            "branch_embedding_dim": 8,
+            "shared_dim": 8,
+            "private_dim": 4,
+            "dropout": 0.0,
+            "use_domain_head": True,
+            "use_vividness_head": False,
+            "vividness_mode": "evidential",
+        },
+        "training": {
+            "batch_size": 2,
+            "epochs": 1,
+            "learning_rate": 0.001,
+            "weight_decay": 0.0001,
+            "device": "cpu",
+            "output_dir": str(root / "train_outputs"),
+            "seed": 0,
+        },
+        "evaluation": {
+            "batch_size": 2,
+            "output_dir": str(root / "eval_outputs"),
+            "transfer_output_dir": str(root / "transfer_outputs"),
+        },
+        "analysis": {"output_dir": str(root / "analysis_outputs")},
+        "export": {"output_dir": str(root / "export_outputs")},
+    }
+    config_path = root / "config.yaml"
+    with open(config_path, "w") as handle:
+        yaml.safe_dump(config, handle)
+
+    loaded = load_workflow_config(str(config_path))
+    train_ds, val_ds, test_ds, _, _, _ = build_datasets(loaded)
+    train_loader, val_loader, _ = build_loaders(loaded, train_ds, val_ds, test_ds)
+    batch = next(iter(train_loader))
+    assert batch.fmri is None
+
+    model = instantiate_model_from_dataset(loaded, train_ds)
+    trainer = SharedPrivateTrainer(
+        model=model,
+        optimizer=torch.optim.AdamW(model.parameters(), lr=1e-3),
+        loss_weights=CanonicalLossWeights(),
+        device="cpu",
+    )
+    best = trainer.fit(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        epochs=1,
+        output_dir=root / "train_outputs",
+        config_snapshot=loaded.to_dict(),
+    )
+    assert "val_content_cosine" in best
+    assert (root / "train_outputs" / "best_decoder.pt").exists()

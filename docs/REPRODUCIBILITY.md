@@ -156,8 +156,8 @@ In the live pod where this audit was executed, that checked-in config intentiona
 
 The broader audit also inspected `subj01`, but it is not included in the checked-in max-available config because:
 
-- `subj01` did not have a rebuildable imagery beta package mounted
-- the stale `subj01` imagery parquet was not canonical enough to enlarge the overlap set
+- `subj01` does have a mounted imagery beta bundle, but the currently recoverable imagery ids do not overlap its perception index
+- the stale `subj01` imagery parquet was not canonical enough to enlarge the overlap set directly
 
 The official commands remain:
 

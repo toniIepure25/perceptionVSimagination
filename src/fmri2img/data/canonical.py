@@ -295,13 +295,26 @@ class CanonicalDecoderDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
         row = self.df.iloc[idx]
-        fmri = self._load_fmri(row)
         if self.target_store is None:
             raise ValueError("CanonicalDecoderDataset requires a LatentTargetStore.")
         target = self.target_store.get(int(row["nsdId"]))
+        fmri = None
         roi_features = None
-        if self.roi_feature_resolver is not None:
-            roi_features = self.roi_feature_resolver(fmri, row)
+        has_roi_features_json = pd.notna(row.get("roi_features_json"))
+        has_roi_values_json = pd.notna(row.get("roi_values_json"))
+        if self.roi_feature_resolver is not None and has_roi_features_json:
+            roi_features = self.roi_feature_resolver(None, row)
+        elif self.roi_feature_resolver is not None and has_roi_values_json:
+            # Prefer serialized ROI values when present. Retry with a loaded full
+            # vector only if the grouping fallback policy genuinely needs it.
+            try:
+                roi_features = self.roi_feature_resolver(None, row)
+            except ValueError:
+                roi_features = None
+        if roi_features is None:
+            fmri = self._load_fmri(row)
+            if self.roi_feature_resolver is not None:
+                roi_features = self.roi_feature_resolver(fmri, row)
         if roi_features is None:
             raise ValueError(
                 "Canonical decoder sample did not produce ROI features. "
@@ -313,7 +326,7 @@ class CanonicalDecoderDataset(Dataset):
             "nsd_id": int(row["nsdId"]),
             "pair_id": int(row["pair_id"]),
             "split": row["split"],
-            "fmri": fmri.astype(np.float32),
+            "fmri": None if fmri is None else fmri.astype(np.float32),
             "clip_target_768": target.astype(np.float32),
             "roi_features": roi_features,
             "vividness": None if not pd.notna(row.get("vividness")) else float(row.get("vividness")),
@@ -328,7 +341,12 @@ class CanonicalDecoderDataset(Dataset):
 
 
 def decoder_collate_fn(samples: Sequence[dict[str, Any]]) -> DecoderBatch:
-    fmri = torch.from_numpy(np.stack([sample["fmri"] for sample in samples])).float()
+    fmri_arrays = [sample.get("fmri") for sample in samples]
+    fmri = None
+    if all(array is not None for array in fmri_arrays):
+        shapes = {tuple(np.asarray(array).shape) for array in fmri_arrays}
+        if len(shapes) == 1:
+            fmri = torch.from_numpy(np.stack(fmri_arrays)).float()
     roi_features = {
         key: torch.from_numpy(np.stack([sample["roi_features"][key] for sample in samples])).float()
         for key in samples[0]["roi_features"]

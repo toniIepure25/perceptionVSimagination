@@ -87,6 +87,9 @@ The following failure-oriented cases are now covered:
 - canonical imagery-index rebuild from split metadata/beta layout
 - inference-device fallback and checkpoint/device alignment during eval/transfer/analysis
 - truthful `train_history.json` validation cosine logging
+- multi-subject unequal-shape raw-fMRI batching with ROI-materialized samples
+- ROI-first canonical training that does not require loading raw voxel arrays
+  when serialized ROI features are already present
 
 ## Real repo context validation
 
@@ -185,3 +188,14 @@ That comparison is intentionally small and honest:
 The follow-up scaling audit is tracked in:
 
 - `docs/EXPANDED_OVERLAP_COMPARISON.md`
+
+That audit originally surfaced a real multi-subject batching bug: the canonical
+collate path still tried to stack raw full-fMRI vectors across subjects with
+different voxel counts. The canonical contract is now tighter and more
+principled:
+
+- multi-subject canonical training is ROI-first
+- raw `fmri` is optional at batch time
+- serialized ROI features can be consumed without forcing a raw voxel load
+- incompatible raw vectors are dropped from the stacked batch instead of
+  breaking ROI-materialized training

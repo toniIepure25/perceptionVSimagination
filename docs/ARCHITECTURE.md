@@ -32,9 +32,10 @@ Three branch encoders consume ROI-group inputs:
 - `metacognitive`
 
 Each branch uses a shallow regularized PyTorch encoder for low-SNR robustness.
-Today, those branch inputs must come from precomputed ROI features in the dataset
-contract or from an explicit smoke-test fallback. The legacy ROI mask loader is
-not yet wired into the canonical workflow entrypoints.
+For real runs, those branch inputs now come from canonical ROI-materialized
+dataset columns such as `roi_features_json` or `roi_values_json`. The raw full
+fMRI vector is treated as optional auxiliary context, not as the official
+multi-subject model input.
 
 ### 2. Shared-private latent split
 
@@ -71,6 +72,15 @@ Canonical sample fields:
 - optional `vividness`
 - optional `confidence`
 
+In canonical multi-subject training:
+
+- ROI-group branch inputs are the authoritative model input
+- raw `fmri` may be absent at batch time even when referenced in the index
+- if serialized ROI features are already present, the dataset does not force a
+  raw voxel load before training
+- if raw fMRI vectors have unequal subject-specific dimensionality, the batcher
+  preserves ROI features and drops the incompatible stacked raw tensor
+
 ## Validation notes
 
 - Pair-aware batching only activates when the dataset contains real cross-condition
@@ -79,6 +89,8 @@ Canonical sample fields:
   shared/private pairing both depend on them.
 - Checked-in canonical configs use project-root-relative paths and are validated
   before dataset construction.
+- The shared/private decoder and current canonical loss terms operate on
+  ROI-derived branch inputs and do not require a same-shape raw full-fMRI tensor.
 
 ## Legacy note
 
