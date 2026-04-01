@@ -19,6 +19,7 @@ Current answer:
 - the expanded fixed comparison has now been rerun successfully
 - the canonical shared-private model improves modestly on the larger set, but Ridge still dominates by a wide margin
 - a shared-only ablation materially outperforms the full shared-private model on this same dataset
+- a narrow private-capacity sweep improves shared-private somewhat, but shared-only still remains the best canonical neural baseline
 
 ## What Changed
 
@@ -276,6 +277,48 @@ shared-private on the current tiny overlap set. Disabling the domain head alone
 does not recover that gap, so the main drag is not just the domain auxiliary.
 The private/disentanglement structure itself is currently too costly relative to
 the available data.
+
+## Narrow Recovery Sweep
+
+Because further overlap expansion was not possible from the current mounted
+environment, the next disciplined step was a very small shared-private recovery
+suite with the benchmark held fixed.
+
+Variants tested:
+
+- `private_dim=16`
+- `private_dim=8`
+
+Everything else was kept fixed:
+
+- same expanded overlap dataset
+- same `vit_l14_image_768` targets
+- same canonical evaluation path
+
+Results:
+
+- shared-private, `private_dim=16`
+  - test cosine: `0.10784`
+  - test MSE: `0.002323`
+- shared-private, `private_dim=8`
+  - test cosine: `0.09595`
+  - test MSE: `0.002354`
+
+Interpretation:
+
+- smaller private capacity does help shared-private
+- `private_dim=16` is the best recovery variant tried so far
+- neither recovery variant beats shared-only (`0.13596`)
+- Ridge still dominates overwhelmingly
+
+So the current evidence-based ordering is now:
+
+1. Ridge
+2. shared-only
+3. shared-private (`private_dim=16`)
+4. shared-private (`private_dim=8`)
+5. shared-private
+6. shared-private without domain head
 
 ## Recommended Next Step
 

@@ -195,6 +195,27 @@ python -m fmri2img.workflows.train_decoder \
   --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_nodomain\"
 ```
 
+The narrow shared-private recovery sweep used the same fixed dataset with only
+private latent dimensionality changed:
+
+```bash
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/max_available_overlap.yaml \
+  --override training.device=\"cpu\" \
+  --override model.private_dim=16 \
+  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
+  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
+  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_priv16\"
+
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/max_available_overlap.yaml \
+  --override training.device=\"cpu\" \
+  --override model.private_dim=8 \
+  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
+  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
+  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_priv8\"
+```
+
 ## Artifact Contract
 
 The official real bootstrap path now expects or produces:

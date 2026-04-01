@@ -188,6 +188,41 @@ Important fixes:
   - disabling the domain head alone does not help
   - the main small-data drag is not just the domain auxiliary
 
+### E8. Shared-private private-dimension sweep
+
+Dataset held fixed:
+
+- `outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet`
+- `5` shared `nsdId` groups
+- `94` rows
+
+#### E8a. Reduced private capacity, `private_dim=16`
+
+- checkpoint:
+  - `outputs/canonical/train/full_imagery_overlap_priv16/best_decoder.pt`
+- metrics:
+  - val cosine `0.04995`
+  - test cosine `0.10784`
+  - test MSE `0.002323`
+  - domain accuracy `0.26316`
+- interpretation:
+  - materially better than the original shared-private model
+  - still clearly below shared-only
+
+#### E8b. Reduced private capacity, `private_dim=8`
+
+- checkpoint:
+  - `outputs/canonical/train/full_imagery_overlap_priv8/best_decoder.pt`
+- metrics:
+  - val cosine `0.04076`
+  - test cosine `0.09595`
+  - test MSE `0.002354`
+  - domain accuracy `0.89474`
+- interpretation:
+  - better than the original shared-private model
+  - slightly worse than `private_dim=16`
+  - still below shared-only
+
 ## 5. Baseline comparison summary
 
 Current ranking on the expanded `5`-id overlap set:
@@ -198,10 +233,16 @@ Current ranking on the expanded `5`-id overlap set:
 2. Canonical shared-only
    - cosine `0.13596`
    - MSE `0.002250`
-3. Canonical shared-private
+3. Canonical shared-private, `private_dim=16`
+   - cosine `0.10784`
+   - MSE `0.002323`
+4. Canonical shared-private, `private_dim=8`
+   - cosine `0.09595`
+   - MSE `0.002354`
+5. Canonical shared-private
    - cosine `0.06927`
    - MSE `0.002424`
-4. Canonical shared-private no-domain
+6. Canonical shared-private no-domain
    - cosine `0.05907`
    - MSE `0.002450`
 
@@ -210,6 +251,8 @@ What this means:
 - the canonical architecture is operational
 - shared-only is materially better than shared-private in the current tiny-data
   regime
+- reducing private capacity helps shared-private somewhat
+- `private_dim=16` is the best recovery variant tested so far
 - Ridge still dominates so strongly that the paper hypothesis is not yet fairly
   testable on performance
 
@@ -256,7 +299,8 @@ Operational blockers:
 Current belief:
 
 - the main bottleneck is still data scale
-- on the present tiny dataset, shared-only is the most informative canonical ablation
+- on the present tiny dataset, shared-only is still the strongest canonical neural baseline
+- if shared-private is revisited before more data arrives, smaller private capacity is the only justified direction so far
 
 ## 8. Next recommended actions
 
@@ -270,8 +314,8 @@ Immediate next step:
 
 Fallback next step if data cannot move soon:
 
-- run a lighter regularization sweep focused on the private/disentanglement
-  capacity, not on new architecture
+- consider a very small follow-up around `private_dim≈16` or similarly reduced
+  private capacity, not a broad architecture redesign
 
 What should wait:
 
@@ -292,6 +336,7 @@ Engineering:
 
 - should the next modeling pass be smaller private dimensions, weaker
   orthogonality, or fewer active losses?
+- does `private_dim=16` already capture most of the recoverable gain in this regime?
 - should a checked-in ablation config set be added for the shared-only and
   no-domain controls?
 
@@ -315,3 +360,5 @@ Risk:
   `5`-id overlap set
 - 2026-04-02: shared-only and no-domain ablations completed; shared-only became
   the strongest canonical variant on the current dataset
+- 2026-04-02: narrow private-capacity sweep completed; smaller private latents
+  improved shared-private but did not beat shared-only
