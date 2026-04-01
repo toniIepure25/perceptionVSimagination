@@ -218,3 +218,21 @@ def test_materialized_roi_features_do_not_require_raw_fmri_paths(tmp_path):
 
     assert sample["fmri"] is None
     assert set(sample["roi_features"]) == {"early_visual", "ventral_visual", "metacognitive"}
+
+
+def test_shared_only_ablation_disables_domain_head_and_zeros_private_latents(canonical_fixture_dir):
+    config = load_workflow_config(
+        str(canonical_fixture_dir["config_path"]),
+        ["model.disentanglement_mode=\"shared_only\"", "model.use_domain_head=true"],
+    )
+    train_ds, _, _, _, _, _ = build_datasets(config)
+    model = instantiate_model_from_dataset(config, train_ds)
+    samples = [train_ds[0], train_ds[1]]
+    batch = decoder_collate_fn(samples)
+    outputs = model(batch)
+
+    assert model.config.disentanglement_mode == "shared_only"
+    assert model.config.use_domain_head is False
+    assert outputs.domain_logits is None
+    assert torch.count_nonzero(outputs.z_perception_private) == 0
+    assert torch.count_nonzero(outputs.z_imagery_private) == 0

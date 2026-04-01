@@ -26,6 +26,7 @@ class SharedPrivateMultitaskDecoder(BaseDecoderModel):
             visual_input_dim=visual_input_dim,
             shared_dim=self.config.shared_dim,
             private_dim=self.config.private_dim,
+            mode=self.config.disentanglement_mode,
             dropout=self.config.dropout,
         )
         self.heads = MultiTaskHeads(

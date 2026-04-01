@@ -69,6 +69,7 @@ class DecoderConfig:
     shared_dim: int = 128
     private_dim: int = 64
     dropout: float = 0.1
+    disentanglement_mode: str = "shared_private"
     use_domain_head: bool = True
     use_vividness_head: bool = True
     vividness_mode: str = "evidential"

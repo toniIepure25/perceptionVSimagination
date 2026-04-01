@@ -209,6 +209,7 @@ def load_canonical_checkpoint(
             "branch_embedding_dim": getattr(model.config, "branch_embedding_dim", None),
             "shared_dim": getattr(model.config, "shared_dim", None),
             "private_dim": getattr(model.config, "private_dim", None),
+            "disentanglement_mode": getattr(model.config, "disentanglement_mode", None),
             "use_domain_head": getattr(model.config, "use_domain_head", None),
             "use_vividness_head": getattr(model.config, "use_vividness_head", None),
         }

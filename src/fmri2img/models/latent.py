@@ -14,9 +14,12 @@ class SharedPrivateDisentanglementLayer(nn.Module):
         visual_input_dim: int,
         shared_dim: int = 128,
         private_dim: int = 64,
+        mode: str = "shared_private",
         dropout: float = 0.1,
     ):
         super().__init__()
+        self.private_dim = private_dim
+        self.mode = mode
         self.shared_proj = nn.Sequential(
             nn.LayerNorm(visual_input_dim),
             nn.Linear(visual_input_dim, shared_dim),
@@ -46,8 +49,17 @@ class SharedPrivateDisentanglementLayer(nn.Module):
 
     def forward(self, visual_features: torch.Tensor) -> Mapping[str, torch.Tensor]:
         z_shared = self.shared_proj(visual_features)
-        z_perc = self.perception_private_proj(visual_features)
-        z_imag = self.imagery_private_proj(visual_features)
+        if self.mode == "shared_only":
+            z_perc = torch.zeros(
+                visual_features.size(0),
+                self.private_dim,
+                device=visual_features.device,
+                dtype=visual_features.dtype,
+            )
+            z_imag = torch.zeros_like(z_perc)
+        else:
+            z_perc = self.perception_private_proj(visual_features)
+            z_imag = self.imagery_private_proj(visual_features)
         reconstructed = self.visual_reconstruction(torch.cat([z_shared, z_perc, z_imag], dim=-1))
         return {
             "z_shared": z_shared,

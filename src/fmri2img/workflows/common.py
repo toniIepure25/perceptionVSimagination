@@ -240,6 +240,7 @@ def instantiate_model_from_dataset(config: ConfigDict, dataset: CanonicalDecoder
     )
     roi_input_dims = _infer_roi_input_dims(dataset, config, roi_group_spec)
     model_cfg = config["model"]
+    disentanglement_mode = model_cfg.get("disentanglement_mode", "shared_private")
     use_vividness_head = bool(model_cfg.get("use_vividness_head", True))
     if use_vividness_head and not (dataset.capabilities.has_vividness or dataset.capabilities.has_confidence):
         logger.warning(
@@ -247,13 +248,20 @@ def instantiate_model_from_dataset(config: ConfigDict, dataset: CanonicalDecoder
             "Disabling the head for this run."
         )
         use_vividness_head = False
+    use_domain_head = bool(model_cfg.get("use_domain_head", True))
+    if disentanglement_mode == "shared_only" and use_domain_head:
+        logger.warning(
+            "Canonical shared-only ablation requested. Disabling the domain head because private latents are inactive."
+        )
+        use_domain_head = False
     decoder_config = DecoderConfig(
         target_dim=int(config["targets"].get("dimension", 768)),
         branch_embedding_dim=int(model_cfg.get("branch_embedding_dim", 128)),
         shared_dim=int(model_cfg.get("shared_dim", 128)),
         private_dim=int(model_cfg.get("private_dim", 64)),
         dropout=float(model_cfg.get("dropout", 0.1)),
-        use_domain_head=bool(model_cfg.get("use_domain_head", True)),
+        disentanglement_mode=disentanglement_mode,
+        use_domain_head=use_domain_head,
         use_vividness_head=use_vividness_head,
         vividness_mode=model_cfg.get("vividness_mode", "evidential"),
     )
@@ -286,6 +294,7 @@ def checkpoint_artifact_spec(
             "dataset_capabilities": effective_config.get("dataset_capabilities", {}),
             "heads": {
                 "content": {"target_dim": int(config["targets"].get("dimension", 768))},
+                "disentanglement": {"mode": effective_model_cfg.get("disentanglement_mode", "shared_private")},
                 "domain": {"enabled": bool(effective_model_cfg.get("use_domain_head", True))},
                 "vividness": {"enabled": bool(effective_model_cfg.get("use_vividness_head", True))},
             },
