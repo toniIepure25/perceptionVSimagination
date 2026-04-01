@@ -16,7 +16,8 @@ Current answer:
 
 - the overlap dataset did grow beyond the old 4-pair ceiling
 - the canonical multi-subject batching bug has now been fixed in the ROI-first path
-- the expanded fixed comparison can now be rerun without redesigning the model or benchmark
+- the expanded fixed comparison has now been rerun successfully
+- the canonical shared-private model improves modestly on the larger set, but Ridge still dominates by a wide margin
 
 ## What Changed
 
@@ -126,7 +127,8 @@ So the simple baseline benefited materially from the small increase in overlap s
 ## Canonical Shared-Private Run Status
 
 The earlier expanded run was blocked by a multi-subject raw-fMRI batching
-assumption. That infrastructure issue is now fixed in the canonical codebase.
+assumption. That infrastructure issue is now fixed in the canonical codebase,
+and the expanded canonical rerun completed successfully.
 
 The fix is intentionally minimal:
 
@@ -141,25 +143,83 @@ The fix is intentionally minimal:
 This preserves single-subject compatibility while making the official
 multi-subject overlap path scientifically cleaner and operationally valid.
 
+Fresh canonical artifacts:
+
+- `outputs/canonical/train/full_imagery_overlap/best_decoder.pt`
+- `outputs/canonical/train/full_imagery_overlap/train_history.json`
+- `outputs/canonical/eval/full_imagery_overlap/metrics.json`
+- `outputs/canonical/transfer/full_imagery_overlap/transfer_metrics.json`
+- `outputs/canonical/analysis/full_imagery_overlap/roi_resolved_summary.json`
+- `outputs/canonical/export/full_imagery_overlap/manifest.json`
+
+Fresh canonical results:
+
+- validation cosine at best epoch: `0.06319`
+- test cosine: `0.06927`
+- test MSE: `0.002424`
+- imagery cosine mean: `0.07151`
+- perception cosine mean: `0.05735`
+- paired eval groups: `1`
+- imagery-minus-perception gap: `0.01415`
+- domain accuracy: `0.89474`
+
+Training history summary:
+
+- epoch 1: train loss `31.58`, val cosine `0.02842`
+- epoch 5: train loss `26.29`, val cosine `0.06319`
+
+Transfer metrics matched the eval metrics exactly in this run because the held-out
+paired evaluation set still contains only `1` usable pair group.
+
 ## Interpretation
 
 The important scientific and engineering conclusions are:
 
 1. The overlap ceiling is no longer `4`; it is now `5`.
 2. The imagery acquisition path is real and reproducible.
-3. The simple Ridge baseline improves on the larger set.
-4. The earlier canonical failure was an infrastructure issue, not evidence
+3. The earlier canonical failure was an infrastructure issue, not evidence
    against the model concept.
-5. The expanded canonical comparison should now be interpreted from the fresh
-   rerun metrics, not from the pre-fix batching failure.
+4. The canonical model now trains and evaluates correctly on the expanded
+   multi-subject set without relying on equal raw voxel dimensionality.
+5. The canonical model shows a weak positive content signal on the larger set,
+   but Ridge remains dramatically stronger.
+6. This run is still too small to validate the paper hypothesis on performance.
 
 This means the project has crossed an important threshold:
 
 - the main limiting factor is no longer “can we get more imagery overlap at all?”
-- the new limiting factor is “can the canonical trainer handle cross-subject raw-fMRI heterogeneity without changing the benchmark?”
+- the new limiting factor is dataset scale, not the basic viability of the
+  canonical multi-subject training path
+
+## Comparison Snapshot
+
+Canonical shared-private vs refreshed Ridge on the same `5`-id expanded overlap set:
+
+- canonical cosine: `0.06927`
+- Ridge cosine: `0.55199`
+- canonical MSE: `0.002424`
+- Ridge MSE: `0.001167`
+- canonical imagery mean: `0.07151`
+- Ridge imagery mean: `0.55152`
+- canonical perception mean: `0.05735`
+- Ridge perception mean: `0.55446`
+
+The gap remains very large. The canonical model is now operationally valid on
+the expanded dataset, but there is no performance evidence yet that it is
+catching up to a simple linear decoder at this scale.
+
+The high canonical domain accuracy should not be overinterpreted. The held-out
+test split is tiny and imbalanced (`16` imagery samples vs `3` perception
+samples), so this metric is mainly a sanity check that the private-latent/domain
+path is numerically active.
 
 ## Recommended Next Step
 
-The next justified move remains a fixed-comparison rerun on the expanded overlap
-set, followed by a direct comparison against the already fresh Ridge baseline.
-Beyond that immediate rerun, the larger strategic need is still further data expansion so the benchmark can move beyond this tiny overlap regime.
+The next justified move is further data expansion with the comparison held
+fixed.
+
+Only after a materially larger overlap set exists should the project consider:
+
+- targeted regularization or loss tuning
+- model simplification
+- improved ROI decomposition

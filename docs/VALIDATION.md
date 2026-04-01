@@ -199,3 +199,9 @@ principled:
 - serialized ROI features can be consumed without forcing a raw voxel load
 - incompatible raw vectors are dropped from the stacked batch instead of
   breaking ROI-materialized training
+
+That fix has now been exercised on the live expanded-overlap rerun as well:
+
+- expanded overlap dataset: `94` rows, `5` shared `nsdId` groups
+- fresh canonical shared/private run completed end to end
+- refreshed Ridge comparison on the same artifacts still wins by a large margin
