@@ -18,6 +18,7 @@ Current answer:
 - the canonical multi-subject batching bug has now been fixed in the ROI-first path
 - the expanded fixed comparison has now been rerun successfully
 - the canonical shared-private model improves modestly on the larger set, but Ridge still dominates by a wide margin
+- a shared-only ablation materially outperforms the full shared-private model on this same dataset
 
 ## What Changed
 
@@ -213,6 +214,69 @@ test split is tiny and imbalanced (`16` imagery samples vs `3` perception
 samples), so this metric is mainly a sanity check that the private-latent/domain
 path is numerically active.
 
+## Minimal Ablation Follow-Up
+
+To avoid changing too many variables at once, the next pass kept the same:
+
+- dataset
+- target space
+- split logic
+- evaluation surface
+
+and added only disciplined model ablations.
+
+### Shared-only ablation
+
+Overrides:
+
+- `model.disentanglement_mode="shared_only"`
+- `model.use_domain_head=false`
+
+Artifacts:
+
+- `outputs/canonical/train/full_imagery_overlap_shared_only/best_decoder.pt`
+- `outputs/canonical/eval/full_imagery_overlap_shared_only/metrics.json`
+
+Results:
+
+- val cosine: `0.07430`
+- test cosine: `0.13596`
+- test MSE: `0.002250`
+- imagery mean: `0.13422`
+- perception mean: `0.14527`
+
+### Shared-private with domain head disabled
+
+Overrides:
+
+- `model.use_domain_head=false`
+
+Artifacts:
+
+- `outputs/canonical/train/full_imagery_overlap_nodomain/best_decoder.pt`
+- `outputs/canonical/eval/full_imagery_overlap_nodomain/metrics.json`
+
+Results:
+
+- val cosine: `0.04813`
+- test cosine: `0.05907`
+- test MSE: `0.002450`
+
+### Ablation interpretation
+
+Ordering on the same `5`-id dataset:
+
+- Ridge: `0.55199`
+- shared-only: `0.13596`
+- shared-private: `0.06927`
+- shared-private no-domain: `0.05907`
+
+The most important conclusion is that shared-only is clearly stronger than full
+shared-private on the current tiny overlap set. Disabling the domain head alone
+does not recover that gap, so the main drag is not just the domain auxiliary.
+The private/disentanglement structure itself is currently too costly relative to
+the available data.
+
 ## Recommended Next Step
 
 The next justified move is further data expansion with the comparison held
@@ -221,5 +285,5 @@ fixed.
 Only after a materially larger overlap set exists should the project consider:
 
 - targeted regularization or loss tuning
-- model simplification
+- private-latent capacity reduction informed by the shared-only result
 - improved ROI decomposition

@@ -57,6 +57,14 @@ The content path uses `z_shared` only.
 The canonical workflow now disables the vividness/confidence head when the dataset
 lacks vividness and confidence supervision.
 
+For controlled canonical ablations, the decoder also supports:
+
+- `disentanglement_mode=shared_private`
+- `disentanglement_mode=shared_only`
+
+In `shared_only`, private latents are held inactive and the domain head is
+disabled automatically so the comparison stays conceptually clean.
+
 ## Data contract
 
 Canonical sample fields:

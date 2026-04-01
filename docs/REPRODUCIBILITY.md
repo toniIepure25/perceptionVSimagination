@@ -174,6 +174,27 @@ python -m fmri2img.workflows.run_legacy_ridge_baseline \
   --config configs/canonical/max_available_overlap.yaml
 ```
 
+The current minimal ablation controls on that same expanded dataset are:
+
+```bash
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/max_available_overlap.yaml \
+  --override training.device=\"cpu\" \
+  --override model.disentanglement_mode=\"shared_only\" \
+  --override model.use_domain_head=false \
+  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
+  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
+  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_shared_only\"
+
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/max_available_overlap.yaml \
+  --override training.device=\"cpu\" \
+  --override model.use_domain_head=false \
+  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
+  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
+  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_nodomain\"
+```
+
 ## Artifact Contract
 
 The official real bootstrap path now expects or produces:
