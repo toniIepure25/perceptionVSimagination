@@ -176,6 +176,8 @@ def test_animus_core_wrapper_injects_default_config_when_omitted():
 def test_docs_reference_canonical_workflows():
     readme = open("README.md").read()
     start_here = open("START_HERE.md").read()
+    assert "START_HERE.md" in readme
+    assert "docs/REPRODUCIBILITY.md" in readme
     for command in (
         "fmri2img.workflows.acquire_public_nsd_imagery",
         "fmri2img.workflows.preflight_animus_core_decoder",
@@ -194,7 +196,6 @@ def test_docs_reference_canonical_workflows():
         "fmri2img.workflows.run_analysis",
         "fmri2img.workflows.export_for_animus",
     ):
-        assert command in readme
         assert command in start_here
 
 

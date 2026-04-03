@@ -462,3 +462,9 @@ Risk:
   page aligned to the evidence freeze, clarifying the practical Animus lane,
   the threshold-testing research lane, the current benchmark ordering, and the
   repository's implementation and documentation map for new researchers
+- 2026-04-04: README reframed for public academic presentation under the
+  project identity `perceptionVSimagination`; Animus-facing language was
+  removed from the front page, the overview was tightened for a cognitive
+  science audience, and the docs test was updated so `START_HERE.md` remains
+  the exhaustive command surface while `README.md` stays professional and
+  publication-facing
