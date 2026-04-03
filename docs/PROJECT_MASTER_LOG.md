@@ -468,3 +468,8 @@ Risk:
   science audience, and the docs test was updated so `START_HERE.md` remains
   the exhaustive command surface while `README.md` stays professional and
   publication-facing
+- 2026-04-04: README refined again for stronger professional presentation,
+  readability, and interdisciplinary framing; section hierarchy, research
+  significance, paper trajectories, and evidence-disciplined project summary
+  were improved to make the repository more legible to an academic admissions
+  audience without changing the frozen scientific claims
