@@ -473,3 +473,8 @@ Risk:
   significance, paper trajectories, and evidence-disciplined project summary
   were improved to make the repository more legible to an academic admissions
   audience without changing the frozen scientific claims
+- 2026-04-04: Codex workflow setup was tightened for the current repository:
+  `AGENTS.md` was made repo-specific, `PLANS.md` and `Documentation.md` were
+  defined as the planning and working-log surfaces, and the repo-local skill
+  docs were normalized around explicit inputs, outputs, and handoffs without
+  changing the scientific evidence boundary
