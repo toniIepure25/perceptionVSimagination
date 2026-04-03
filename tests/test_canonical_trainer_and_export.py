@@ -13,6 +13,7 @@ from fmri2img.training import CanonicalLossWeights, SharedPrivateTrainer, load_c
 from fmri2img.workflows.common import (
     build_datasets,
     build_loaders,
+    checkpoint_artifact_spec,
     instantiate_model_from_dataset,
     load_workflow_config,
     resolve_runtime_device,
@@ -134,6 +135,43 @@ def test_export_manifest_requires_canonical_keys(canonical_fixture_dir, tmp_path
             checkpoint_path=checkpoint,
             artifact_spec={"artifact_version": "1.0"},
         )
+
+
+def test_checkpoint_artifact_spec_carries_animus_core_metadata(canonical_fixture_dir):
+    config = load_workflow_config(str(canonical_fixture_dir["config_path"]))
+    config["experiment"] = {
+        "name": "animus_core_decoder",
+        "description": "Shared-only practical decoder.",
+        "benchmark_role": "canonical_neural_baseline",
+        "evidence_tier": "validated",
+    }
+    config["animus"] = {
+        "subproject": "animus_core_decoder",
+        "decoder_role": "practical_content_decoder",
+        "stability_tier": "current_default",
+        "intended_use": "content decoding",
+        "source_interface_status": "scaffolded",
+        "confidence_interface_status": "scaffolded",
+    }
+    config["model"]["disentanglement_mode"] = "shared_only"
+    config["model"]["use_domain_head"] = False
+    config["model"]["use_vividness_head"] = False
+    _, _, _, _, roi_summary, target_summary = build_datasets(config)
+    artifact = checkpoint_artifact_spec(
+        config,
+        checkpoint_path="outputs/example/best_decoder.pt",
+        target_spec=target_summary,
+        roi_summary=roi_summary,
+        effective_config=config.to_dict(),
+    )
+    assert artifact["metadata"]["experiment"]["name"] == "animus_core_decoder"
+    assert artifact["metadata"]["animus"]["subproject"] == "animus_core_decoder"
+    assert artifact["metadata"]["animus"]["decoder_role"] == "practical_content_decoder"
+    assert artifact["metadata"]["animus"]["interfaces"]["content"]["status"] == "active"
+    assert artifact["metadata"]["animus"]["interfaces"]["source"]["enabled"] is False
+    assert artifact["metadata"]["animus"]["interfaces"]["source"]["status"] == "scaffolded"
+    assert artifact["metadata"]["animus"]["interfaces"]["confidence"]["status"] == "scaffolded"
+    assert artifact["metadata"]["heads"]["disentanglement"]["mode"] == "shared_only"
 
 
 def test_resolve_runtime_device_falls_back_to_cpu_when_cuda_unavailable(monkeypatch):

@@ -103,9 +103,20 @@ ckpt = torch.load('experimental_results/N1v27a_bigg_tokens/subj01/checkpoint_bes
 
 ### NSD-Imagery Data
 
-**Status**: NOT YET DOWNLOADED.
+**Status**: Public NSD-Imagery has been downloaded and canonicalized in the live
+benchmark workflow.
 
-Must be acquired from OpenNeuro ds004937 or the NSD S3 bucket. See `docs/technical/NSD_IMAGERY_DATASET_GUIDE.md`.
+Important nuance:
+
+- the public source is operational and already integrated
+- it only expands the current paired benchmark to `5` shared ids
+- the next decisive gain now depends on a larger paired source than the current
+  public release
+
+See:
+
+- `docs/DATA_ACQUISITION_PROGRAM.md`
+- `docs/EXTERNAL_DATA_INTEGRATION_PLAN.md`
 
 ## Storage Strategy
 

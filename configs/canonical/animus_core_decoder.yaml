@@ -1,0 +1,107 @@
+experiment:
+  name: animus_core_decoder
+  description: >
+    Practical shared-only content decoder for Animus-facing export and stable
+    reuse on the current max-available overlap benchmark.
+  benchmark_role: canonical_neural_baseline
+  evidence_tier: validated
+
+animus:
+  subproject: animus_core_decoder
+  decoder_role: practical_content_decoder
+  stability_tier: current_default
+  intended_use: >
+    Stable content decoding/export path for Animus while shared-private remains
+    a threshold-testing research track.
+  source_interface_status: scaffolded
+  confidence_interface_status: scaffolded
+
+dataset:
+  subject: subj02
+  mixed_index: outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet
+  perception_conditions: ["perception"]
+  imagery_conditions: ["imagery"]
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["lh.prf-visualrois", "rh.prf-visualrois"]
+    ventral_visual: ["lh.floc-faces", "rh.floc-faces", "lh.floc-places", "rh.floc-places"]
+    metacognitive: ["lh.Kastner2015", "rh.Kastner2015", "lh.HCP_MMP1", "rh.HCP_MMP1", "lh.streams", "rh.streams"]
+  missing_policy: error
+  fallback_policy: error
+  min_voxels: 1
+  mask_root: ${NSD_ROI_MASK_ROOT}
+  layout_config: configs/data.yaml
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 128
+  shared_dim: 128
+  private_dim: 64
+  dropout: 0.1
+  disentanglement_mode: shared_only
+  use_domain_head: false
+  use_vividness_head: false
+  vividness_mode: evidential
+
+training:
+  batch_size: 8
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.0
+  vividness_weight: 0.0
+  confidence_weight: 0.0
+  reconstruction_weight: 0.1
+  device: cuda
+  output_dir: outputs/animus/core_decoder/train/full_imagery_overlap_shared_only
+  seed: 0
+
+evaluation:
+  batch_size: 16
+  output_dir: outputs/animus/core_decoder/eval/full_imagery_overlap_shared_only
+  transfer_output_dir: outputs/animus/core_decoder/transfer/full_imagery_overlap_shared_only
+
+analysis:
+  output_dir: outputs/animus/core_decoder/analysis/full_imagery_overlap_shared_only
+
+export:
+  output_dir: outputs/animus/core_decoder/export/full_imagery_overlap_shared_only
+
+preparation:
+  imagery:
+    data_root: ${NSD_IMAGERY_ROOT}
+    metadata_root: ${NSD_IMAGERY_METADATA_ROOT}
+    beta_root: ${NSD_IMAGERY_BETA_ROOT}
+    beta_path_template: ${NSD_IMAGERY_BETA_ROOT}/{subject}/betas_nsdimagery.nii.gz
+    cache_root: cache
+    conditions: ["imagery"]
+    stimulus_sets: ["B"]
+    require_nsd_id: true
+    source_report_template: outputs/canonical/prepared/imagery_full_all/{subject}.source_report.json
+    report_template: outputs/canonical/prepared/imagery_full_all/{subject}.report.json
+  overlap:
+    subjects: ["subj01", "subj02", "subj03", "subj04", "subj05", "subj06", "subj07", "subj08"]
+    output_root: outputs/canonical/prepared/full_imagery_overlap
+    report_path: outputs/canonical/prepared/full_imagery_overlap/report.json
+    overlap_ids_path: outputs/canonical/prepared/full_imagery_overlap/overlap_nsd_ids.json
+    perception_index_template: data/indices/nsd_index/subject={subject}/index.parquet
+    imagery_index_template: cache/indices/imagery_full_all/{subject}.parquet
+    mask_root_template: ${NSD_ROI_MASK_ROOT}/{subject}
+    materialize_roi: true
+    cache_root: cache
+  targets:
+    model_id: openai/clip-vit-large-patch14
+    batch_size: 128
+    inference_batch_size: 32
+  preflight:
+    paper_pair_threshold: 32
+

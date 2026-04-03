@@ -89,10 +89,99 @@ def test_canonical_workflows_smoke(canonical_fixture_dir):
     assert export.returncode == 0, export.stderr
 
 
+def test_animus_core_workflow_wrappers_smoke(canonical_fixture_dir, tmp_path):
+    env = _workflow_env()
+    config_path = str(canonical_fixture_dir["config_path"])
+    preflight_output = tmp_path / "preflight.json"
+    preflight = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.preflight_animus_core_decoder",
+            "--config",
+            config_path,
+            "--output",
+            str(preflight_output),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert preflight.returncode == 0, preflight.stderr
+    assert preflight_output.exists()
+
+    train = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.train_animus_core_decoder",
+            "--config",
+            config_path,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert train.returncode == 0, train.stderr
+
+    checkpoint = canonical_fixture_dir["root"] / "train_outputs" / "best_decoder.pt"
+    assert checkpoint.exists()
+
+    eval_run = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.eval_animus_core_decoder",
+            "--config",
+            config_path,
+            "--checkpoint",
+            str(checkpoint),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert eval_run.returncode == 0, eval_run.stderr
+
+    export = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "fmri2img.workflows.export_animus_core_decoder",
+            "--config",
+            config_path,
+            "--checkpoint",
+            str(checkpoint),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert export.returncode == 0, export.stderr
+
+
+def test_animus_core_wrapper_injects_default_config_when_omitted():
+    env = _workflow_env()
+    result = subprocess.run(
+        [sys.executable, "-m", "fmri2img.workflows.train_animus_core_decoder"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode != 0
+    assert "Canonical workflow prerequisites are missing" in result.stderr
+    assert "required: --config" not in result.stderr
+
+
 def test_docs_reference_canonical_workflows():
     readme = open("README.md").read()
     start_here = open("START_HERE.md").read()
     for command in (
+        "fmri2img.workflows.acquire_public_nsd_imagery",
+        "fmri2img.workflows.preflight_animus_core_decoder",
+        "fmri2img.workflows.train_animus_core_decoder",
+        "fmri2img.workflows.eval_animus_core_decoder",
+        "fmri2img.workflows.export_animus_core_decoder",
         "fmri2img.workflows.prepare_perception_index",
         "fmri2img.workflows.prepare_imagery_index",
         "fmri2img.workflows.prepare_targets",
@@ -122,15 +211,50 @@ def test_bootstrap_docs_reference_ridge_comparison_workflow():
 def test_expanded_overlap_docs_reference_max_available_config():
     reproducibility = open("docs/REPRODUCIBILITY.md").read()
     expanded = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
+    ladder = open("docs/BENCHMARK_LADDER.md").read()
     config_name = "configs/canonical/max_available_overlap.yaml"
     assert config_name in reproducibility
     assert config_name in expanded
+    assert "configs/canonical/animus_core_decoder.yaml" in ladder
+    assert "configs/canonical/threshold_shared_private_p16.yaml" in ladder
+
+
+def test_external_data_docs_exist_and_reference_canonical_acquisition_plan():
+    acquisition = open("docs/DATA_ACQUISITION_PROGRAM.md").read()
+    integration = open("docs/EXTERNAL_DATA_INTEGRATION_PLAN.md").read()
+    assert "fmri2img.workflows.acquire_public_nsd_imagery" in acquisition
+    assert "openneuro.org/datasets/ds004937" in acquisition
+    assert "natural-scenes-dataset" in acquisition
+    assert "train_animus_core_decoder" in integration
+    assert "threshold_shared_private_p16.yaml" in integration
+
+
+def test_acquire_public_nsd_imagery_wrapper_invokes_official_script(monkeypatch):
+    import fmri2img.workflows.acquire_public_nsd_imagery as workflow
+
+    seen = {}
+
+    class Result:
+        returncode = 0
+
+    def fake_run(cmd, check=False):
+        seen["cmd"] = cmd
+        seen["check"] = check
+        return Result()
+
+    monkeypatch.setattr(workflow.subprocess, "run", fake_run)
+    rc = workflow.main(["--subjects", "subj01", "--dry-run"])
+    assert rc == 0
+    assert seen["cmd"][0] == sys.executable
+    assert seen["cmd"][1].endswith("scripts/download_nsd_imagery.py")
+    assert seen["cmd"][2:] == ["--subjects", "subj01", "--dry-run"]
+    assert seen["check"] is False
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
-    assert "4 shared `nsdId` pairs" in scaling
-    assert "further data expansion" in scaling
+    assert "shared overlap ids: `5`" in scaling
+    assert "shared-only" in scaling
 
 
 def test_checked_in_smoke_config_runs(tmp_path):

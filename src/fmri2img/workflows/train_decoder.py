@@ -30,11 +30,11 @@ def _json_safe(value):
     return value
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Train the canonical shared/private decoder.")
     parser.add_argument("--config", required=True, help="Path to canonical workflow config.")
     parser.add_argument("--override", action="append", default=[], help="Config override KEY=VALUE")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     config = load_workflow_config(args.config, args.override)
     runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))

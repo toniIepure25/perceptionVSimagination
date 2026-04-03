@@ -278,6 +278,18 @@ def checkpoint_artifact_spec(
 ) -> dict[str, Any]:
     effective_config = effective_config or {}
     effective_model_cfg = effective_config.get("model", config["model"])
+    experiment_cfg = config.get("experiment", {})
+    animus_cfg = config.get("animus", {})
+    domain_enabled = bool(effective_model_cfg.get("use_domain_head", True))
+    vividness_enabled = bool(effective_model_cfg.get("use_vividness_head", True))
+    source_interface_status = animus_cfg.get(
+        "source_interface_status",
+        "active" if domain_enabled else "scaffolded",
+    )
+    confidence_interface_status = animus_cfg.get(
+        "confidence_interface_status",
+        "active" if vividness_enabled else "scaffolded",
+    )
     return {
         "artifact_version": "1.0",
         "target_spec": target_spec,
@@ -291,12 +303,29 @@ def checkpoint_artifact_spec(
             "project": "fmri2img",
             "workflow": "shared_private_decoder",
             "compatibility_version": "animus-decoder-v1",
+            "experiment": {
+                "name": experiment_cfg.get("name"),
+                "description": experiment_cfg.get("description"),
+                "benchmark_role": experiment_cfg.get("benchmark_role"),
+                "evidence_tier": experiment_cfg.get("evidence_tier"),
+            },
+            "animus": {
+                "subproject": animus_cfg.get("subproject"),
+                "decoder_role": animus_cfg.get("decoder_role"),
+                "stability_tier": animus_cfg.get("stability_tier"),
+                "intended_use": animus_cfg.get("intended_use"),
+                "interfaces": {
+                    "content": {"enabled": True, "status": "active"},
+                    "source": {"enabled": domain_enabled, "status": source_interface_status},
+                    "confidence": {"enabled": vividness_enabled, "status": confidence_interface_status},
+                },
+            },
             "dataset_capabilities": effective_config.get("dataset_capabilities", {}),
             "heads": {
                 "content": {"target_dim": int(config["targets"].get("dimension", 768))},
                 "disentanglement": {"mode": effective_model_cfg.get("disentanglement_mode", "shared_private")},
-                "domain": {"enabled": bool(effective_model_cfg.get("use_domain_head", True))},
-                "vividness": {"enabled": bool(effective_model_cfg.get("use_vividness_head", True))},
+                "domain": {"enabled": domain_enabled},
+                "vividness": {"enabled": vividness_enabled},
             },
         },
     }

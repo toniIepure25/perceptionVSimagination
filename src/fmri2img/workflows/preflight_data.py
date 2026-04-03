@@ -180,13 +180,13 @@ def _readiness_status(
     return "bootstrap_ready"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Preflight the canonical data path before real decoder training.")
     parser.add_argument("--config", required=True)
     parser.add_argument("--override", action="append", default=[])
     parser.add_argument("--output", default=None, help="Optional JSON report path.")
     parser.add_argument("--fail-on-blocked", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     config = load_workflow_config(args.config, args.override)
     subject = config_subject(config)

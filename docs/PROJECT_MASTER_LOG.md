@@ -64,6 +64,8 @@ Key completed milestones:
 - multi-subject ROI-first batching fix for unequal raw voxel dimensionality
 - canonical Ridge comparison workflow
 - canonical shared-only ablation mode
+- dedicated Animus Core Decoder workflow surface
+- professional README/onboarding surface aligned to the evidence freeze
 
 Important fixes:
 
@@ -256,11 +258,31 @@ What this means:
 - Ridge still dominates so strongly that the paper hypothesis is not yet fairly
   testable on performance
 
+Evidence freeze roles:
+
+- Ridge is the external low-data reference baseline.
+- Shared-only is the best current canonical neural baseline.
+- Shared-private is the main hypothesis family, not the current performance
+  leader.
+- Shared-private with `private_dim=16` is the best current exploratory
+  disentanglement variant.
+- Shared-only should now be treated as the practical Animus Core Decoder path.
+
 What cannot yet be concluded:
 
 - whether disentanglement helps once overlap scale is materially larger
 - whether the shared-private model is fundamentally worse, or just too data-hungry
 - whether better ROI decomposition would change the ordering
+
+Current paper-grade hypotheses:
+
+- low-overlap regimes favor Ridge and shared-only over explicit disentanglement
+- shared-private may only become beneficial after a threshold of paired overlap
+- ROI-first canonicalization is necessary for valid multi-subject
+  perception/imagery decoding
+- private-capacity scaling likely governs whether disentanglement helps or hurts
+- the project's central novelty is now a threshold hypothesis, not an assumed
+  disentanglement win
 
 ## 6. Current blockers
 
@@ -269,6 +291,7 @@ Data blockers:
 - only `5` overlapable canonical imagery ids are currently available from the
   full public imagery source
 - held-out paired evaluation remains only `1` usable pair group
+- no richer paired source is currently accessible from the mounted environment
 
 Environment blockers:
 
@@ -284,6 +307,8 @@ Modeling blockers:
 Operational blockers:
 
 - no larger overlap-capable dataset is currently mounted or recoverable locally
+- the next decisive progress now depends on external paired-data acquisition or
+  mount integration
 
 ## 7. Decisions made
 
@@ -301,6 +326,15 @@ Current belief:
 - the main bottleneck is still data scale
 - on the present tiny dataset, shared-only is still the strongest canonical neural baseline
 - if shared-private is revisited before more data arrives, smaller private capacity is the only justified direction so far
+- the repo should now communicate three evidence levels explicitly:
+  - external reference baseline
+  - best current neural baseline
+  - exploratory hypothesis family
+- the practical Animus path should now run through shared-only
+- the research path should now be framed as threshold testing:
+  when does shared-private overtake shared-only, if ever?
+- the repo now has a dedicated shared-only workflow surface for subsystem users,
+  separate from the generic threshold-testing workflows
 
 ## 8. Next recommended actions
 
@@ -310,7 +344,16 @@ Immediate next step:
   while keeping the same fixed comparison:
   - Ridge
   - canonical shared-only
-  - canonical shared-private
+  - canonical shared-private, `private_dim=16`
+- execute the concrete program in:
+  - `docs/DATA_ACQUISITION_PROGRAM.md`
+  - `docs/EXTERNAL_DATA_INTEGRATION_PLAN.md`
+
+Ranked data options:
+
+1. richer NSD-style paired imagery/perception data beyond the current public release
+2. a secondary public paired imagery/perception dataset
+3. large perception-only datasets for the practical Animus lane
 
 Fallback next step if data cannot move soon:
 
@@ -323,6 +366,21 @@ What should wait:
 - stimulus-vs-percept work
 - SDXL/reconstruction expansion
 - large ROI redesign
+- stronger threshold-paper claims without larger paired data
+
+Project-elevation step:
+
+- keep the benchmark ladder and evidence freeze explicit in every future report
+- frame the paper program around threshold-style evidence rather than assumed
+  disentanglement superiority
+- use `animus_core_decoder.yaml` as the practical subsystem config and
+  `threshold_shared_private_p16.yaml` as the primary hypothesis config
+- keep Paper 1 framed as an honest benchmark/evidence paper until materially
+  larger paired data changes the evidence boundary
+- treat the current draft as a serious benchmark manuscript rather than a
+  placeholder summary
+- prepare Paper 1 for `Imaging Neuroscience` as the primary venue while keeping
+  a benchmark-oriented fallback path for `NeurIPS Datasets and Benchmarks`
 
 ## 9. Open questions
 
@@ -339,11 +397,17 @@ Engineering:
 - does `private_dim=16` already capture most of the recoverable gain in this regime?
 - should a checked-in ablation config set be added for the shared-only and
   no-domain controls?
+- how should the evidence freeze evolve once materially larger overlap data is
+  available?
 
 Risk:
 
 - without more overlap data, it is easy to overfit engineering effort to a
   scientifically underpowered regime
+- it is also easy to over-write the current paper as a positive disentanglement
+  paper instead of the benchmark/evidence paper the data currently supports
+- it is easy to underinvest in writing rigor once the codebase is strong; the
+  manuscript needs the same evidence discipline as the benchmark
 
 ## 10. Change log / session log
 
@@ -362,3 +426,39 @@ Risk:
   the strongest canonical variant on the current dataset
 - 2026-04-02: narrow private-capacity sweep completed; smaller private latents
   improved shared-private but did not beat shared-only
+- 2026-04-02: evidence freeze, benchmark ladder, paper positioning, and
+  top-level research dossier added to formalize the project as a paper program
+- 2026-04-02: shared-only promoted into the Animus Core Decoder lane; threshold
+  hypothesis formalized as the main research program framing
+- 2026-04-02: dedicated Animus Core Decoder wrapper commands added and the
+  fixed benchmark ladder docs aligned to the practical-vs-exploratory split
+- 2026-04-02: external-data acquisition program formalized; public NSD-Imagery
+  acquisition promoted into the canonical workflow namespace and the next
+  decisive step narrowed to larger paired-data integration
+- 2026-04-02: Paper 1 drafting scaffold added, including the outline, claims
+  map, and figures/tables plan for the current realistic benchmark/evidence
+  paper path
+- 2026-04-02: first serious Paper 1 draft package written under `docs/paper1/`,
+  including section drafts and a manuscript-style full draft constrained by the
+  current evidence freeze
+- 2026-04-02: first real Paper 1 figure/table package generated under
+  `docs/paper1/figures/` and `docs/paper1/tables/`, including the benchmark
+  ladder, overlap-scarcity, shared-only-vs-shared-private, and threshold
+  schematic figures plus the main results / evidence-boundary / reproducibility
+  tables
+- 2026-04-02: Paper 1 claims-tightening and citation-planning pass completed;
+  manuscript sections now reference concrete figure/table assets, stronger
+  claims were softened to match the evidence freeze, and citation planning was
+  added before bibliography lock
+- 2026-04-02: Paper 1 bibliography lock completed with verified references,
+  manuscript citations injected into the core section drafts and full draft,
+  related work tightened around benchmark framing, and captions / submission /
+  appendix scaffolds added to move the paper toward a submission-ready package
+- 2026-04-02: Paper 1 primary venue chosen as `Imaging Neuroscience`; the full
+  draft was editorially hardened for venue fit, the appendix was assembled into
+  a real supplement document, the submission checklist was upgraded, and a
+  submission-package plan was added without changing the evidence boundary
+- 2026-04-03: root README rewritten as a professional research-platform landing
+  page aligned to the evidence freeze, clarifying the practical Animus lane,
+  the threshold-testing research lane, the current benchmark ordering, and the
+  repository's implementation and documentation map for new researchers

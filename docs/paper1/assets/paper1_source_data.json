@@ -1,0 +1,193 @@
+{
+  "paper": {
+    "title": "Perception-to-Imagery Decoding Under Overlap Scarcity: A Reproducible ROI-First Benchmark",
+    "date_frozen": "2026-04-02"
+  },
+  "dataset": {
+    "name": "max_available_overlap",
+    "prepared_mixed_index": "outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet",
+    "target_space": "vit_l14_image_768",
+    "rows": 94,
+    "shared_paired_nsd_ids": 5,
+    "held_out_paired_groups": 1,
+    "subjects": ["subj02", "subj03", "subj05", "subj07"],
+    "subject_breakdown": [
+      {"subject": "subj02", "rows": 38, "overlap_ids": 2},
+      {"subject": "subj03", "rows": 18, "overlap_ids": 1},
+      {"subject": "subj05", "rows": 19, "overlap_ids": 1},
+      {"subject": "subj07", "rows": 19, "overlap_ids": 1}
+    ]
+  },
+  "benchmark_results": [
+    {
+      "model": "Ridge",
+      "role_label": "external baseline",
+      "family": "ridge",
+      "status": "validated",
+      "cosine": 0.55199,
+      "mse": 0.001167,
+      "imagery_mean_cosine": 0.55152,
+      "perception_mean_cosine": 0.55446,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.run_legacy_ridge_baseline --config configs/canonical/max_available_overlap.yaml",
+      "artifact": "outputs/canonical/baselines/full_imagery_overlap_ridge_legacy/metrics.json"
+    },
+    {
+      "model": "Shared-only",
+      "role_label": "canonical neural baseline",
+      "family": "shared_only",
+      "status": "validated",
+      "cosine": 0.13596,
+      "mse": 0.002250,
+      "imagery_mean_cosine": 0.13422,
+      "perception_mean_cosine": 0.14527,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/animus_core_decoder.yaml",
+      "workflow": "python -m fmri2img.workflows.train_animus_core_decoder",
+      "artifact": "outputs/animus/core_decoder/train/full_imagery_overlap_shared_only/best_decoder.pt"
+    },
+    {
+      "model": "Shared-private p16",
+      "role_label": "exploratory hypothesis model",
+      "family": "shared_private",
+      "status": "exploratory",
+      "cosine": 0.10784,
+      "mse": 0.002323,
+      "imagery_mean_cosine": null,
+      "perception_mean_cosine": null,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/threshold_shared_private_p16.yaml",
+      "workflow": "python -m fmri2img.workflows.train_decoder --config configs/canonical/threshold_shared_private_p16.yaml",
+      "artifact": "outputs/research/threshold_shared_private_p16/train/full_imagery_overlap/best_decoder.pt"
+    },
+    {
+      "model": "Shared-private p8",
+      "role_label": "diagnostic recovery variant",
+      "family": "shared_private",
+      "status": "exploratory",
+      "cosine": 0.09595,
+      "mse": 0.002354,
+      "imagery_mean_cosine": null,
+      "perception_mean_cosine": null,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/max_available_overlap.yaml + override model.private_dim=8",
+      "workflow": "python -m fmri2img.workflows.train_decoder --config configs/canonical/max_available_overlap.yaml --override model.private_dim=8",
+      "artifact": "outputs/canonical/train/full_imagery_overlap_priv8/best_decoder.pt"
+    },
+    {
+      "model": "Shared-private",
+      "role_label": "canonical hypothesis-family baseline",
+      "family": "shared_private",
+      "status": "exploratory",
+      "cosine": 0.06927,
+      "mse": 0.002424,
+      "imagery_mean_cosine": 0.07151,
+      "perception_mean_cosine": 0.05735,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.train_decoder --config configs/canonical/max_available_overlap.yaml",
+      "artifact": "outputs/canonical/train/full_imagery_overlap/best_decoder.pt"
+    },
+    {
+      "model": "Shared-private no-domain",
+      "role_label": "diagnostic control",
+      "family": "shared_private",
+      "status": "exploratory",
+      "cosine": 0.05907,
+      "mse": 0.002450,
+      "imagery_mean_cosine": null,
+      "perception_mean_cosine": null,
+      "paired_eval_groups": 1,
+      "config": "configs/canonical/max_available_overlap.yaml + override model.use_domain_head=false",
+      "workflow": "python -m fmri2img.workflows.train_decoder --config configs/canonical/max_available_overlap.yaml --override model.use_domain_head=false",
+      "artifact": "outputs/canonical/train/full_imagery_overlap_nodomain/best_decoder.pt"
+    }
+  ],
+  "claims_boundary": [
+    {
+      "status": "supported",
+      "claim": "The repository provides a reproducible ROI-first platform for multi-subject perception/imagery decoding.",
+      "missing_for_stronger_claim": ""
+    },
+    {
+      "status": "supported",
+      "claim": "Ridge is the strongest model on the current low-overlap benchmark.",
+      "missing_for_stronger_claim": ""
+    },
+    {
+      "status": "supported",
+      "claim": "Shared-only is the strongest canonical neural baseline on the current benchmark.",
+      "missing_for_stronger_claim": ""
+    },
+    {
+      "status": "partially_supported",
+      "claim": "Low-overlap regimes favor simpler decoders over explicit disentanglement.",
+      "missing_for_stronger_claim": "Repeated evidence on larger paired datasets or overlap sweeps."
+    },
+    {
+      "status": "partially_supported",
+      "claim": "Private-capacity scaling is a meaningful control knob in low-data regimes.",
+      "missing_for_stronger_claim": "More scales and larger paired data."
+    },
+    {
+      "status": "not_justified_yet",
+      "claim": "Shared-private disentanglement improves content decoding.",
+      "missing_for_stronger_claim": "A materially larger paired benchmark where shared-private beats shared-only."
+    },
+    {
+      "status": "not_justified_yet",
+      "claim": "The threshold hypothesis is confirmed.",
+      "missing_for_stronger_claim": "An overlap-expansion study showing a performance transition."
+    },
+    {
+      "status": "not_justified_yet",
+      "claim": "Private latents are already neuroscientifically meaningful.",
+      "missing_for_stronger_claim": "Larger paired data, stable ROI analyses, and repeated evidence."
+    }
+  ],
+  "reproducibility_contract": [
+    {
+      "stage": "Public imagery acquisition",
+      "config": "n/a",
+      "workflow": "python -m fmri2img.workflows.acquire_public_nsd_imagery --subjects all --skip-stimuli --output cache/nsd_imagery_full_all",
+      "artifact": "cache/nsd_imagery_full_all/{metadata,betas,stimuli?}"
+    },
+    {
+      "stage": "Benchmark overlap assembly",
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.prepare_overlap_bootstrap --config configs/canonical/max_available_overlap.yaml --overwrite-existing",
+      "artifact": "outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet"
+    },
+    {
+      "stage": "Target cache",
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.prepare_targets --config configs/canonical/max_available_overlap.yaml",
+      "artifact": "outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet"
+    },
+    {
+      "stage": "Preflight",
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.preflight_data --config configs/canonical/max_available_overlap.yaml",
+      "artifact": "outputs/canonical/prepared/full_imagery_overlap/preflight.json"
+    },
+    {
+      "stage": "External baseline",
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "workflow": "python -m fmri2img.workflows.run_legacy_ridge_baseline --config configs/canonical/max_available_overlap.yaml",
+      "artifact": "outputs/canonical/baselines/full_imagery_overlap_ridge_legacy/metrics.json"
+    },
+    {
+      "stage": "Animus Core Decoder",
+      "config": "configs/canonical/animus_core_decoder.yaml",
+      "workflow": "python -m fmri2img.workflows.train_animus_core_decoder",
+      "artifact": "outputs/animus/core_decoder/train/full_imagery_overlap_shared_only/best_decoder.pt"
+    },
+    {
+      "stage": "Threshold-testing model",
+      "config": "configs/canonical/threshold_shared_private_p16.yaml",
+      "workflow": "python -m fmri2img.workflows.train_decoder --config configs/canonical/threshold_shared_private_p16.yaml",
+      "artifact": "outputs/research/threshold_shared_private_p16/train/full_imagery_overlap/best_decoder.pt"
+    }
+  ]
+}

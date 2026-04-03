@@ -27,6 +27,27 @@ For the live `orchestraiq-jupyter` pod, the canonical imagery prep path now supp
 
 `prepare_imagery_index` automatically detects this split layout and writes both a source-layout report and a filtered canonical report per subject.
 
+## External data acquisition
+
+The canonical public imagery acquisition entrypoint is now:
+
+```bash
+python -m fmri2img.workflows.acquire_public_nsd_imagery \
+  --subjects all \
+  --skip-stimuli \
+  --output cache/nsd_imagery_full_all
+```
+
+This delegates to the repo's official public downloader script and is the
+canonical way to refresh the public NSD-Imagery source before running imagery
+prep.
+
+Use the acquisition program docs when the goal is to break beyond the current
+public-data ceiling:
+
+- `docs/DATA_ACQUISITION_PROGRAM.md`
+- `docs/EXTERNAL_DATA_INTEGRATION_PLAN.md`
+
 ## Smoke Fixture
 
 The checked-in smoke fixture remains the fastest sanity check:
@@ -35,6 +56,26 @@ The checked-in smoke fixture remains the fastest sanity check:
 python -m fmri2img.workflows.train_decoder \
   --config configs/canonical/shared_private_smoke.yaml
 ```
+
+## Practical Animus Core Decoder
+
+The current practical shared-only subsystem is:
+
+- config: `configs/canonical/animus_core_decoder.yaml`
+
+Dedicated wrapper commands:
+
+```bash
+python -m fmri2img.workflows.preflight_animus_core_decoder
+python -m fmri2img.workflows.train_animus_core_decoder
+python -m fmri2img.workflows.eval_animus_core_decoder \
+  --checkpoint outputs/animus/core_decoder/train/full_imagery_overlap_shared_only/best_decoder.pt
+python -m fmri2img.workflows.export_animus_core_decoder \
+  --checkpoint outputs/animus/core_decoder/train/full_imagery_overlap_shared_only/best_decoder.pt
+```
+
+These wrappers default to the Animus Core config, but still allow `--config`
+and `--override` when a controlled variant is needed.
 
 ## Official Real Bootstrap Baseline
 
@@ -151,69 +192,30 @@ This config is meant to answer a specific question:
 
 In the live pod where this audit was executed, that checked-in config intentionally resolves to the current fully canonical ceiling:
 
-- subjects: `subj02`, `subj05`, `subj07`
-- shared pairs: `4`
+- subjects: `subj02`, `subj03`, `subj05`, `subj07`
+- rows: `94`
+- shared paired `nsdId`s: `5`
 
-The broader audit also inspected `subj01`, but it is not included in the checked-in max-available config because:
+The broader audit also confirmed that the full public NSD-Imagery source is now
+mounted and canonicalized, but only these four subjects contribute usable
+overlap on the current benchmark. The remaining subjects are excluded because
+their recoverable imagery ids still do not overlap the perception indices.
 
-- `subj01` does have a mounted imagery beta bundle, but the currently recoverable imagery ids do not overlap its perception index
-- the stale `subj01` imagery parquet was not canonical enough to enlarge the overlap set directly
-
-The official commands remain:
+The official fixed-ladder commands are now:
 
 ```bash
-python -m fmri2img.workflows.prepare_overlap_bootstrap \
-  --config configs/canonical/max_available_overlap.yaml
-python -m fmri2img.workflows.prepare_targets \
-  --config configs/canonical/max_available_overlap.yaml
-python -m fmri2img.workflows.preflight_data \
-  --config configs/canonical/max_available_overlap.yaml
-python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/max_available_overlap.yaml
 python -m fmri2img.workflows.run_legacy_ridge_baseline \
   --config configs/canonical/max_available_overlap.yaml
+python -m fmri2img.workflows.train_animus_core_decoder
+python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/threshold_shared_private_p16.yaml
 ```
 
-The current minimal ablation controls on that same expanded dataset are:
+The shared-private threshold hypothesis is now formalized as:
 
 ```bash
 python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/max_available_overlap.yaml \
-  --override training.device=\"cpu\" \
-  --override model.disentanglement_mode=\"shared_only\" \
-  --override model.use_domain_head=false \
-  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
-  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
-  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_shared_only\"
-
-python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/max_available_overlap.yaml \
-  --override training.device=\"cpu\" \
-  --override model.use_domain_head=false \
-  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
-  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
-  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_nodomain\"
-```
-
-The narrow shared-private recovery sweep used the same fixed dataset with only
-private latent dimensionality changed:
-
-```bash
-python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/max_available_overlap.yaml \
-  --override training.device=\"cpu\" \
-  --override model.private_dim=16 \
-  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
-  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
-  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_priv16\"
-
-python -m fmri2img.workflows.train_decoder \
-  --config configs/canonical/max_available_overlap.yaml \
-  --override training.device=\"cpu\" \
-  --override model.private_dim=8 \
-  --override dataset.mixed_index=\"outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet\" \
-  --override targets.cache_path=\"outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet\" \
-  --override training.output_dir=\"outputs/canonical/train/full_imagery_overlap_priv8\"
+  --config configs/canonical/threshold_shared_private_p16.yaml
 ```
 
 ## Artifact Contract

@@ -3,10 +3,12 @@ experiment:
   description: >
     Canonical fixed-comparison scaling audit over the maximum overlapable
     subject set currently mounted in the live environment.
+  benchmark_role: fixed_threshold_benchmark
+  evidence_tier: validated_dataset
 
 dataset:
   subject: subj02
-  mixed_index: outputs/canonical/prepared/max_available_overlap/max_available_overlap_mixed_with_roi.parquet
+  mixed_index: outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet
   perception_conditions: ["perception"]
   imagery_conditions: ["imagery"]
 
@@ -27,7 +29,7 @@ roi:
 targets:
   name: vit_l14_image_768
   dimension: 768
-  cache_path: outputs/targets/max_available_overlap_vit_l14_image_768.parquet
+  cache_path: outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet
   id_column: nsdId
 
 model:
@@ -49,19 +51,19 @@ training:
   confidence_weight: 0.05
   reconstruction_weight: 0.1
   device: cuda
-  output_dir: outputs/canonical/train/max_available_overlap
+  output_dir: outputs/canonical/train/full_imagery_overlap
   seed: 0
 
 evaluation:
   batch_size: 16
-  output_dir: outputs/canonical/eval/max_available_overlap
-  transfer_output_dir: outputs/canonical/transfer/max_available_overlap
+  output_dir: outputs/canonical/eval/full_imagery_overlap
+  transfer_output_dir: outputs/canonical/transfer/full_imagery_overlap
 
 analysis:
-  output_dir: outputs/canonical/analysis/max_available_overlap
+  output_dir: outputs/canonical/analysis/full_imagery_overlap
 
 export:
-  output_dir: outputs/canonical/export/max_available_overlap
+  output_dir: outputs/canonical/export/full_imagery_overlap
 
 preparation:
   imagery:
@@ -76,12 +78,12 @@ preparation:
     source_report_template: outputs/canonical/prepared/imagery/{subject}.source_report.json
     report_template: outputs/canonical/prepared/imagery/{subject}.report.json
   overlap:
-    subjects: ["subj02", "subj05", "subj07"]
-    output_root: outputs/canonical/prepared/max_available_overlap
-    report_path: outputs/canonical/prepared/max_available_overlap/report.json
-    overlap_ids_path: outputs/canonical/prepared/max_available_overlap/overlap_nsd_ids.json
+    subjects: ["subj01", "subj02", "subj03", "subj04", "subj05", "subj06", "subj07", "subj08"]
+    output_root: outputs/canonical/prepared/full_imagery_overlap
+    report_path: outputs/canonical/prepared/full_imagery_overlap/report.json
+    overlap_ids_path: outputs/canonical/prepared/full_imagery_overlap/overlap_nsd_ids.json
     perception_index_template: data/indices/nsd_index/subject={subject}/index.parquet
-    imagery_index_template: cache/indices/imagery/{subject}.parquet
+    imagery_index_template: cache/indices/imagery_full_all/{subject}.parquet
     mask_root_template: ${NSD_ROI_MASK_ROOT}/{subject}
     materialize_roi: true
     cache_root: cache

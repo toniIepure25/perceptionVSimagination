@@ -30,6 +30,16 @@ python -m fmri2img.workflows.prepare_roi_features --config configs/canonical/sha
 python -m fmri2img.workflows.preflight_data --config configs/canonical/shared_private_bootstrap.yaml
 ```
 
+The external public imagery acquisition surface is also now represented in the
+canonical workflow namespace:
+
+```bash
+python -m fmri2img.workflows.acquire_public_nsd_imagery \
+  --subjects all \
+  --skip-stimuli \
+  --output cache/nsd_imagery_full_all
+```
+
 The checked-in official real bootstrap baseline also has a canonical overlap assembly path:
 
 ```bash
@@ -144,7 +154,7 @@ The first real mixed-condition bootstrap run was executed on the live `orchestra
 That live run used:
 
 - subjects `subj02`, `subj05`, `subj07`
-- 4 shared `nsdId` pairs
+- 4 shared `nsdId` pairs at the time of the first bootstrap run
 - atlas-union bootstrap ROI groups
 - a real 768-D ViT-L/14 target cache
 - canonical train/eval/transfer/export workflows
@@ -170,7 +180,7 @@ The next scaling audit was also executed on the live pod with the fixed comparis
 That audit established an important trust boundary:
 
 - the platform can rerun the comparison on the largest fully canonical overlap dataset currently rebuildable
-- but the mounted environment still tops out at 4 shared `nsdId` pairs, so the data-scale question is not answerable yet
+- the mounted environment now reaches `5` shared `nsdId` pairs and `94` rows, but the held-out paired set is still too small for a decisive disentanglement claim
 
 The comparison baseline is now rerunnable through the official workflow surface:
 
@@ -205,3 +215,6 @@ That fix has now been exercised on the live expanded-overlap rerun as well:
 - expanded overlap dataset: `94` rows, `5` shared `nsdId` groups
 - fresh canonical shared/private run completed end to end
 - refreshed Ridge comparison on the same artifacts still wins by a large margin
+- the dedicated Animus Core Decoder lane is now represented by its own checked-in config and wrapper commands
+- the next material benchmark improvement now depends on external paired-data
+  acquisition, not more workflow hardening on the current public source

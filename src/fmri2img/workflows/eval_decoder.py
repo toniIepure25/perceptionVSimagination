@@ -20,12 +20,12 @@ from fmri2img.workflows.common import (
 )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the canonical shared/private decoder.")
     parser.add_argument("--config", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--override", action="append", default=[])
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     config = load_workflow_config(args.config, args.override)
     runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))

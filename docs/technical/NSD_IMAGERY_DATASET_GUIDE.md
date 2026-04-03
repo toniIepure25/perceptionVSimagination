@@ -2,6 +2,12 @@
 
 **Technical Documentation for NSD-Imagery Integration**
 
+> Current program note: the public NSD-Imagery acquisition path is now exposed
+> through `python -m fmri2img.workflows.acquire_public_nsd_imagery`, and the
+> current public release has already been integrated into the canonical
+> benchmark. For the next-step acquisition strategy beyond that public ceiling,
+> see `docs/DATA_ACQUISITION_PROGRAM.md`.
+
 ---
 
 ## Overview

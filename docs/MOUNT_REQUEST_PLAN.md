@@ -1,5 +1,11 @@
 # Mount Request Plan
 
+> Historical note: this document reflects the earlier imagery-mount request
+> phase. For the current next-step acquisition program after the public
+> `5`-id ceiling was established, use
+> [DATA_ACQUISITION_PROGRAM.md](DATA_ACQUISITION_PROGRAM.md) and
+> [EXTERNAL_DATA_INTEGRATION_PLAN.md](EXTERNAL_DATA_INTEGRATION_PLAN.md).
+
 ## Status Update
 
 The original request in this document has now been largely satisfied in the live pod:

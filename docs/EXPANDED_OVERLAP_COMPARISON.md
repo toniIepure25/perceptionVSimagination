@@ -1,5 +1,12 @@
 # Expanded Overlap Comparison
 
+This report should now be read together with:
+
+- [CURRENT_EVIDENCE_FREEZE.md](CURRENT_EVIDENCE_FREEZE.md)
+- [BENCHMARK_LADDER.md](BENCHMARK_LADDER.md)
+- [ANIMUS_CORE_DECODER.md](ANIMUS_CORE_DECODER.md)
+- [TOP_LEVEL_RESEARCH_DOSSIER.md](TOP_LEVEL_RESEARCH_DOSSIER.md)
+
 ## Summary
 
 This document records the first successful expansion of the canonical overlap dataset after acquiring the full public NSD-Imagery source.

@@ -9,12 +9,12 @@ from fmri2img.training.canonical import inspect_canonical_checkpoint
 from fmri2img.workflows.common import build_datasets, checkpoint_artifact_spec, load_workflow_config
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Export canonical decoder artifacts for Animus.")
     parser.add_argument("--config", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--override", action="append", default=[])
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     config = load_workflow_config(args.config, args.override)
     _, _, _, _, roi_summary, target_summary = build_datasets(config)

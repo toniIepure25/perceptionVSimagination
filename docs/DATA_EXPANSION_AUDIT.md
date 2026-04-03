@@ -1,5 +1,11 @@
 # Data Expansion Audit
 
+> Historical note: this document captures the step-by-step audit that led from
+> the original `4`-pair ceiling to the later `5`-pair public-data ceiling.
+> For the current actionable external-data program, use
+> [DATA_ACQUISITION_PROGRAM.md](DATA_ACQUISITION_PROGRAM.md) and
+> [EXTERNAL_DATA_INTEGRATION_PLAN.md](EXTERNAL_DATA_INTEGRATION_PLAN.md).
+
 ## Update After Full Acquisition
 
 This audit was written before the full public NSD-Imagery source was actually downloaded into the live pod.
