@@ -115,26 +115,26 @@ constraint. The paper and the repository should become stronger by becoming
 
 ### Current benchmark at a glance
 
-| Property | Current value |
-| --- | --- |
-| Subjects | `subj02`, `subj03`, `subj05`, `subj07` |
-| Total rows | `94` |
-| Shared paired `nsdId`s | `5` |
-| Held-out paired evaluation groups | `1` |
-| Target space | `vit_l14_image_768` |
+| Property                          | Current value                          |
+| --------------------------------- | -------------------------------------- |
+| Subjects                          | `subj02`, `subj03`, `subj05`, `subj07` |
+| Total rows                        | `94`                                   |
+| Shared paired `nsdId`s            | `5`                                    |
+| Held-out paired evaluation groups | `1`                                    |
+| Target space                      | `vit_l14_image_768`                    |
 
 This is a **real benchmark**, but still a **very small paired-overlap regime**.
 
 ### Frozen benchmark ladder
 
-| Rank | Model | Scientific role | Test cosine | Test MSE |
-| --- | --- | --- | ---: | ---: |
-| 1 | Ridge | External low-data reference baseline | `0.55199` | `0.001167` |
-| 2 | Shared-only | Best current canonical neural baseline | `0.13596` | `0.002250` |
-| 3 | Shared-private `private_dim=16` | Best current exploratory shared-private variant | `0.10784` | `0.002323` |
-| 4 | Shared-private `private_dim=8` | Exploratory recovery variant | `0.09595` | `0.002354` |
-| 5 | Shared-private | Canonical hypothesis-family baseline | `0.06927` | `0.002424` |
-| 6 | Shared-private no-domain | Diagnostic control | `0.05907` | `0.002450` |
+| Rank | Model                           | Scientific role                                 | Test cosine |   Test MSE |
+| ---- | ------------------------------- | ----------------------------------------------- | ----------: | ---------: |
+| 1    | Ridge                           | External low-data reference baseline            |   `0.55199` | `0.001167` |
+| 2    | Shared-only                     | Best current canonical neural baseline          |   `0.13596` | `0.002250` |
+| 3    | Shared-private `private_dim=16` | Best current exploratory shared-private variant |   `0.10784` | `0.002323` |
+| 4    | Shared-private `private_dim=8`  | Exploratory recovery variant                    |   `0.09595` | `0.002354` |
+| 5    | Shared-private                  | Canonical hypothesis-family baseline            |   `0.06927` | `0.002424` |
+| 6    | Shared-private no-domain        | Diagnostic control                              |   `0.05907` | `0.002450` |
 
 ### What is justified now
 
