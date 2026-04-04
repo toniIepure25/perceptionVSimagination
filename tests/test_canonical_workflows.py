@@ -474,7 +474,7 @@ def test_materialize_public_nod_payloads_refuses_without_git_annex(monkeypatch, 
         ]
     }
     monkeypatch.setattr(workflow.shutil, "which", lambda name: None)
-    rc = workflow._materialize_paths(dataset_root, manifest)
+    rc = workflow._materialize_via_annex(dataset_root, manifest)
     captured = capsys.readouterr()
     assert rc == 2
     assert "git-annex is not available" in captured.err
@@ -503,10 +503,136 @@ def test_materialize_public_nod_payloads_reports_unretrievable_annex_payloads(mo
 
     monkeypatch.setattr(workflow.shutil, "which", lambda name: "/usr/bin/git-annex")
     monkeypatch.setattr(workflow.subprocess, "run", lambda *args, **kwargs: Result())
-    rc = workflow._materialize_paths(dataset_root, manifest)
+    rc = workflow._materialize_via_annex(dataset_root, manifest)
     captured = capsys.readouterr()
     assert rc == 1
     assert "no usable annex source" in captured.err
+
+
+def test_materialize_public_nod_payloads_direct_openneuro_s3_writes_to_annex_targets(monkeypatch, tmp_path):
+    import json
+    from urllib.error import URLError
+
+    from fmri2img.workflows.materialize_public_nod_payloads import _materialize_via_openneuro_s3
+
+    dataset_root = tmp_path / "ds004496"
+    dataset_root.mkdir()
+    retrieval_report = tmp_path / "retrieval.json"
+    target = dataset_root / ".git" / "annex" / "objects" / "aa" / "bb" / "payload.nii.gz"
+    worktree_path = dataset_root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sample.nii.gz"
+    worktree_path.parent.mkdir(parents=True, exist_ok=True)
+    worktree_path.symlink_to(Path(os.path.relpath(target, worktree_path.parent)))
+
+    manifest = {
+        "dataset_id": "ds004496",
+        "entries": [
+            {
+                "files": {
+                    "preproc_bold": {"path": str(worktree_path.relative_to(dataset_root)), "visible": True, "resolved": False},
+                    "confounds": {"path": "ignore.tsv", "visible": False, "resolved": False},
+                    "ciftify_beta": {"path": "ignore_beta.nii", "visible": False, "resolved": False},
+                    "ciftify_label": {"path": "ignore_label.txt", "visible": False, "resolved": False},
+                }
+            }
+        ],
+    }
+
+    def fake_download(url, destination, chunk_size=1024 * 1024):
+        raise URLError("offline-test")
+
+    monkeypatch.setattr(
+        "fmri2img.workflows.materialize_public_nod_payloads._download_to_path",
+        fake_download,
+    )
+
+    rc = _materialize_via_openneuro_s3(
+        dataset_root,
+        manifest,
+        retrieval_report,
+        base_url="https://example.invalid/openneuro",
+    )
+    assert rc == 1
+    report = json.loads(retrieval_report.read_text())
+    assert report["downloaded_files"] == 0
+    assert len(report["failures"]) == 1
+
+
+def test_materialize_public_nod_payloads_uses_direct_openneuro_s3_by_default(monkeypatch, tmp_path):
+    import fmri2img.workflows.materialize_public_nod_payloads as workflow
+
+    dataset_root = tmp_path / "ds004496"
+    dataset_root.mkdir()
+    index_path = tmp_path / "index.parquet"
+    manifest_path = tmp_path / "manifest.json"
+    report_path = tmp_path / "report.json"
+    retrieval_report_path = tmp_path / "retrieval.json"
+
+    import pandas as pd
+
+    pd.DataFrame(
+        [
+            {
+                "subject": "sub-01",
+                "session": "ses-imagenet01",
+                "run": 10,
+                "task": "imagenet",
+                "row_status": "missing_payload",
+                "usable_for_later_shared_only_prep": False,
+                "events_path": "sub-01/ses-imagenet01/func/sample_events.tsv",
+                "preproc_bold_path": "derivatives/fmriprep/sub-01/ses-imagenet01/func/sample_bold.nii.gz",
+                "confounds_path": "derivatives/fmriprep/sub-01/ses-imagenet01/func/sample_confounds.tsv",
+                "ciftify_beta_path": "derivatives/ciftify/sub-01/results/run/sample_beta.nii",
+                "ciftify_label_path": "derivatives/ciftify/sub-01/results/run/sample_label.txt",
+                "events_visible": True,
+                "preproc_bold_visible": True,
+                "confounds_visible": False,
+                "ciftify_beta_visible": False,
+                "ciftify_label_visible": False,
+                "events_resolved": True,
+                "preproc_bold_resolved": False,
+                "confounds_resolved": False,
+                "ciftify_beta_resolved": False,
+                "ciftify_label_resolved": False,
+            }
+        ]
+    ).to_parquet(index_path, index=False)
+    (dataset_root / "sub-01" / "ses-imagenet01" / "func").mkdir(parents=True)
+    (dataset_root / "sub-01" / "ses-imagenet01" / "func" / "sample_events.tsv").write_text("x")
+    target = dataset_root / ".git" / "annex" / "objects" / "aa" / "bb" / "payload.nii.gz"
+    symlink_path = dataset_root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sample_bold.nii.gz"
+    symlink_path.parent.mkdir(parents=True, exist_ok=True)
+    symlink_path.symlink_to(Path(os.path.relpath(target, symlink_path.parent)))
+
+    seen = {}
+
+    def fake_direct(dataset_root_arg, manifest_arg, retrieval_report_arg, base_url_arg):
+        seen["dataset_root"] = dataset_root_arg
+        seen["retrieval_report"] = retrieval_report_arg
+        seen["base_url"] = base_url_arg
+        seen["entry_count"] = len(manifest_arg["entries"])
+        return 0
+
+    monkeypatch.setattr(workflow, "_materialize_via_openneuro_s3", fake_direct)
+    rc = workflow.main(
+        [
+            "--dataset-root",
+            str(dataset_root),
+            "--index",
+            str(index_path),
+            "--manifest",
+            str(manifest_path),
+            "--report",
+            str(report_path),
+            "--retrieval-report",
+            str(retrieval_report_path),
+            "--materialize",
+        ]
+    )
+    assert rc == 0
+    assert seen["dataset_root"] == dataset_root.resolve()
+    assert seen["retrieval_report"] == retrieval_report_path.resolve()
+    assert seen["base_url"] == workflow.DEFAULT_OPENNEURO_S3_BASE
+    assert seen["entry_count"] == 1
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():

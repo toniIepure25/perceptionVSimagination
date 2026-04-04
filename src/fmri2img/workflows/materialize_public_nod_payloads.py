@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
 
 import pandas as pd
 
@@ -16,6 +18,7 @@ from fmri2img.workflows.prepare_public_nod_index import DEFAULT_OUTPUT as DEFAUL
 
 
 _ANNEX_SIZE_RE = re.compile(r"SHA256E-s(\d+)--")
+DEFAULT_OPENNEURO_S3_BASE = "https://s3.amazonaws.com/openneuro.org"
 _REQUIRED_COLUMNS = {
     "events": "events_path",
     "preproc_bold": "preproc_bold_path",
@@ -35,6 +38,10 @@ def _default_manifest_path() -> Path:
 
 def _default_report_path() -> Path:
     return Path(__file__).resolve().parents[3] / "cache/indices/public_nod/imagenet_missing_payload_report.json"
+
+
+def _default_retrieval_report_path() -> Path:
+    return Path(__file__).resolve().parents[3] / "cache/indices/public_nod/imagenet_missing_payload_retrieval_report.json"
 
 
 def _annex_target_size_bytes(path: Path) -> int | None:
@@ -117,7 +124,95 @@ def build_missing_payload_manifest(dataset_root: Path, index_path: Path, status_
     return manifest, report
 
 
-def _materialize_paths(dataset_root: Path, manifest: dict) -> int:
+def _wanted_paths(manifest: dict) -> list[str]:
+    wanted = []
+    for entry in manifest["entries"]:
+        for file_key in ("preproc_bold", "confounds", "ciftify_beta", "ciftify_label"):
+            info = entry["files"][file_key]
+            if info["visible"] and not info["resolved"]:
+                wanted.append(info["path"])
+    return sorted(set(wanted))
+
+
+def _symlink_target_path(path: Path) -> Path:
+    return (path.parent / path.readlink()).resolve() if path.is_symlink() else path
+
+
+def _download_to_path(url: str, destination: Path, chunk_size: int = 1024 * 1024) -> int:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with urlopen(url) as response, destination.open("wb") as handle:
+        total = 0
+        while True:
+            chunk = response.read(chunk_size)
+            if not chunk:
+                break
+            handle.write(chunk)
+            total += len(chunk)
+    return total
+
+
+def _materialize_via_openneuro_s3(dataset_root: Path, manifest: dict, retrieval_report_path: Path, base_url: str) -> int:
+    wanted = _wanted_paths(manifest)
+    if not wanted:
+        report = {
+            "strategy": "direct_openneuro_s3",
+            "dataset_root": str(dataset_root),
+            "base_url": base_url,
+            "downloaded_files": 0,
+            "downloaded_bytes": 0,
+            "failures": [],
+        }
+        retrieval_report_path.write_text(json.dumps(report, indent=2) + "\n")
+        print("No unresolved payloads matched the selected manifest rows.")
+        print(f"Retrieval report: {retrieval_report_path}")
+        return 0
+
+    dataset_id = manifest["dataset_id"]
+    downloaded = []
+    failures = []
+    total_bytes = 0
+    for relpath in wanted:
+        url = f"{base_url.rstrip('/')}/{dataset_id}/{relpath}"
+        worktree_path = dataset_root / relpath
+        destination = _symlink_target_path(worktree_path)
+        try:
+            downloaded_bytes = _download_to_path(url, destination)
+        except (HTTPError, URLError) as exc:
+            failures.append({"path": relpath, "url": url, "error": str(exc)})
+            continue
+        downloaded.append(
+            {
+                "path": relpath,
+                "url": url,
+                "destination": str(destination),
+                "bytes": downloaded_bytes,
+            }
+        )
+        total_bytes += downloaded_bytes
+
+    report = {
+        "strategy": "direct_openneuro_s3",
+        "dataset_root": str(dataset_root),
+        "base_url": base_url,
+        "downloaded_files": len(downloaded),
+        "downloaded_bytes": total_bytes,
+        "downloaded_gib": round(total_bytes / (1024 ** 3), 3),
+        "downloaded": downloaded,
+        "failures": failures,
+    }
+    retrieval_report_path.write_text(json.dumps(report, indent=2) + "\n")
+    print(f"Retrieval report: {retrieval_report_path}")
+    if failures:
+        print(
+            "One or more requested payloads could not be downloaded from the official OpenNeuro S3 path. "
+            "Inspect the retrieval report for the failed URLs before retrying.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def _materialize_via_annex(dataset_root: Path, manifest: dict) -> int:
     if shutil.which("git-annex") is None:
         print(
             "git-annex is not available on this host. Install git-annex on the live pod before "
@@ -126,13 +221,7 @@ def _materialize_paths(dataset_root: Path, manifest: dict) -> int:
         )
         return 2
 
-    wanted = []
-    for entry in manifest["entries"]:
-        for file_key in ("preproc_bold", "confounds", "ciftify_beta", "ciftify_label"):
-            info = entry["files"][file_key]
-            if info["visible"] and not info["resolved"]:
-                wanted.append(info["path"])
-    wanted = sorted(set(wanted))
+    wanted = _wanted_paths(manifest)
     if not wanted:
         print("No unresolved annex-backed NOD payloads matched the selected manifest rows.")
         return 0
@@ -162,13 +251,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--index", type=Path, default=_default_index_path())
     parser.add_argument("--manifest", type=Path, default=_default_manifest_path())
     parser.add_argument("--report", type=Path, default=_default_report_path())
+    parser.add_argument("--retrieval-report", type=Path, default=_default_retrieval_report_path())
     parser.add_argument("--status-filter", default="missing_payload")
     parser.add_argument("--materialize", action="store_true")
+    parser.add_argument(
+        "--strategy",
+        choices=("direct_openneuro_s3", "annex"),
+        default="direct_openneuro_s3",
+        help="Payload retrieval strategy to use when --materialize is set.",
+    )
+    parser.add_argument(
+        "--openneuro-s3-base-url",
+        default=DEFAULT_OPENNEURO_S3_BASE,
+        help="Base URL for the official OpenNeuro public S3 bucket.",
+    )
     args = parser.parse_args(argv)
 
     manifest_path = args.manifest.resolve()
     report_path = args.report.resolve()
+    retrieval_report_path = args.retrieval_report.resolve()
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    retrieval_report_path.parent.mkdir(parents=True, exist_ok=True)
 
     manifest, report = build_missing_payload_manifest(args.dataset_root, args.index, status_filter=args.status_filter)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
@@ -182,7 +285,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.materialize:
         return 0
-    return _materialize_paths(args.dataset_root.resolve(), manifest)
+    dataset_root = args.dataset_root.resolve()
+    if args.strategy == "direct_openneuro_s3":
+        return _materialize_via_openneuro_s3(dataset_root, manifest, retrieval_report_path, args.openneuro_s3_base_url)
+    return _materialize_via_annex(dataset_root, manifest)
 
 
 if __name__ == "__main__":
