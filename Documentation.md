@@ -95,6 +95,30 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-05 - NOD target-selection contract built for the fixed adapter slice
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/prepare_public_nod_target_selection.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused tests via
+  `./.venv/bin/pytest tests/test_canonical_workflows.py -q -k 'prepare_public_nod_target_selection_builds_deterministic_trial_table or prepare_public_nod_target_selection_rejects_label_mismatch or prepare_public_nod_shared_only_adapter_requires_full_fixed_slice or public_dataset_program_docs_and_catalog_exist'`;
+  remote build via
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_selection`
+  and remote focused tests from the pod `.venv`
+- Decision: added the smallest canonical target-selection surface over the
+  fixed NOD adapter slice by expanding the `36` adapter rows into a
+  deterministic `3600`-row trial-level target table using matching
+  `events.tsv` `stim_file` and `label.txt` basenames
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  still a narrow practical Animus-lane target-selection artifact only
+- Follow-up: build the smallest canonical target embedding cache over this
+  target-selection artifact before considering any real shared-only training
+  config
+
 ## 2026-04-05 - NOD shared-only adapter built for the fixed resolved slice
 
 - Scope: engineering, data acquisition, reproducibility

@@ -150,3 +150,16 @@ Copy this block:
 - Result summary: built a `36`-row adapter artifact for `sub-01..sub-09`, `ses-imagenet01..04`, `run-10`, with `all_payloads_resolved=true`, `adapter_ready=true`, `prep_ready=true`, and `training_ready=false`
 - Interpretation summary: the first NOD slice is now packaged as a stable downstream shared-only prep artifact, but target-selection and ROI-materialization contracts still block honest model training
 - Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-TARGET-SELECTION
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane canonical target-selection contract over the fixed resolved NOD adapter slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_selection`
+- Dataset / prepared artifacts: adapter artifact `cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_target_selection.parquet`
+- Status: done
+- Result summary: built a deterministic `3600`-row trial-level target-selection artifact from the fixed `36` adapter rows, with `100` target rows per run, `3600` unique target identifiers, and `target_selection_ready=true`, `downstream_prep_ready=true`, `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has a stable target-selection contract for downstream prep, but a canonical target embedding cache, ROI-materialization contract, and shared-only train/eval config are still required before honest model training
+- Promoted to evidence?: no

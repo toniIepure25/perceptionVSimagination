@@ -588,3 +588,12 @@ Risk:
   `prep_ready=true`, and `training_ready=false`. This makes the practical
   Animus lane more reusable without widening the NOD contract or changing any
   scientific claims
+- 2026-04-05: the next downstream contract for the same fixed NOD slice was
+  added via `fmri2img.workflows.prepare_public_nod_target_selection`. The
+  workflow expands the `36` resolved adapter rows into a deterministic
+  `3600`-row trial-level target-selection artifact by validating
+  `events.tsv` `stim_file` basenames against `ciftify` `label.txt`. The new
+  report marks the output as `target_selection_ready=true`,
+  `downstream_prep_ready=true`, and `training_ready=false`, preserving the
+  boundary that target embeddings, ROI materialization, and a real shared-only
+  training config remain separate steps
