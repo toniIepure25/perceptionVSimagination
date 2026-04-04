@@ -181,6 +181,41 @@ Current row-level status meanings:
 - `incomplete`: only part of the row contract is visible
 - `missing`: none of the required inputs are visible
 
+## Current live-pod prepared-index result
+
+Built on the live pod from:
+
+- `/home/jovyan/local-data/perceptionVSimagination/cache/public_datasets/ds004496`
+
+Outputs:
+
+- prepared index:
+  `/home/jovyan/local-data/perceptionVSimagination/cache/indices/public_nod/imagenet_multisession_common_sessions.parquet`
+- report:
+  `/home/jovyan/local-data/perceptionVSimagination/cache/indices/public_nod/imagenet_multisession_common_sessions.report.json`
+
+Observed result on the current clone:
+
+- rows: `360`
+- row status counts:
+  - `incomplete`: `324`
+  - `missing_payload`: `36`
+- usable rows for later shared-only prep: `0`
+
+Current dominant blockers:
+
+- only `36` rows expose visible `events.tsv`
+- `fmriprep` BOLD and confounds are visible for all `360` rows, but not
+  resolved as payloads
+- `ciftify` beta and label paths are visible for all `360` rows, but not
+  resolved as payloads
+
+Interpretation:
+
+- the first prepared index is real and useful
+- it proves the subset contract and the visibility/resolution surface
+- it does **not** justify shared-only training yet
+
 ## Expected remote path
 
 On the verified live pod:

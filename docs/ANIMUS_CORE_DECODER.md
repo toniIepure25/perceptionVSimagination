@@ -188,6 +188,12 @@ subset:
 This is still a readiness/indexing step, not a claim that NOD is already ready
 for shared-only training.
 
+Current live result:
+
+- a real NOD prepared index exists for the `imagenet` common-session subset
+- the current clone still yields `0` rows usable for later shared-only prep
+- this strengthens operational clarity for the Animus lane, not empirical claims
+
 ## Current limits
 
 - current overlap benchmark remains extremely small

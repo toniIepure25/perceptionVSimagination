@@ -100,6 +100,16 @@ This builds a row-level prepared index for the first NOD subset and records
 payload visibility versus real payload resolution, without overstating
 training readiness.
 
+Current live result:
+
+- output:
+  `cache/indices/public_nod/imagenet_multisession_common_sessions.parquet`
+- rows: `360`
+- readiness:
+  - `324` rows `incomplete`
+  - `36` rows `missing_payload`
+  - `0` rows currently usable for later shared-only prep
+
 ### Priority 2. Secondary imagery benchmark
 
 Target:

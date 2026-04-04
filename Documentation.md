@@ -95,6 +95,27 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - NOD prepared index built on live pod
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `docs/NOD_PUBLIC_DATASET.md`,
+  `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: remote build via
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index` and
+  remote focused checks from pod `.venv`
+- Decision: materialized the first real NOD prepared index for the `imagenet`
+  multi-session common-session subset and kept row-level readiness honest with
+  `incomplete` versus `missing_payload` rather than inflating the clone into
+  training readiness
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  a practical Animus-lane preparation artifact only
+- Follow-up: determine whether the next move should be selective annex
+  materialization for the exact `fmriprep`/`ciftify` inputs named by the index,
+  or a narrower adapter pass over the currently visible raw-event subset
+
 ## 2026-04-04 - NOD prepared-index adapter
 
 - Scope: engineering, data acquisition, reproducibility

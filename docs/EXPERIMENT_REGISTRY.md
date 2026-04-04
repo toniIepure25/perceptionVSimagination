@@ -85,3 +85,16 @@ Copy this block:
 - Result summary: metadata-only Git clone completed on the live pod and wrote `acquisition_provenance.json`
 - Interpretation summary: practical public-data path is now real and reproducible, but annexed imaging content and any training adapter remain future work
 - Promoted to evidence?: no
+
+## EXP-2026-04-04-NOD-PREPARED-INDEX
+
+- Date: 2026-04-04
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane prepared-index build for the NOD `imagenet` common-session subset
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index`
+- Dataset / prepared artifacts: OpenNeuro `ds004496` metadata clone at `cache/public_datasets/ds004496/`
+- Output / artifact path: `cache/indices/public_nod/imagenet_multisession_common_sessions.parquet`
+- Status: done
+- Result summary: built a `360`-row prepared index with status counts `{'incomplete': 324, 'missing_payload': 36}` and `0` usable rows
+- Interpretation summary: the subset contract is now materialized, but payload resolution still blocks shared-only preparation
+- Promoted to evidence?: no

@@ -549,3 +549,9 @@ Risk:
   subset and records visible-versus-resolved path states for raw events,
   `fmriprep` BOLD/confounds, and `ciftify` beta/label inputs so the repo can
   track NOD readiness without inflating it into training readiness
+- 2026-04-04: the first real NOD prepared index was built on the live pod for
+  the `imagenet` common-session subset (`360` rows). The resulting readiness
+  breakdown showed `324` `incomplete` rows, `36` `missing_payload` rows, and
+  `0` rows currently usable for later shared-only prep, establishing an honest
+  operational boundary between “prepared index exists” and “dataset is
+  training-ready”
