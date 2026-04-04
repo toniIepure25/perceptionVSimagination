@@ -142,6 +142,14 @@ def _materialize_paths(dataset_root: Path, manifest: dict) -> int:
         cwd=dataset_root,
         check=False,
     )
+    if result.returncode != 0:
+        print(
+            "git-annex ran, but one or more requested payloads were not retrievable. "
+            "This usually means the current dataset clone has no usable annex source "
+            "for the selected keys. Inspect `git config --get-regexp '^remote\\..*annex|^annex\\..*'` "
+            "and `git-annex whereis <path>` inside the dataset clone before retrying.",
+            file=sys.stderr,
+        )
     return int(result.returncode)
 
 

@@ -255,15 +255,41 @@ Current live-pod result from the manifest audit:
 Current operational blocker:
 
 - the visible unresolved files are annex-backed symlinks under `.git/annex`
-- the live pod currently lacks `git-annex`
-- so the repo can now name the exact first payload target, but cannot
-  materialize it yet from the current pod image
+- the live pod now has `git-annex`, but the current metadata mirror clone still
+  has no usable annex source for these keys
+- `remote.origin.annex-ignore` is set to `true`
+- `git-annex whereis` on a representative target reports `0 copies`
+- so the repo can now name the exact first payload target and attempt
+  retrieval, but the current clone still cannot materialize those payloads
 
 Interpretation:
 
 - this is a real readiness improvement for the practical Animus lane
 - it is still **not** a claim that NOD is ready for shared-only prep or
   training
+
+## Live pod annex-enablement result
+
+Verified on `2026-04-04` on pod `orchestraiq-jupyter-75555bb5f5-hxwp5`:
+
+- `git-annex` was safely enabled in place via:
+  `apt-get install -y --no-install-recommends git-annex`
+- package footprint was modest:
+  - about `17.4 MB` download
+  - about `105 MB` additional installed disk usage
+- the helper now runs real `git annex get` attempts on the live pod
+
+Materialization outcome for the current exact subset:
+
+- exact target manifest:
+  `cache/indices/public_nod/imagenet_missing_payload_manifest.json`
+- retrieval attempted for the existing `36`-row `run-10` subset
+- result: retrieval still failed because no annex remote is known to contain
+  the requested keys
+- rerunning the prepared index left readiness unchanged:
+  - `324` `incomplete`
+  - `36` `missing_payload`
+  - `0` usable rows
 
 ## Expected remote path
 

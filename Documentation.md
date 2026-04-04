@@ -95,6 +95,30 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - NOD annex enabled but upstream payload source still missing
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/materialize_public_nod_payloads.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: enabled `git-annex` on pod
+  `orchestraiq-jupyter-75555bb5f5-hxwp5` via `apt-get install -y --no-install-recommends git-annex`,
+  initialized annex state inside the `ds004496` clone, attempted
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads --materialize`,
+  and reran `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index`
+- Decision: the local tooling blocker is removed, but the current GitHub-based
+  metadata mirror clone still has no usable annex source for the target keys,
+  so the exact `36`-row subset remains unresolved and the prepared index is
+  unchanged
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  still a practical Animus-lane operational pass only
+- Follow-up: identify the real annex-capable upstream for `ds004496`, then
+  rerun the existing exact-subset materialization workflow before considering
+  any later shared-only prep step
+
 ## 2026-04-04 - NOD exact payload manifest and annex-tooling blocker
 
 - Scope: engineering, data acquisition, reproducibility

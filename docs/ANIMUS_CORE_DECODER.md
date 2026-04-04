@@ -203,7 +203,8 @@ Current live result:
 - a real NOD prepared index exists for the `imagenet` common-session subset
 - the current clone still yields `0` rows usable for later shared-only prep
 - the first exact payload target is now known: the `36` `run-10` rows, about
-  `8.23 GiB` total, still blocked by missing `git-annex` on the live pod
+  `8.23 GiB` total; `git-annex` is now enabled on the live pod, but the
+  metadata mirror clone still has no usable annex source for those keys
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

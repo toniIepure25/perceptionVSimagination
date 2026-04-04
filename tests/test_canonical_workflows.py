@@ -480,6 +480,35 @@ def test_materialize_public_nod_payloads_refuses_without_git_annex(monkeypatch, 
     assert "git-annex is not available" in captured.err
 
 
+def test_materialize_public_nod_payloads_reports_unretrievable_annex_payloads(monkeypatch, tmp_path, capsys):
+    import fmri2img.workflows.materialize_public_nod_payloads as workflow
+
+    dataset_root = tmp_path / "ds004496"
+    dataset_root.mkdir()
+    manifest = {
+        "entries": [
+            {
+                "files": {
+                    "preproc_bold": {"path": "a.nii.gz", "visible": True, "resolved": False},
+                    "confounds": {"path": "a.tsv", "visible": True, "resolved": False},
+                    "ciftify_beta": {"path": "a_beta.nii", "visible": True, "resolved": False},
+                    "ciftify_label": {"path": "a_label.txt", "visible": True, "resolved": False},
+                }
+            }
+        ]
+    }
+
+    class Result:
+        returncode = 1
+
+    monkeypatch.setattr(workflow.shutil, "which", lambda name: "/usr/bin/git-annex")
+    monkeypatch.setattr(workflow.subprocess, "run", lambda *args, **kwargs: Result())
+    rc = workflow._materialize_paths(dataset_root, manifest)
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "no usable annex source" in captured.err
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling

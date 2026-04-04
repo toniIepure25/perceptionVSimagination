@@ -563,3 +563,11 @@ Risk:
   `fmri2img.workflows.materialize_public_nod_payloads` helper now writes the
   manifest/report and refuses materialization when `git-annex` is missing,
   recording the current live-pod blocker without inflating NOD readiness
+- 2026-04-04: `git-annex` was enabled directly on the live pod with a minimal
+  `apt-get install --no-install-recommends git-annex` step, and the exact
+  `36`-row NOD subset was retried through the checked-in materialization
+  workflow. Retrieval still failed because the current GitHub metadata mirror
+  clone has no usable annex source for the requested keys
+  (`remote.origin.annex-ignore=true`, `git-annex whereis` reports `0 copies`),
+  so the prepared-index readiness stayed unchanged at `324` `incomplete`,
+  `36` `missing_payload`, and `0` usable rows

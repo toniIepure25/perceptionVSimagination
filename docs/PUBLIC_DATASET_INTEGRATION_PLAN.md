@@ -111,8 +111,10 @@ Current exact materialization target:
 - the target is the `36` `run-10` rows across `sub-01..sub-09` and
   `ses-imagenet01..04`
 - the estimated missing payload set is about `8.23 GiB`
-- current blocker: the live pod does not have `git-annex`, so exact payload
-  materialization is still blocked even though the target subset is now known
+- `git-annex` is now enabled on the live pod
+- current blocker: the metadata mirror clone still has no usable annex source
+  for these keys, with `remote.origin.annex-ignore=true` and `git-annex whereis`
+  reporting `0 copies` for representative missing-payload targets
 
 ### Priority 2. Secondary imagery benchmark
 
@@ -177,9 +179,10 @@ What to implement next:
 
 The next implementation step should be:
 
-1. add `git-annex` to the live pod image or otherwise provide it on the pod
-2. run `fmri2img.workflows.materialize_public_nod_payloads --materialize`
-   against the `36` exact `missing_payload` rows
+1. identify or configure a real annex-capable upstream for `ds004496`
+   rather than relying on the GitHub metadata mirror alone
+2. rerun `fmri2img.workflows.materialize_public_nod_payloads --materialize`
+   against the existing `36` exact `missing_payload` rows
 3. rerun `fmri2img.workflows.prepare_public_nod_index`
 4. only then decide whether any rows become honestly usable for later
    shared-only prep

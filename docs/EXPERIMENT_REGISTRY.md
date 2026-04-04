@@ -111,3 +111,16 @@ Copy this block:
 - Result summary: built a `36`-row manifest for the `run-10` rows across `sub-01..sub-09` and `ses-imagenet01..04`, estimated about `8.23 GiB` of missing payloads, and confirmed that `git-annex` is missing on the live pod so materialization could not proceed; rerunning the prepared index left readiness unchanged at `{'incomplete': 324, 'missing_payload': 36}` with `0` usable rows
 - Interpretation summary: the first exact NOD payload target is now explicit and bounded, but the pod image still blocks real payload retrieval and shared-only preparation remains unavailable
 - Promoted to evidence?: no
+
+## EXP-2026-04-04-NOD-ANNEX-ENABLEMENT-AND-RETRIEVAL-ATTEMPT
+
+- Date: 2026-04-04
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane exact-subset annex enablement and retrieval attempt for the first unresolved NOD payload subset
+- Config: n/a; pod enablement via `apt-get install -y --no-install-recommends git-annex`, canonical workflow `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads --materialize`
+- Dataset / prepared artifacts: OpenNeuro `ds004496` metadata mirror clone plus the exact manifest at `cache/indices/public_nod/imagenet_missing_payload_manifest.json`
+- Output / artifact path: `cache/indices/public_nod/imagenet_missing_payload_report.json`
+- Status: blocked
+- Result summary: enabled `git-annex` on the live pod, initialized annex state in the `ds004496` clone, and attempted retrieval for the exact `36`-row `run-10` subset; retrieval still failed because no annex remote is known to contain the requested keys, leaving the prepared index unchanged at `{'incomplete': 324, 'missing_payload': 36}` with `0` usable rows
+- Interpretation summary: the local tooling blocker is resolved, but the current GitHub metadata mirror remains insufficient as a payload source; the next blocker is upstream annex availability, not local execution
+- Promoted to evidence?: no
