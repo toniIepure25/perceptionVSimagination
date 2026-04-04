@@ -5,9 +5,12 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.train_decoder")
+
 import numpy as np
 import torch
-
 from fmri2img.training.canonical import CanonicalLossWeights, SharedPrivateTrainer
 from fmri2img.workflows.common import (
     build_datasets,

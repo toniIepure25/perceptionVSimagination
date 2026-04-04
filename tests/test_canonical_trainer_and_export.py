@@ -10,6 +10,7 @@ import pandas as pd
 from fmri2img.evaluation import collect_predictions, compute_decoder_metrics, compute_roi_summary
 from fmri2img.export import export_decoder_bundle
 from fmri2img.training import CanonicalLossWeights, SharedPrivateTrainer, load_canonical_checkpoint
+from fmri2img.workflows.inspect_animus_export import main as inspect_animus_export_main
 from fmri2img.workflows.common import (
     build_datasets,
     build_loaders,
@@ -74,6 +75,9 @@ def test_trainer_fit_and_eval_bundle(canonical_fixture_dir):
     manifest = json.loads((export_dir / "manifest.json").read_text())
     assert manifest["artifact_version"] == "1.0"
     assert manifest["target_spec"]["dimension"] == 768
+    decoder_card = json.loads((export_dir / "decoder_card.json").read_text())
+    assert decoder_card["artifacts"]["checkpoint"] == checkpoint.name
+    assert (export_dir / "decoder_card.md").exists()
 
 
 def test_target_dimension_mismatch_is_rejected(canonical_fixture_dir, tmp_path):
@@ -172,6 +176,81 @@ def test_checkpoint_artifact_spec_carries_animus_core_metadata(canonical_fixture
     assert artifact["metadata"]["animus"]["interfaces"]["source"]["status"] == "scaffolded"
     assert artifact["metadata"]["animus"]["interfaces"]["confidence"]["status"] == "scaffolded"
     assert artifact["metadata"]["heads"]["disentanglement"]["mode"] == "shared_only"
+
+
+def test_animus_export_writes_decoder_card(canonical_fixture_dir, tmp_path):
+    checkpoint = tmp_path / "dummy.pt"
+    torch.save({"state_dict": {}}, checkpoint)
+    config = load_workflow_config(str(canonical_fixture_dir["config_path"]))
+    config["experiment"] = {
+        "name": "animus_core_decoder",
+        "description": "Shared-only practical decoder.",
+        "benchmark_role": "canonical_neural_baseline",
+        "evidence_tier": "validated",
+    }
+    config["animus"] = {
+        "subproject": "animus_core_decoder",
+        "decoder_role": "practical_content_decoder",
+        "stability_tier": "current_default",
+        "intended_use": "content decoding",
+        "source_interface_status": "scaffolded",
+        "confidence_interface_status": "scaffolded",
+    }
+    _, _, _, _, roi_summary, target_summary = build_datasets(config)
+    export_dir = export_decoder_bundle(
+        output_dir=tmp_path / "animus_export",
+        checkpoint_path=checkpoint,
+        artifact_spec=checkpoint_artifact_spec(
+            config,
+            checkpoint_path=str(checkpoint),
+            target_spec=target_summary,
+            roi_summary=roi_summary,
+            effective_config=config.to_dict(),
+        ),
+    )
+    decoder_card = json.loads((export_dir / "decoder_card.json").read_text())
+    assert decoder_card["experiment"]["name"] == "animus_core_decoder"
+    assert decoder_card["animus"]["stability_tier"] == "current_default"
+    assert decoder_card["interfaces"]["source"]["status"] == "scaffolded"
+    assert "content decoding" in (export_dir / "decoder_card.md").read_text()
+
+
+def test_inspect_animus_export_prints_decoder_summary_and_validates_bundle(canonical_fixture_dir, tmp_path, capsys):
+    checkpoint = tmp_path / "dummy.pt"
+    torch.save({"state_dict": {}}, checkpoint)
+    config = load_workflow_config(str(canonical_fixture_dir["config_path"]))
+    config["experiment"] = {
+        "name": "animus_core_decoder",
+        "description": "Shared-only practical decoder.",
+        "benchmark_role": "canonical_neural_baseline",
+        "evidence_tier": "validated",
+    }
+    config["animus"] = {
+        "subproject": "animus_core_decoder",
+        "decoder_role": "practical_content_decoder",
+        "stability_tier": "current_default",
+        "intended_use": "content decoding",
+        "source_interface_status": "scaffolded",
+        "confidence_interface_status": "scaffolded",
+    }
+    _, _, _, _, roi_summary, target_summary = build_datasets(config)
+    export_dir = export_decoder_bundle(
+        output_dir=tmp_path / "animus_export",
+        checkpoint_path=checkpoint,
+        artifact_spec=checkpoint_artifact_spec(
+            config,
+            checkpoint_path=str(checkpoint),
+            target_spec=target_summary,
+            roi_summary=roi_summary,
+            effective_config=config.to_dict(),
+        ),
+    )
+    rc = inspect_animus_export_main([str(export_dir), "--validate"])
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "Animus Export Summary" in output
+    assert "benchmark_role: canonical_neural_baseline" in output
+    assert "Bundle validation: OK" in output
 
 
 def test_resolve_runtime_device_falls_back_to_cpu_when_cuda_unavailable(monkeypatch):

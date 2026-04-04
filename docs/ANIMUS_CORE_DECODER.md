@@ -109,6 +109,14 @@ Current interface state:
 - source/domain: scaffolded
 - confidence: scaffolded
 
+The export bundle also writes a compact decoder card:
+
+- `decoder_card.json`
+- `decoder_card.md`
+
+Use the decoder card for fast subsystem inspection. Use `manifest.json` as the
+full machine-readable contract.
+
 That means the export surface is ready for future source/confidence extensions
 without pretending those heads are currently validated for deployment.
 
@@ -145,6 +153,29 @@ For the current external-data program, see:
 
 - `docs/DATA_ACQUISITION_PROGRAM.md`
 - `docs/EXTERNAL_DATA_INTEGRATION_PLAN.md`
+- `docs/NOD_PUBLIC_DATASET.md`
+
+The first checked-in public strengthening path for the practical lane is now
+`ds004496` metadata acquisition through:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.acquire_public_nod \
+  --output cache/public_datasets/ds004496
+```
+
+That surface is intentionally metadata-first. It establishes public provenance
+and remote path discipline for the Animus lane without pretending that NOD
+already belongs to the paired threshold ladder.
+
+Current remote status:
+
+- metadata clone completed on the live pod at
+  `/home/jovyan/local-data/perceptionVSimagination/cache/public_datasets/ds004496`
+- full annexed imaging content is still pending a separate storage-aware
+  acquisition step
+- the smallest viable NOD contract is now inspection-only:
+  `imagenet`, multi-session subjects `sub-01..sub-09`, and visible
+  `ciftify` beta/label derivatives for a future practical shared-only adapter
 
 ## Current limits
 

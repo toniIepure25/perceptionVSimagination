@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.preflight_data")
+
 import pandas as pd
 
 from fmri2img.data.canonical import normalize_decoder_index

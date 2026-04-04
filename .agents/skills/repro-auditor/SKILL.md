@@ -43,8 +43,9 @@ Use this skill when the question is “can we really rerun this?” rather than 
    - eval/transfer metrics
    - export manifest if export is claimed
 5. Verify the documented command matches the config and output path.
-6. Verify readiness labels honestly: `smoke_only`, `bootstrap_ready`, `paper_ready`, or `blocked`.
-7. Compare any manuscript or README claim against the current trust boundary.
+6. Verify the canonical command was intended to run from the project `.venv`.
+7. Verify readiness labels honestly: `smoke_only`, `bootstrap_ready`, `paper_ready`, or `blocked`.
+8. Compare any manuscript or README claim against the current trust boundary.
 
 ## Classification
 
@@ -81,6 +82,8 @@ Return a short audit memo with:
 
 - hand off to `paper-drafter` if wording needs to be corrected
 - hand off to `experiment-design` if reproducibility failure reveals a missing plan rather than a missing artifact
+
+Normal sequence: `ablation-runner` -> `repro-auditor` -> `paper-drafter` when the result is claim-relevant.
 
 ## Boundaries
 

@@ -170,6 +170,16 @@ Still required before submission quality:
 - optional decision on whether to add a direct dataset-host citation for the
   public imagery release
 
+The current submission-hardening target is now explicitly:
+
+- primary venue: **Imaging Neuroscience**
+- main text: compact scientific narrative with explicit figure/table support
+- appendix/supplement: reproducibility, configs, commands, artifact paths, and
+  export contract summary
+
+That means the paper should read less like an internal repo dossier and more
+like a careful neuroscience submission with a strong supplement.
+
 Paper 1 now also has:
 
 - a first real figure package under `docs/paper1/figures/`

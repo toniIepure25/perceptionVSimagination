@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.run_legacy_ridge_baseline")
+
 import numpy as np
 import pandas as pd
 

@@ -22,9 +22,9 @@ shared-private model but remains below shared-only. These results do not
 support a claim that explicit disentanglement already improves
 perception-to-imagery decoding performance. Instead, they motivate a threshold
 hypothesis: shared-private structure may require materially larger paired
-overlap before it becomes beneficial. The platform therefore serves both as a
-practical shared-only decoder lane for Animus and as a disciplined research
-testbed for future threshold studies.
+overlap before it becomes beneficial. The platform therefore serves as a
+disciplined benchmark and reproducibility surface for future threshold studies,
+while also identifying shared-only as the current practical neural subsystem.
 
 ## 1. Introduction
 
@@ -65,8 +65,8 @@ modestly under reduced private capacity, but do not overtake shared-only. These
 results are scientifically useful because they clarify what can be claimed
 today: the platform is operational and trustworthy, but explicit disentanglement
 is not yet supported as the best model family in this low-overlap regime.
-Figure 2 summarizes the scarcity boundary that makes those conclusions
-necessarily modest.
+Figure 2 and Table 2 summarize the scarcity boundary and the resulting claim
+discipline that make those conclusions necessarily modest.
 
 This leads to a threshold-style research question. The current paper does not
 claim that shared-private structure wins. Instead, it establishes a benchmark
@@ -150,8 +150,8 @@ primary metrics, along with imagery/perception mean cosine summaries,
 transfer-focused evaluation on held-out paired subsets, and paired-group counts.
 Domain accuracy is recorded only as a secondary diagnostic for shared-private
 models and is not treated as a headline result in the current paper. Appendix B
-and Appendix E summarize the exact workflow commands and the practical export
-contract used in Paper 1.
+and Appendix E summarize the exact workflow commands, artifact roots, and the
+practical export contract used in Paper 1.
 
 ## 4. Benchmark Setup
 
@@ -206,7 +206,9 @@ The main empirical message is therefore not a positive shared-private result.
 Instead, it is a disciplined low-overlap finding: simple models dominate under
 the present data ceiling, and shared-only is currently the correct canonical
 neural baseline. The shared-private family remains an important hypothesis
-family, but not the current winner.
+family, but not the current winner. Table 1 should therefore be read as a
+benchmark-ordering result, not as evidence that the shared-private question has
+already been settled in general.
 
 ## 6. Discussion
 
@@ -236,6 +238,11 @@ program. It also remains compatible with the broader imagery literature, which
 supports meaningful overlap between imagery and perception without implying that
 the same decoder structure should already dominate in a tiny paired benchmark
 (Pearson, 2019; Dijkstra et al., 2018).
+
+For an Imaging Neuroscience audience, the main value of that practical lane is
+not that it changes the scientific ranking, but that it demonstrates how a
+reproducible benchmark can still yield a usable subsystem while preserving
+strict empirical modesty.
 
 ## 7. Limitations
 
@@ -267,6 +274,6 @@ paired perception/imagery dataset and rerun the same ladder unchanged. If
 shared-private improves under that larger regime, the threshold hypothesis gains
 support. If it does not, the field gains an equally valuable result about when
 simpler models remain the correct default for perception-to-imagery decoding.
-Appendix A and Appendix B summarize the exact frozen benchmark assets and
-commands needed to carry that next-stage rerun forward without changing the
-comparison surface.
+Appendix A through Appendix E summarize the frozen benchmark assets, commands,
+artifact paths, and export contract needed to carry that next-stage rerun
+forward without changing the comparison surface.

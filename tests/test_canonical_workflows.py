@@ -1,6 +1,10 @@
+import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+import pytest
 
 
 def _workflow_env():
@@ -176,10 +180,17 @@ def test_animus_core_wrapper_injects_default_config_when_omitted():
 def test_docs_reference_canonical_workflows():
     readme = open("README.md").read()
     start_here = open("START_HERE.md").read()
+    agents = open("AGENTS.md").read()
+    documentation = open("Documentation.md").read()
     assert "START_HERE.md" in readme
     assert "docs/REPRODUCIBILITY.md" in readme
+    assert "docs/EXPERIMENT_REGISTRY.md" in start_here
+    assert "docs/EXPERIMENT_REGISTRY.md" in agents
+    assert "docs/EXPERIMENT_REGISTRY.md" in documentation
     for command in (
         "fmri2img.workflows.acquire_public_nsd_imagery",
+        "fmri2img.workflows.acquire_public_nod",
+        "fmri2img.workflows.inspect_public_nod",
         "fmri2img.workflows.preflight_animus_core_decoder",
         "fmri2img.workflows.train_animus_core_decoder",
         "fmri2img.workflows.eval_animus_core_decoder",
@@ -252,10 +263,123 @@ def test_acquire_public_nsd_imagery_wrapper_invokes_official_script(monkeypatch)
     assert seen["check"] is False
 
 
+def test_acquire_public_nod_wrapper_invokes_official_script(monkeypatch):
+    import fmri2img.workflows.acquire_public_nod as workflow
+
+    seen = {}
+
+    class Result:
+        returncode = 0
+
+    def fake_run(cmd, check=False):
+        seen["cmd"] = cmd
+        seen["check"] = check
+        return Result()
+
+    monkeypatch.setattr(workflow.subprocess, "run", fake_run)
+    rc = workflow.main(["--dry-run"])
+    assert rc == 0
+    assert seen["cmd"][0] == sys.executable
+    assert seen["cmd"][1].endswith("scripts/download_nod_metadata.py")
+    assert seen["cmd"][2:] == ["--dry-run"]
+    assert seen["check"] is False
+
+
+def test_inspect_public_nod_summarizes_minimal_layout(tmp_path):
+    from fmri2img.workflows.inspect_public_nod import summarize_nod_layout
+
+    root = tmp_path / "ds004496"
+    root.mkdir()
+    (root / "dataset_description.json").write_text("{}\n")
+    (root / "participants.tsv").write_text(
+        "participant_id\tage\tsex\tgroup\n"
+        "sub-01\t22\tF\tmulti-session\n"
+        "sub-10\t21\tM\tsingle-session\n"
+    )
+    (root / "sub-01" / "ses-imagenet01" / "func").mkdir(parents=True)
+    (root / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_events.tsv").write_text("onset\tduration\n")
+    (root / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_bold.json").write_text("{}\n")
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func").mkdir(parents=True)
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_space-T1w_desc-preproc_bold.nii.gz").write_text("x")
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_desc-confounds_timeseries.tsv").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1").mkdir(parents=True)
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_Atlas.dtseries.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_beta.dscalar.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_label.txt").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-floc_task-floc").mkdir(parents=True)
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-floc_task-floc" / "floc-faces.dlabel.nii").write_text("x")
+
+    summary = summarize_nod_layout(root)
+    assert summary["subject_count"] == 1
+    assert summary["multi_session_subjects"] == ["sub-01"]
+    assert summary["readiness"]["metadata_clone_present"] is True
+    assert summary["readiness"]["surface_glm_visible"] is True
+    assert summary["readiness"]["animus_shared_only_training_ready"] is False
+    assert summary["recommended_first_contract"]["task_family"] == "imagenet perception-only"
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
     assert "shared-only" in scaling
+
+
+def test_experiment_registry_exists_and_uses_compact_ledger_format():
+    registry = Path("docs/EXPERIMENT_REGISTRY.md").read_text()
+    assert "# Experiment Registry" in registry
+    assert "Documentation.md" in registry
+    assert "docs/PROJECT_MASTER_LOG.md" in registry
+    assert "## EXP-2026-04-02-RIDGE-MAX-OVERLAP" in registry
+    assert "Promoted to evidence?: yes" in registry
+
+
+def test_project_venv_guard_helper_accepts_project_venv_and_rejects_system_python():
+    from fmri2img.workflows._venv_guard import ensure_project_venv, is_running_in_project_venv, project_root
+
+    assert is_running_in_project_venv(executable=sys.executable, repo_root=project_root())
+    with pytest.raises(SystemExit) as excinfo:
+        ensure_project_venv(
+            "fmri2img.workflows.train_decoder",
+            executable="/usr/bin/python3",
+            repo_root=project_root(),
+        )
+    assert "must be run from the project .venv" in str(excinfo.value)
+
+
+def test_train_decoder_fails_fast_outside_project_venv():
+    system_python = Path("/usr/bin/python3")
+    if not system_python.exists() or system_python.parent == Path(sys.executable).parent:
+        pytest.skip("A distinct system Python interpreter is not available in this environment.")
+
+    env = _workflow_env()
+    result = subprocess.run(
+        [str(system_python), "-m", "fmri2img.workflows.train_decoder", "--help"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode != 0
+    assert "must be run from the project .venv" in result.stderr
+    assert "./.venv/bin/python -m fmri2img.workflows.train_decoder" in result.stderr
+
+
+def test_public_dataset_program_docs_and_catalog_exist():
+    opportunity = Path("docs/PUBLIC_DATASET_OPPORTUNITY_MAP.md").read_text()
+    plan = Path("docs/PUBLIC_DATASET_INTEGRATION_PLAN.md").read_text()
+    acquisition = Path("docs/DATA_ACQUISITION_PROGRAM.md").read_text()
+    nod_note = Path("docs/NOD_PUBLIC_DATASET.md").read_text()
+    catalog = json.loads(Path("configs/public_datasets/catalog.json").read_text())
+    assert "ds004496" in opportunity
+    assert "ds000203" in opportunity
+    assert "show_public_dataset_options" in opportunity
+    assert "ds004496" in plan
+    assert "orchestraiq-jupyter-75555bb5f5-hxwp5" in plan
+    assert "kubectl exec" in acquisition
+    assert "repo `.venv`" in acquisition
+    assert "fmri2img.workflows.acquire_public_nod" in acquisition
+    assert "metadata_only_git_clone" in nod_note
+    assert "fmri2img.workflows.inspect_public_nod" in nod_note
+    assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 
 def test_checked_in_smoke_config_runs(tmp_path):

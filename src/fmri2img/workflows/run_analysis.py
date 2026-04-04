@@ -4,6 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.run_analysis")
+
 from fmri2img.evaluation import collect_predictions, compute_roi_summary
 from fmri2img.training.canonical import load_canonical_checkpoint
 from fmri2img.workflows.common import (

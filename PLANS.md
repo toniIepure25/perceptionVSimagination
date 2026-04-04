@@ -3,6 +3,20 @@
 Use this file for multi-step work that spans more than one session, more than
 one run, or more than one lane. It is the forward plan, not the evidence log.
 
+## What Does Not Belong Here
+
+Do not use this file for:
+
+- raw session notes or command transcripts
+- permanent milestone history
+- paper prose drafts
+- evidence-freeze updates written before results exist
+
+Execution outcomes can be linked here, but the detailed local note belongs in
+`Documentation.md`, the compact durable run record belongs in
+`docs/EXPERIMENT_REGISTRY.md`, and the durable milestone belongs in
+`docs/PROJECT_MASTER_LOG.md`.
+
 ## When to use this file
 
 Create or refresh a plan when work involves:
@@ -61,6 +75,10 @@ Copy this block for each active initiative:
 
 - <output path or report>
 - <checkpoint / metrics / figure / memo>
+
+### Run ledger
+
+- YYYY-MM-DD | <config> | <override summary> | <output path> | planned | running | blocked | done
 
 ### Validation
 
@@ -148,3 +166,4 @@ already identified.
 - Prefer shared-only improvements for Animus-facing subsystem work.
 - Treat shared-private wins as unproven until they beat shared-only on a fair,
   fixed comparison surface.
+- Keep canonical commands and validation anchored to the project `.venv`.

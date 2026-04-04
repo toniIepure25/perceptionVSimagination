@@ -478,3 +478,60 @@ Risk:
   defined as the planning and working-log surfaces, and the repo-local skill
   docs were normalized around explicit inputs, outputs, and handoffs without
   changing the scientific evidence boundary
+- 2026-04-04: workflow-review pass completed for dual-lane day-to-day use:
+  the file boundary between `AGENTS.md`, `PLANS.md`, `Documentation.md`, and
+  `docs/PROJECT_MASTER_LOG.md` was tightened, `.venv` was made the explicit
+  canonical environment for validation and workflow commands, a lightweight
+  daily loop and optional lane-separated worktree pattern were documented, and
+  the five repo-local skills were given a clearer orchestration sequence for
+  research design, execution, auditing, and paper handoff
+- 2026-04-04: workflow hardening added a compact durable experiment ledger in
+  `docs/EXPERIMENT_REGISTRY.md` and a real `.venv` guard on key canonical
+  workflow entrypoints so preflight, train, eval, analysis, export, and Ridge
+  baseline commands fail fast with an actionable message when run outside the
+  project environment
+- 2026-04-04: Animus Core export hardening added a compact decoder card
+  (`decoder_card.json` and `decoder_card.md`) alongside the existing export
+  manifest so the practical shared-only subsystem is easier to inspect, hand
+  off, and integrate without changing the frozen benchmark ladder or evidence
+  interpretation
+- 2026-04-04: Animus integration guidance was tightened so the decoder card is
+  now the preferred quick human-facing inspection surface, `manifest.json`
+  remains the full machine-readable contract, and a tiny
+  `inspect_animus_export` helper was added for fast bundle inspection and
+  validation from the project `.venv`
+- 2026-04-04: Paper 1 was hardened further toward an **Imaging Neuroscience**
+  submission package: the full draft was tightened for flow and reduced
+  redundancy, appendix/supplement boundaries were clarified around configs,
+  commands, artifact paths, and export-contract details, the submission package
+  plan and checklist were updated, and a final claim/style audit was completed
+  without changing the frozen benchmark ordering or evidence boundary
+- 2026-04-04: a disciplined public-data expansion program was added for the
+  dual-lane repo: public dataset opportunities were ranked by threshold,
+  practical Animus, and future-paper roles; a machine-readable catalog and
+  small inspection helper were added; and the strategy docs now explicitly keep
+  perception-only and non-NSD imagery datasets separate from the primary fixed
+  threshold ladder unless later evidence justifies promotion
+- 2026-04-04: the remote public-data execution surface was audited and
+  documented as the environment of record for real acquisition/integration
+  work: the live pod `orchestraiq-jupyter-75555bb5f5-hxwp5` in
+  `runai-romania-dev` was verified, the repo path
+  `/home/jovyan/local-data/perceptionVSimagination` and active cache/output
+  roots were confirmed, about `215G` free space was measured before any new
+  download, no next-step public datasets were already staged there, and the
+  current blocker was recorded that the pod still lacks the repo `.venv` needed
+  for canonical workflow execution
+- 2026-04-04: the live pod blocker was removed by provisioning a repo-local
+  `.venv` under `/home/jovyan/local-data/perceptionVSimagination`, validating
+  guarded canonical module execution there, and completing the first real
+  `ds004496` practical-data step as a metadata-only Git acquisition under
+  `cache/public_datasets/ds004496` with a checked-in workflow wrapper and
+  provenance file; this expanded the practical Animus data path without
+  changing the frozen threshold ladder or evidence interpretation
+- 2026-04-04: the real `ds004496` clone was inspected on the live pod and the
+  first practical contract was narrowed to an honest, minimal surface:
+  `imagenet` perception-only, multi-session subjects `sub-01..sub-09`, and
+  visible `ciftify` beta/label derivatives. A guarded
+  `fmri2img.workflows.inspect_public_nod` helper and tightened NOD docs were
+  added so the repo can distinguish “inspection-ready” from “training-ready”
+  without altering the primary threshold ladder

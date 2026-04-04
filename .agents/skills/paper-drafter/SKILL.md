@@ -80,6 +80,9 @@ If results changed upstream, sync the relevant manuscript assets:
 - hand off to `repro-auditor` if reproducibility support for a claim is unclear
 - hand off to `experiment-design` if the text depends on evidence the repo does not yet have
 
+Normal sequence for evidence-bearing work: run report -> `repro-auditor` ->
+evidence docs -> `paper-drafter`.
+
 ## Boundaries
 
 - Do not invent new evidence.

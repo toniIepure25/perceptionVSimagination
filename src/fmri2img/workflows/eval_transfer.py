@@ -4,6 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.eval_transfer")
+
 import numpy as np
 import pandas as pd
 

@@ -140,6 +140,12 @@ The main benchmark artifacts used or produced by Paper 1 are:
 | Shared-private p16 eval root | `outputs/research/threshold_shared_private_p16/eval/full_imagery_overlap/` |
 | Shared-private p16 export root | `outputs/research/threshold_shared_private_p16/export/full_imagery_overlap/` |
 
+For submission packaging, the supplement should treat these artifact roots as
+the canonical provenance map for the paper rather than as an invitation to
+reinterpret the benchmark. Their role is to let a reviewer or future user trace
+the frozen comparison surface back to concrete prepared data, train roots, eval
+roots, and export bundles.
+
 ## Appendix D. Additional benchmark variants and controls
 
 The main manuscript focuses on the frozen ladder. Additional shared-private
@@ -177,6 +183,16 @@ The intended interface interpretation is:
 - `content`: active
 - `source`: scaffolded
 - `confidence`: scaffolded
+
+The export bundle now also contains two inspection-oriented surfaces:
+
+- `decoder_card.json`: compact structured summary for fast human or script-level inspection
+- `decoder_card.md`: compact human-facing summary for supplement or handoff review
+
+`manifest.json` remains the full machine-readable export contract. The decoder
+card is intentionally narrower and should be read as a quick guide to decoder
+identity, benchmark role, evidence tier, interface readiness, and artifact
+locations inside the export bundle.
 
 This practical export contract is deliberately narrower than the threshold
 research story. Paper 1 does **not** claim that source or confidence decoding
@@ -224,7 +240,21 @@ The table assets are maintained as versioned markdown files under:
 This keeps the paper package reproducible without pretending that the present
 benchmark is larger or more decisive than it is.
 
-## Appendix H. Next decisive experiment
+## Appendix H. Submission package boundary
+
+For the current Imaging Neuroscience submission path, the package boundary
+should be:
+
+- main manuscript:
+  benchmark motivation, methods, frozen ladder, results, discussion, limits
+- appendix / supplement:
+  overlap details, exact configs, exact commands, artifact roots, export
+  contract, figure/table provenance
+
+This separation keeps the main paper readable as a scientific manuscript while
+still making the reproducibility contribution explicit and reviewable.
+
+## Appendix I. Next decisive experiment
 
 The next decisive experiment does not require a new benchmark definition. It
 requires a larger paired dataset. Once such data are available, the fixed

@@ -34,7 +34,7 @@ Use this skill after a question has been scoped and before code changes or long 
 2. Fix the comparison surface before proposing changes.
 3. Name the exact config baseline.
 4. Specify the minimal controlled overrides.
-5. Define required artifacts, validation commands, and docs updates.
+5. Define required artifacts, validation commands from the project `.venv`, and docs updates.
 
 ## Default Baselines
 
@@ -75,6 +75,8 @@ Produce a compact plan containing:
 - hand off to `ablation-runner` for execution
 - hand off to `paper-drafter` only after real results exist
 - hand off to `repro-auditor` if the main question is rerunnability rather than design
+
+Normal sequence: `research-scout` -> `experiment-design` -> `ablation-runner`.
 
 ## Boundaries
 

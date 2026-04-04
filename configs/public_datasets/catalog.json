@@ -1,0 +1,88 @@
+{
+  "datasets": [
+    {
+      "id": "nsd_imagery_public",
+      "label": "NSD-Imagery public release",
+      "dataset_id": "ds004937",
+      "host": "OpenNeuro / NSD S3",
+      "task_type": "paired perception/imagery extension with NSD-style identifiers",
+      "role": "A",
+      "classification": "current canonical public source",
+      "lane_fit": "threshold research and Animus support",
+      "primary_use": "canonical baseline public imagery source",
+      "rank_within_role": 1,
+      "status": "already integrated; exhausted for the fixed primary benchmark",
+      "notes": "Preserves benchmark semantics, but the currently accessible public release still yields only 5 shared paired ids on the fixed ladder."
+    },
+    {
+      "id": "ds000203",
+      "label": "Visual imagery and false memory for pictures",
+      "dataset_id": "ds000203",
+      "host": "OpenNeuro legacy OpenfMRI",
+      "task_type": "mental imagery and reality-monitoring fMRI",
+      "role": "A/C",
+      "classification": "secondary paired-imagery benchmark candidate",
+      "lane_fit": "secondary benchmark and future paper path",
+      "primary_use": "imagery / reality-monitoring benchmark distinct from the NSD-style ladder",
+      "rank_within_role": 2,
+      "status": "public candidate; not integrated",
+      "notes": "Genuine imagery task, but not a drop-in replacement for the natural-image paired threshold ladder."
+    },
+    {
+      "id": "ds004496",
+      "label": "Natural Object Dataset (NOD)",
+      "dataset_id": "ds004496",
+      "host": "OpenNeuro",
+      "task_type": "large-scale perception-only natural-image fMRI",
+      "role": "B",
+      "classification": "Animus robustness dataset",
+      "lane_fit": "practical Animus lane",
+      "primary_use": "shared-only subsystem strengthening and robustness",
+      "rank_within_role": 1,
+      "status": "metadata mirror cloned on the live pod; annexed imaging content not yet acquired",
+      "notes": "High subject count and image scale make it the strongest immediate public perception-only option for the practical lane. Metadata-only Git acquisition now exists at cache/public_datasets/ds004496 on the live pod."
+    },
+    {
+      "id": "ds004192",
+      "label": "THINGS-fMRI",
+      "dataset_id": "ds004192",
+      "host": "OpenNeuro / THINGS initiative",
+      "task_type": "large-scale perception-only object fMRI",
+      "role": "B/C",
+      "classification": "Animus robustness dataset and future object-semantic benchmark",
+      "lane_fit": "practical Animus lane and future paper path",
+      "primary_use": "object-rich perception benchmark with strong semantic structure",
+      "rank_within_role": 2,
+      "status": "public candidate; not integrated",
+      "notes": "Excellent object-semantic coverage and derivatives, but fewer subjects than NOD."
+    },
+    {
+      "id": "ds001499",
+      "label": "BOLD5000",
+      "dataset_id": "ds001499",
+      "host": "OpenNeuro",
+      "task_type": "large-scale perception-only natural-image fMRI",
+      "role": "B",
+      "classification": "Animus robustness dataset",
+      "lane_fit": "practical Animus lane",
+      "primary_use": "image-scale perception benchmark with COCO/ImageNet/SUN overlap",
+      "rank_within_role": 3,
+      "status": "public candidate; not integrated",
+      "notes": "Operationally attractive and historically important, but smaller and less subject-rich than NOD."
+    },
+    {
+      "id": "ds006623",
+      "label": "Covert consciousness under anesthesia",
+      "dataset_id": "ds006623",
+      "host": "OpenNeuro",
+      "task_type": "mental imagery under graded propofol sedation",
+      "role": "C",
+      "classification": "future paper dataset",
+      "lane_fit": "future source-routing / internally generated state work",
+      "primary_use": "consciousness and internally generated state decoding",
+      "rank_within_role": 1,
+      "status": "public candidate; not integrated",
+      "notes": "Very strong for future imagery/consciousness papers, but not a natural-image paired threshold benchmark."
+    }
+  ]
+}

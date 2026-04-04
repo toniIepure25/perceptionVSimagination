@@ -20,9 +20,9 @@
 
 - [ ] Final bibliography pass against target venue style
 - [ ] Final figure/table caption formatting in venue style
-- [ ] One last claim audit against the evidence freeze
+- [x] One last claim audit against the evidence freeze
 - [ ] Final proofreading pass for flow, redundancy, and sentence polish
-- [ ] Supplement package polish from the assembled appendix
+- [x] Supplement package polish from the assembled appendix
 
 ## Still missing before real submission
 
@@ -65,6 +65,12 @@ Potential downside:
 
 Prepare Paper 1 first for **Imaging Neuroscience** while preserving a
 benchmark-oriented fallback path for **NeurIPS Datasets and Benchmarks**.
+
+Current pass update:
+
+- venue alignment remains fixed to **Imaging Neuroscience**
+- the manuscript package has been tightened for flow, redundancy, and
+  supplement clarity without changing the evidence boundary
 
 ## Remaining submission risks
 

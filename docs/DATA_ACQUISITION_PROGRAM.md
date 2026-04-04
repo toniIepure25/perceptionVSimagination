@@ -2,6 +2,31 @@
 
 This document defines the current external-data program for the repository.
 
+## Remote execution rule
+
+Real acquisition and prep work should use the remote cluster environment as the
+execution surface of record.
+
+Verified on `2026-04-04`:
+
+- namespace: `runai-romania-dev`
+- live pod: `orchestraiq-jupyter-75555bb5f5-hxwp5`
+- preferred access path: `kubectl exec`
+- repo path: `/home/jovyan/local-data/perceptionVSimagination`
+- existing shared data root: `/home/jovyan/work/data`
+- free space before any new download: about `215G`
+
+Current blocker:
+
+- the live pod does not yet have the repo `.venv`, so canonical workflow
+  entrypoints should not be run there until that environment is provisioned
+
+Operational consequence:
+
+- check remote storage and dataset presence first
+- do not begin a new public download on the pod until `.venv` parity is fixed
+- keep local-only dry runs separate from remote acquisition of record
+
 ## Chosen track
 
 The current program is on:
@@ -62,6 +87,11 @@ Why this is rank 1:
 - it is the only realistic near-term option that can directly answer the
   threshold question without changing the task definition
 
+Remote note:
+
+- this class still depends on the live pod gaining a repo `.venv` before any
+  canonical rebuild or rerun work should begin
+
 ## 2. Best medium-effort acquisition
 
 Integrate a public paired imagery/perception dataset as a secondary benchmark.
@@ -96,9 +126,9 @@ Why this is rank 3 instead of rank 1:
 
 Bring in a large public perception-only dataset such as:
 
+- NOD (`ds004496`)
 - BOLD5000 (`ds001499`)
 - THINGS-fMRI (`ds004192`)
-- NOD (`ds004496`)
 
 Why this matters:
 
@@ -108,6 +138,28 @@ Why this matters:
 Why it is not the immediate next answer:
 
 - it does not directly break the paired perception/imagery threshold benchmark
+- on the current cluster pod, no candidate public datasets are already staged,
+  so the first step is still remote environment alignment plus disciplined
+  acquisition planning
+
+Current first practical move:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.acquire_public_nod \
+  --output cache/public_datasets/ds004496
+```
+
+This is a metadata-only Git acquisition surface for the practical Animus lane.
+It is intentionally smaller than a full annex download and does not change the
+primary threshold ladder.
+
+Current status:
+
+- completed on the live pod
+- output path:
+  `/home/jovyan/local-data/perceptionVSimagination/cache/public_datasets/ds004496`
+- provenance file:
+  `cache/public_datasets/ds004496/acquisition_provenance.json`
 
 ## Canonical public source path
 

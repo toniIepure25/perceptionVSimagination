@@ -2,6 +2,14 @@
 
 This repository now has one canonical path: the shared/private perception-imagery decoder platform.
 
+Run canonical commands and validation from the project environment:
+
+```bash
+source .venv/bin/activate
+```
+
+or call tools explicitly through `./.venv/bin/python` and `./.venv/bin/pytest`.
+
 ## Read first
 
 - [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
@@ -16,6 +24,7 @@ This repository now has one canonical path: the shared/private perception-imager
 - [docs/DATA_ACQUISITION_PROGRAM.md](docs/DATA_ACQUISITION_PROGRAM.md)
 - [docs/EXTERNAL_DATA_INTEGRATION_PLAN.md](docs/EXTERNAL_DATA_INTEGRATION_PLAN.md)
 - [docs/PROJECT_MASTER_LOG.md](docs/PROJECT_MASTER_LOG.md)
+- [docs/EXPERIMENT_REGISTRY.md](docs/EXPERIMENT_REGISTRY.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)
 - [docs/VALIDATION.md](docs/VALIDATION.md)
@@ -39,6 +48,19 @@ python -m fmri2img.workflows.acquire_public_nsd_imagery \
   --subjects all \
   --skip-stimuli \
   --output cache/nsd_imagery_full_all
+```
+
+Practical public-data acquisition:
+
+```bash
+python -m fmri2img.workflows.acquire_public_nod \
+  --output cache/public_datasets/ds004496
+```
+
+Practical public-data inspection:
+
+```bash
+python -m fmri2img.workflows.inspect_public_nod
 ```
 
 Primary threshold-testing research model:

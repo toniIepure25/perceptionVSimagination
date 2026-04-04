@@ -130,7 +130,10 @@ Current ranked data options:
 
 1. richer NSD-style paired imagery/perception data beyond the current public release
 2. a secondary public paired imagery/perception dataset as a separate benchmark
+   (best current public candidate: `ds000203`)
 3. large perception-only datasets for the practical Animus lane
+   (best current public candidate: `ds004496`, with `ds004192` and `ds001499`
+   as follow-on public options)
 
 ### Medium-term experiments
 
@@ -246,6 +249,8 @@ See also:
 
 - [DATA_ACQUISITION_PROGRAM.md](DATA_ACQUISITION_PROGRAM.md)
 - [EXTERNAL_DATA_INTEGRATION_PLAN.md](EXTERNAL_DATA_INTEGRATION_PLAN.md)
+- [PUBLIC_DATASET_OPPORTUNITY_MAP.md](PUBLIC_DATASET_OPPORTUNITY_MAP.md)
+- [PUBLIC_DATASET_INTEGRATION_PLAN.md](PUBLIC_DATASET_INTEGRATION_PLAN.md)
 
 That is the shortest path to a stronger paper and the clearest way to decide
 whether shared-private is a viable central claim or only a long-term hypothesis.

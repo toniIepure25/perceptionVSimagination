@@ -36,6 +36,8 @@ Prefer these commands:
 
 Use `train_animus_core_decoder` only for the practical shared-only lane.
 
+Run canonical commands from the project `.venv`.
+
 ## Baseline Choices
 
 - Practical subsystem ablations: start from `configs/canonical/animus_core_decoder.yaml`
@@ -72,6 +74,8 @@ For each run, report:
 
 - hand off to `repro-auditor` if artifact or readiness status is uncertain
 - hand off to `paper-drafter` only after results are logged and claim-safe
+
+Normal sequence: `experiment-design` -> `ablation-runner` -> `repro-auditor`.
 
 ## Boundaries
 

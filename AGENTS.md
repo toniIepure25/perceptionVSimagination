@@ -4,6 +4,19 @@ This file is the Codex operating contract for `perceptionVSimagination`.
 Optimize for minimal diffs, strong reproducibility, and clear separation
 between reusable engineering and scientific interpretation.
 
+## What This File Is For
+
+- `AGENTS.md`: the default operating contract for how work should be done here
+- `PLANS.md`: multi-session strategy, experiment programs, and active run
+  matrices
+- `Documentation.md`: current working notes, decisions, and follow-up items
+- `docs/EXPERIMENT_REGISTRY.md`: compact durable ledger of important runs
+- `docs/PROJECT_MASTER_LOG.md`: durable project memory and official milestones
+
+If two files seem to overlap, prefer the narrower one. Do not turn
+`Documentation.md` into the long-term archive, and do not turn
+`docs/PROJECT_MASTER_LOG.md` into a session transcript.
+
 ## Working agreements
 
 - Plan first for complex tasks or anything that changes experiments, docs
@@ -45,6 +58,27 @@ Classify work into one primary lane before editing:
 Do not merge these lanes into one narrative. Engineering hardening does not
 justify new empirical claims.
 
+## Daily Loop
+
+Use this default operating rhythm unless the task clearly needs something else:
+
+1. Classify the lane and identify the canonical baseline config or doc surface.
+2. If the work spans sessions or multiple runs, create or update an entry in
+   `PLANS.md`.
+3. Do the smallest useful edit or run.
+4. Validate from the project `.venv`, not from system Python.
+5. Record the local outcome and next action in `Documentation.md`.
+6. If a run or experiment is durable enough to matter later, append it to
+   `docs/EXPERIMENT_REGISTRY.md`.
+7. If the change is a real milestone or durable repo-state change, append a
+   concise entry to `docs/PROJECT_MASTER_LOG.md`.
+
+Default command style:
+
+- `source .venv/bin/activate`
+- or call tools explicitly through `./.venv/bin/python`, `./.venv/bin/pytest`,
+  `./.venv/bin/ruff`
+
 ## Canonical commands
 
 Prefer these commands and configs:
@@ -71,6 +105,8 @@ Prefer these commands and configs:
 
 Use `--override` for small controlled changes. Avoid copying configs unless the
 variant needs a stable checked-in contract.
+
+Run canonical validation and workflows from the project `.venv`.
 
 ## Default baselines
 
@@ -108,7 +144,18 @@ Do not let README, comments, config names, or paper text outrun those facts.
 - Use `PLANS.md` for long-horizon experiment/program planning.
 - Use `Documentation.md` for milestone logging, decisions, and follow-up
   actions during active work.
+- Use `docs/EXPERIMENT_REGISTRY.md` for compact durable experiment/run entries.
 - Always append meaningful milestones to `docs/PROJECT_MASTER_LOG.md`.
+
+Separation rule:
+
+- `PLANS.md` answers: what are we trying to do over the next several steps?
+- `Documentation.md` answers: what happened in this working pass and what is
+  next?
+- `docs/EXPERIMENT_REGISTRY.md` answers: which durable runs matter and where
+  their artifacts live?
+- `docs/PROJECT_MASTER_LOG.md` answers: what durable repo-level milestone just
+  became true?
 
 Update doc surfaces by change type:
 
@@ -118,7 +165,8 @@ Update doc surfaces by change type:
 - Architecture or data-contract changes:
   `docs/ARCHITECTURE.md`, `docs/CURRENT_STATE.md`, `docs/VALIDATION.md`
 - New experiment results:
-  run report first, then `docs/REPRODUCIBILITY.md`, then only update
+  run report and `docs/EXPERIMENT_REGISTRY.md` first, then
+  `docs/REPRODUCIBILITY.md`, then only update
   `docs/CURRENT_EVIDENCE_FREEZE.md`, `docs/BENCHMARK_LADDER.md`, and
   `docs/PAPER_1_CLAIMS_MAP.md` if the evidence boundary genuinely changed
 - Manuscript/public narrative changes:
@@ -127,6 +175,9 @@ Update doc surfaces by change type:
 
 ## Reproducibility contract
 
+- Canonical commands, tests, and validations must run from the project `.venv`.
+- Canonical workflow entrypoints fail fast outside the project `.venv` with an
+  actionable message.
 - Run `preflight_data` before real training on canonical data paths.
 - Respect readiness labels: `smoke_only`, `bootstrap_ready`, `paper_ready`,
   `blocked`.
@@ -154,6 +205,37 @@ Repo-specific skills live under `.agents/skills/`:
 
 Use the skill that matches the task. Chain them in that order when the job
 spans strategy, execution, auditing, and paper updates.
+
+Default orchestration:
+
+- idea triage: `research-scout`
+- executable plan: `experiment-design`
+- controlled run: `ablation-runner`
+- artifact/claim audit: `repro-auditor`
+- manuscript-facing update: `paper-drafter`
+
+Skip or reorder only when the task is already downstream:
+
+- skip `research-scout` when the question is already fixed
+- skip `experiment-design` for a trivial one-file engineering change
+- go straight to `repro-auditor` when the issue is rerunnability or claim safety
+- go straight to `paper-drafter` only when no new evidence or rerun decision is needed
+
+The normal handoff is narrow and directional: do not use `paper-drafter` to
+invent evidence, and do not use `ablation-runner` to redesign the research question.
+
+## Optional Worktrees
+
+If parallel lane work starts causing branch clutter, use separate git worktrees
+by lane. Keep this optional and lightweight:
+
+- `animus-core`
+- `threshold-research`
+- `paper-lane`
+- `data-acquisition`
+
+Use worktrees only when they reduce collisions between engineering, runs, and
+paper edits. Do not create process overhead for single-lane work.
 
 ## Validation expectations
 

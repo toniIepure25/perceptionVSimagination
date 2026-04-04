@@ -4,6 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.eval_decoder")
+
 from fmri2img.evaluation import (
     collect_predictions,
     compute_decoder_metrics,

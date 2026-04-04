@@ -4,6 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from fmri2img.workflows._venv_guard import ensure_project_venv
+
+ensure_project_venv("fmri2img.workflows.export_for_animus")
+
 from fmri2img.export import export_decoder_bundle
 from fmri2img.training.canonical import inspect_canonical_checkpoint
 from fmri2img.workflows.common import build_datasets, checkpoint_artifact_spec, load_workflow_config
