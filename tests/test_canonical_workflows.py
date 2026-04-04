@@ -735,6 +735,133 @@ def test_prepare_public_nod_shared_only_adapter_requires_full_fixed_slice(tmp_pa
     assert "requires the full resolved run-10 slice" in str(excinfo.value)
 
 
+def test_prepare_public_nod_target_selection_builds_deterministic_trial_table(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_target_selection import build_public_nod_target_selection
+    import pandas as pd
+
+    repo_root = tmp_path
+    input_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_shared_only_adapter.parquet"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+
+    adapter_rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            events_rel = Path(subject) / session / "func" / f"{subject}_{session}_task-imagenet_run-10_events.tsv"
+            label_rel = (
+                Path("derivatives")
+                / "ciftify"
+                / subject
+                / "results"
+                / f"{session}_task-imagenet_run-10"
+                / f"{session}_task-imagenet_run-10_label.txt"
+            )
+            events_abs = dataset_root / events_rel
+            label_abs = dataset_root / label_rel
+            events_abs.parent.mkdir(parents=True, exist_ok=True)
+            label_abs.parent.mkdir(parents=True, exist_ok=True)
+            events_abs.write_text(
+                "onset\tduration\ttrial_type\tresponse_time\tstim_file\n"
+                "0\t1\t101\t0.5\timagenet/n00000001/sample_a.JPEG\n"
+                "4\t1\t102\t0.6\timagenet/n00000002/sample_b.JPEG\n"
+            )
+            label_abs.write_text("sample_a.JPEG\nsample_b.JPEG\n")
+            adapter_rows.append(
+                {
+                    "dataset_id": "ds004496",
+                    "dataset_label": "Natural Object Dataset (NOD)",
+                    "lane": "practical_animus",
+                    "task": "imagenet",
+                    "subject": subject,
+                    "session": session,
+                    "run": 10,
+                    "contract_scope": "imagenet_multisession_common_sessions",
+                    "usable_for_later_shared_only_prep": True,
+                    "events_resolved": True,
+                    "preproc_bold_resolved": True,
+                    "confounds_resolved": True,
+                    "ciftify_beta_resolved": True,
+                    "ciftify_label_resolved": True,
+                    "events_path": str(events_rel),
+                    "ciftify_label_path": str(label_rel),
+                    "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                    "adapter_status": "adapter_ready_not_training_ready",
+                }
+            )
+    pd.DataFrame(adapter_rows).to_parquet(input_path, index=False)
+
+    selection, report = build_public_nod_target_selection(input_path)
+    assert len(selection) == 72
+    assert selection["target_identifier"].nunique() == 2
+    assert report["adapter_row_count"] == 36
+    assert report["target_selection_rows"] == 72
+    assert report["state"] == {
+        "target_selection_ready": True,
+        "downstream_prep_ready": True,
+        "training_ready": False,
+    }
+    assert report["per_run_target_counts"]["sub-01|ses-imagenet01|run-10"] == 2
+
+
+def test_prepare_public_nod_target_selection_rejects_label_mismatch(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_target_selection import build_public_nod_target_selection
+    import pandas as pd
+
+    repo_root = tmp_path
+    input_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_shared_only_adapter.parquet"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+
+    adapter_rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            events_rel = Path(subject) / session / "func" / f"{subject}_{session}_task-imagenet_run-10_events.tsv"
+            label_rel = (
+                Path("derivatives")
+                / "ciftify"
+                / subject
+                / "results"
+                / f"{session}_task-imagenet_run-10"
+                / f"{session}_task-imagenet_run-10_label.txt"
+            )
+            events_abs = dataset_root / events_rel
+            label_abs = dataset_root / label_rel
+            events_abs.parent.mkdir(parents=True, exist_ok=True)
+            label_abs.parent.mkdir(parents=True, exist_ok=True)
+            events_abs.write_text(
+                "onset\tduration\ttrial_type\tresponse_time\tstim_file\n"
+                "0\t1\t101\t0.5\timagenet/n00000001/sample_a.JPEG\n"
+            )
+            label_abs.write_text(("wrong_name.JPEG\n" if subject == "sub-01" and session == "ses-imagenet01" else "sample_a.JPEG\n"))
+            adapter_rows.append(
+                {
+                    "dataset_id": "ds004496",
+                    "dataset_label": "Natural Object Dataset (NOD)",
+                    "lane": "practical_animus",
+                    "task": "imagenet",
+                    "subject": subject,
+                    "session": session,
+                    "run": 10,
+                    "contract_scope": "imagenet_multisession_common_sessions",
+                    "usable_for_later_shared_only_prep": True,
+                    "events_resolved": True,
+                    "preproc_bold_resolved": True,
+                    "confounds_resolved": True,
+                    "ciftify_beta_resolved": True,
+                    "ciftify_label_resolved": True,
+                    "events_path": str(events_rel),
+                    "ciftify_label_path": str(label_rel),
+                    "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                    "adapter_status": "adapter_ready_not_training_ready",
+                }
+            )
+    pd.DataFrame(adapter_rows).to_parquet(input_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_target_selection(input_path)
+    assert "deterministic agreement between events.tsv stim_file and label.txt" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -800,6 +927,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.prepare_public_nod_index" in nod_note
     assert "fmri2img.workflows.materialize_public_nod_payloads" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_shared_only_adapter" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_target_selection" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

@@ -207,6 +207,8 @@ Current live result:
   `36` `run-10` rows, `144` files, about `8.23 GiB` total
 - the next checked-in downstream surface is the fixed shared-only adapter:
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter`
+- the next downstream surface after that is fixed target selection:
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_selection`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

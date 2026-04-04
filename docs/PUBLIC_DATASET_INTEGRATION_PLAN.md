@@ -199,3 +199,12 @@ Current adapter target:
 - purpose:
   provide the narrowest stable downstream prep artifact for shared-only
   consumption while keeping training readiness explicitly false
+
+Current target-selection target:
+
+- `fmri2img.workflows.prepare_public_nod_target_selection`
+- output:
+  `cache/indices/public_nod/imagenet_run10_target_selection.parquet`
+- purpose:
+  turn the fixed adapter slice into a deterministic trial-level target
+  selection contract without yet claiming target-cache or training readiness

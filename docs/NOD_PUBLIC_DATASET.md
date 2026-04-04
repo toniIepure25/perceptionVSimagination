@@ -342,6 +342,49 @@ Why it is not yet training-ready:
 - no checked-in shared-only train/eval config should point here until those
   contracts are explicit
 
+## Fixed target-selection surface
+
+The smallest canonical target-selection workflow for the resolved adapter slice
+is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_selection
+```
+
+Default outputs:
+
+- target-selection parquet:
+  `cache/indices/public_nod/imagenet_run10_target_selection.parquet`
+- target-selection report:
+  `cache/indices/public_nod/imagenet_run10_target_selection.report.json`
+
+What it uses:
+
+- the fixed `36`-row shared-only adapter parquet
+- `events.tsv` `stim_file` values
+- `ciftify` `label.txt` values
+
+Current target identifier contract:
+
+- one trial-level row per selected image presentation
+- deterministic target identifier:
+  `Path(stim_file).name`
+- validation rule:
+  `Path(stim_file).name == label.txt entry`
+
+Current meaning:
+
+- target-selection-ready: yes
+- downstream-prep-ready: yes
+- training-ready: no
+
+What still blocks training after target selection:
+
+- a canonical target embedding cache built from this target-selection artifact
+- an ROI materialization contract aligned to the NOD derivatives
+- a shared-only training/eval config that points to both the adapter and the
+  target-selection outputs
+
 ## Expected remote path
 
 On the verified live pod:
