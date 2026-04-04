@@ -98,3 +98,16 @@ Copy this block:
 - Result summary: built a `360`-row prepared index with status counts `{'incomplete': 324, 'missing_payload': 36}` and `0` usable rows
 - Interpretation summary: the subset contract is now materialized, but payload resolution still blocks shared-only preparation
 - Promoted to evidence?: no
+
+## EXP-2026-04-04-NOD-MISSING-PAYLOAD-MANIFEST
+
+- Date: 2026-04-04
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane exact payload manifest for the first unresolved NOD subset
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads`
+- Dataset / prepared artifacts: OpenNeuro `ds004496` metadata clone plus the prepared index at `cache/indices/public_nod/imagenet_multisession_common_sessions.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_missing_payload_manifest.json`
+- Status: blocked
+- Result summary: built a `36`-row manifest for the `run-10` rows across `sub-01..sub-09` and `ses-imagenet01..04`, estimated about `8.23 GiB` of missing payloads, and confirmed that `git-annex` is missing on the live pod so materialization could not proceed; rerunning the prepared index left readiness unchanged at `{'incomplete': 324, 'missing_payload': 36}` with `0` usable rows
+- Interpretation summary: the first exact NOD payload target is now explicit and bounded, but the pod image still blocks real payload retrieval and shared-only preparation remains unavailable
+- Promoted to evidence?: no

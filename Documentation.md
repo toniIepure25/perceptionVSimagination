@@ -102,11 +102,14 @@ Paper handoff rule:
 - Surfaces touched: `src/fmri2img/workflows/materialize_public_nod_payloads.py`,
   `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
   `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
-  `Documentation.md`, `docs/PROJECT_MASTER_LOG.md`
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
 - Validation: remote audit on pod `orchestraiq-jupyter-75555bb5f5-hxwp5`
   confirmed `216G` free space, identified the exact `36` `missing_payload`
   rows, and measured their estimated unresolved payload size at about
-  `8.23 GiB`; local focused tests cover the new manifest helper
+  `8.23 GiB`; remote helper execution wrote the exact manifest/report, refused
+  `--materialize` because `git-annex` is absent, and rerunning the prepared
+  index left readiness unchanged; local focused tests cover the new manifest helper
 - Decision: added a tight manifest/report workflow for the first unresolved NOD
   payload subset and kept the materialization boundary honest by refusing
   `--materialize` when `git-annex` is absent on the live pod
