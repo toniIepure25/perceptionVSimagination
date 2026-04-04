@@ -597,3 +597,12 @@ Risk:
   `downstream_prep_ready=true`, and `training_ready=false`, preserving the
   boundary that target embeddings, ROI materialization, and a real shared-only
   training config remain separate steps
+- 2026-04-05: the fixed NOD slice now also has an explicit canonical
+  target-embedding cache contract via
+  `fmri2img.workflows.prepare_public_nod_target_embedding_cache`. The workflow
+  consumes the deterministic `3600`-row target-selection artifact and emits a
+  repo-usable target-embedding manifest for the intended `768`-D ViT-L/14
+  cache surface. On the live pod, all `3600` stimulus paths are visible but
+  `0` JPEG payloads are currently resolved, so the report correctly keeps
+  `target_embedding_ready=false`, `downstream_prep_ready=false`, and
+  `training_ready=false` without changing any evidence-facing interpretation

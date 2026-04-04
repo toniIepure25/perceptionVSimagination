@@ -163,3 +163,16 @@ Copy this block:
 - Result summary: built a deterministic `3600`-row trial-level target-selection artifact from the fixed `36` adapter rows, with `100` target rows per run, `3600` unique target identifiers, and `target_selection_ready=true`, `downstream_prep_ready=true`, `training_ready=false`
 - Interpretation summary: the fixed NOD slice now has a stable target-selection contract for downstream prep, but a canonical target embedding cache, ROI-materialization contract, and shared-only train/eval config are still required before honest model training
 - Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-TARGET-EMBEDDING-CONTRACT
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane canonical target-embedding cache contract over the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache`
+- Dataset / prepared artifacts: target-selection artifact `cache/indices/public_nod/imagenet_run10_target_selection.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_target_embedding_manifest.parquet`
+- Status: done
+- Result summary: built a `3600`-row target-embedding manifest for the fixed `run-10` NOD slice with `3600` visible stimulus paths, `0` resolved JPEG payloads, `target_embedding_ready=false`, `downstream_prep_ready=false`, and `training_ready=false`
+- Interpretation summary: the canonical NOD target-cache contract is now explicit and repo-usable, but the current live-pod stimulus JPEGs are still unresolved annex paths so real embeddings and honest shared-only training remain blocked
+- Promoted to evidence?: no

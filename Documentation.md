@@ -437,3 +437,25 @@ Paper handoff rule:
 - Follow-up: add repo-specific checks for skill-doc frontmatter or workflow-doc
   consistency, and keep future canonical workflow validation anchored to the
   project `.venv`
+
+## 2026-04-05 - NOD target-embedding cache contract
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/prepare_public_nod_target_embedding_cache.py`,
+  `tests/test_canonical_workflows.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  plus `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache`
+  and focused remote pytest on the live pod
+- Decision: added the smallest honest canonical target-embedding surface over
+  the fixed `3600`-row NOD target-selection artifact by emitting a manifest for
+  the intended `768`-D ViT-L/14 cache contract instead of faking embeddings
+- Claim boundary: no benchmark, evidence-freeze, or paper-claim changes; the
+  live NOD slice remains a narrow practical Animus-lane prep path only, and
+  the current target JPEG payloads are still unresolved on the pod
+- Follow-up: materialize the exact `3600` NOD stimulus JPEG payloads, then
+  compute the real `clip_target_768` cache before considering any shared-only
+  train/eval config
