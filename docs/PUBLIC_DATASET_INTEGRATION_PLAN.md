@@ -190,3 +190,12 @@ The next implementation step should be:
    `run-10`, `sub-01..sub-09`, `ses-imagenet01..04`
 3. do not widen to the rest of NOD until the next prepared-index contract is
    explicit
+
+Current adapter target:
+
+- `fmri2img.workflows.prepare_public_nod_shared_only_adapter`
+- output:
+  `cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet`
+- purpose:
+  provide the narrowest stable downstream prep artifact for shared-only
+  consumption while keeping training readiness explicitly false

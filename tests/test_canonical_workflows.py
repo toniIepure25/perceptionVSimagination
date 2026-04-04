@@ -635,6 +635,106 @@ def test_materialize_public_nod_payloads_uses_direct_openneuro_s3_by_default(mon
     assert seen["entry_count"] == 1
 
 
+def test_prepare_public_nod_shared_only_adapter_keeps_only_fixed_resolved_subset(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_adapter import (
+        EXPECTED_RUN,
+        build_public_nod_shared_only_adapter,
+    )
+    import pandas as pd
+
+    index_path = tmp_path / "prepared_index.parquet"
+    rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            rows.append(
+                {
+                    "task": "imagenet",
+                    "subject": subject,
+                    "session": session,
+                    "run": EXPECTED_RUN,
+                    "contract_scope": "imagenet_multisession_common_sessions",
+                    "usable_for_later_shared_only_prep": True,
+                    "events_resolved": True,
+                    "preproc_bold_resolved": True,
+                    "confounds_resolved": True,
+                    "ciftify_beta_resolved": True,
+                    "ciftify_label_resolved": True,
+                }
+            )
+    rows.append(
+        {
+            "task": "imagenet",
+            "subject": "sub-01",
+            "session": "ses-imagenet01",
+            "run": 9,
+            "contract_scope": "imagenet_multisession_common_sessions",
+            "usable_for_later_shared_only_prep": True,
+            "events_resolved": True,
+            "preproc_bold_resolved": True,
+            "confounds_resolved": True,
+            "ciftify_beta_resolved": True,
+            "ciftify_label_resolved": True,
+        }
+    )
+    rows.append(
+        {
+            "task": "imagenet",
+            "subject": "sub-01",
+            "session": "ses-imagenet01",
+            "run": EXPECTED_RUN,
+            "contract_scope": "imagenet_multisession_common_sessions",
+            "usable_for_later_shared_only_prep": False,
+            "events_resolved": True,
+            "preproc_bold_resolved": True,
+            "confounds_resolved": True,
+            "ciftify_beta_resolved": True,
+            "ciftify_label_resolved": True,
+        }
+    )
+    pd.DataFrame(rows).to_parquet(index_path, index=False)
+
+    prepared, report = build_public_nod_shared_only_adapter(index_path)
+    assert len(prepared) == 36
+    assert sorted(prepared["run"].unique().tolist()) == [10]
+    assert report["row_count"] == 36
+    assert report["usable_rows"] == 36
+    assert report["state"] == {
+        "adapter_ready": True,
+        "prep_ready": True,
+        "training_ready": False,
+    }
+    assert prepared["adapter_scope"].nunique() == 1
+    assert prepared["adapter_status"].nunique() == 1
+
+
+def test_prepare_public_nod_shared_only_adapter_requires_full_fixed_slice(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_adapter import build_public_nod_shared_only_adapter
+    import pandas as pd
+
+    index_path = tmp_path / "prepared_index.parquet"
+    pd.DataFrame(
+        [
+            {
+                "task": "imagenet",
+                "subject": "sub-01",
+                "session": "ses-imagenet01",
+                "run": 10,
+                "contract_scope": "imagenet_multisession_common_sessions",
+                "usable_for_later_shared_only_prep": True,
+                "events_resolved": True,
+                "preproc_bold_resolved": True,
+                "confounds_resolved": True,
+                "ciftify_beta_resolved": True,
+                "ciftify_label_resolved": True,
+            }
+        ]
+    ).to_parquet(index_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_shared_only_adapter(index_path)
+    assert "requires the full resolved run-10 slice" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -699,6 +799,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "prepared_index_contract" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_index" in nod_note
     assert "fmri2img.workflows.materialize_public_nod_payloads" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_shared_only_adapter" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

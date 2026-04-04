@@ -205,6 +205,8 @@ Current live result:
 - the first exact payload target has been resolved through the official
   OpenNeuro public S3 path:
   `36` `run-10` rows, `144` files, about `8.23 GiB` total
+- the next checked-in downstream surface is the fixed shared-only adapter:
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

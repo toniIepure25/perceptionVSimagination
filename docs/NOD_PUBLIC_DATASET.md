@@ -114,7 +114,6 @@ Why this is the smallest viable contract:
 What is still missing before a real shared-only run:
 
 - a canonical target-selection contract for NOD stimuli
-- a checked-in prepared-index adapter
 - an ROI materialization contract aligned to NOD derivatives
 - a real shared-only train/eval config that points to a prepared NOD index
 
@@ -199,21 +198,21 @@ Observed result on the current clone:
 - rows: `360`
 - row status counts:
   - `incomplete`: `324`
-  - `missing_payload`: `36`
-- usable rows for later shared-only prep: `0`
+  - `resolved`: `36`
+- usable rows for later shared-only prep: `36`
 
-Current dominant blockers:
+Current scope boundary:
 
-- only `36` rows expose visible `events.tsv`
-- `fmriprep` BOLD and confounds are visible for all `360` rows, but not
-  resolved as payloads
-- `ciftify` beta and label paths are visible for all `360` rows, but not
-  resolved as payloads
+- only the fixed `run-10` slice is resolved
+- the remaining `324` rows are still incomplete
+- this does not justify widening the NOD contract beyond the currently resolved
+  subset
 
 Interpretation:
 
 - the first prepared index is real and useful
 - it proves the subset contract and the visibility/resolution surface
+- it now supports a narrow downstream shared-only adapter surface
 - it does **not** justify shared-only training yet
 
 ## Exact missing-payload manifest surface
@@ -304,6 +303,44 @@ It stays narrow:
 - `sub-01..sub-09`
 - `ses-imagenet01..04`
 - still no claim that the wider NOD subset is ready
+
+## Fixed shared-only adapter surface
+
+The smallest downstream shared-only adapter surface for the resolved slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter
+```
+
+Default outputs:
+
+- adapter parquet:
+  `cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet`
+- adapter report:
+  `cache/indices/public_nod/imagenet_run10_shared_only_adapter.report.json`
+
+What it enforces:
+
+- `task == imagenet`
+- `subject in sub-01..sub-09`
+- `session in ses-imagenet01..04`
+- `run == 10`
+- `usable_for_later_shared_only_prep == True`
+
+Current meaning:
+
+- adapter-ready: yes
+- prep-ready: yes
+- training-ready: no
+
+Why it is not yet training-ready:
+
+- the adapter only turns the resolved NOD slice into a stable downstream prep
+  artifact
+- the repo still lacks a canonical target-selection contract for NOD stimuli
+- the repo still lacks an ROI materialization contract aligned to this NOD path
+- no checked-in shared-only train/eval config should point here until those
+  contracts are explicit
 
 ## Expected remote path
 
