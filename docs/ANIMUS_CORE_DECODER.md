@@ -201,10 +201,10 @@ materialization attempt.
 Current live result:
 
 - a real NOD prepared index exists for the `imagenet` common-session subset
-- the current clone still yields `0` rows usable for later shared-only prep
-- the first exact payload target is now known: the `36` `run-10` rows, about
-  `8.23 GiB` total; `git-annex` is now enabled on the live pod, but the
-  metadata mirror clone still has no usable annex source for those keys
+- the current clone now yields `36` rows usable for later shared-only prep
+- the first exact payload target has been resolved through the official
+  OpenNeuro public S3 path:
+  `36` `run-10` rows, `144` files, about `8.23 GiB` total
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

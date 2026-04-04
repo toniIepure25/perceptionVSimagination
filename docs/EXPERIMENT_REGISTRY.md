@@ -124,3 +124,16 @@ Copy this block:
 - Result summary: enabled `git-annex` on the live pod, initialized annex state in the `ds004496` clone, and attempted retrieval for the exact `36`-row `run-10` subset; retrieval still failed because no annex remote is known to contain the requested keys, leaving the prepared index unchanged at `{'incomplete': 324, 'missing_payload': 36}` with `0` usable rows
 - Interpretation summary: the local tooling blocker is resolved, but the current GitHub metadata mirror remains insufficient as a payload source; the next blocker is upstream annex availability, not local execution
 - Promoted to evidence?: no
+
+## EXP-2026-04-04-NOD-DIRECT-S3-EXACT-SUBSET-RETRIEVAL
+
+- Date: 2026-04-04
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane exact-subset payload retrieval for the first usable NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads --materialize --strategy direct_openneuro_s3`
+- Dataset / prepared artifacts: OpenNeuro `ds004496` exact `36`-row manifest plus official public S3 source under `https://s3.amazonaws.com/openneuro.org/ds004496/`
+- Output / artifact path: `cache/indices/public_nod/imagenet_missing_payload_retrieval_report.json`
+- Status: done
+- Result summary: downloaded `144` exact files for the fixed `run-10` subset (`36` BOLD, `36` confounds, `36` beta, `36` label) totaling about `8.23 GiB`; rerunning the prepared index changed readiness to `{'incomplete': 324, 'resolved': 36}` with `36` usable rows
+- Interpretation summary: the first NOD subset is now genuinely payload-ready for later shared-only prep, but this remains a narrow practical Animus-lane data-readiness result and not threshold evidence
+- Promoted to evidence?: no

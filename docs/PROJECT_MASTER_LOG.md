@@ -571,3 +571,12 @@ Risk:
   (`remote.origin.annex-ignore=true`, `git-annex whereis` reports `0 copies`),
   so the prepared-index readiness stayed unchanged at `324` `incomplete`,
   `36` `missing_payload`, and `0` usable rows
+- 2026-04-04: the payload-source blocker for the first NOD subset was resolved
+  by switching from annex retrieval to the official OpenNeuro public S3 path.
+  The checked-in materialization workflow now supports direct OpenNeuro S3
+  downloads into the existing annex-object targets, and the exact `36`
+  `run-10` rows (`144` files, about `8.23 GiB`) were retrieved successfully on
+  the live pod. Rerunning the prepared index moved the NOD slice to
+  `324` `incomplete`, `36` `resolved`, and `36` usable rows for later
+  shared-only prep, without changing the frozen threshold ladder or evidence
+  interpretation

@@ -101,8 +101,8 @@ Current live result:
 - rows: `360`
 - readiness:
   - `324` rows `incomplete`
-  - `36` rows `missing_payload`
-  - `0` rows currently usable for later shared-only prep
+  - `36` rows `resolved`
+  - `36` rows currently usable for later shared-only prep
 
 Current exact materialization target:
 
@@ -111,10 +111,15 @@ Current exact materialization target:
 - the target is the `36` `run-10` rows across `sub-01..sub-09` and
   `ses-imagenet01..04`
 - the estimated missing payload set is about `8.23 GiB`
-- `git-annex` is now enabled on the live pod
-- current blocker: the metadata mirror clone still has no usable annex source
-  for these keys, with `remote.origin.annex-ignore=true` and `git-annex whereis`
-  reporting `0 copies` for representative missing-payload targets
+- the smallest working public source is the official OpenNeuro public S3 path:
+  `https://s3.amazonaws.com/openneuro.org/ds004496/<dataset-relative-path>`
+- this exact subset has now been retrieved successfully without widening scope:
+  - `144` files downloaded
+  - about `8.23 GiB`
+  - `36` `fmriprep` BOLD files
+  - `36` confounds files
+  - `36` `ciftify` beta files
+  - `36` `ciftify` label files
 
 ### Priority 2. Secondary imagery benchmark
 
@@ -179,10 +184,9 @@ What to implement next:
 
 The next implementation step should be:
 
-1. identify or configure a real annex-capable upstream for `ds004496`
-   rather than relying on the GitHub metadata mirror alone
-2. rerun `fmri2img.workflows.materialize_public_nod_payloads --materialize`
-   against the existing `36` exact `missing_payload` rows
-3. rerun `fmri2img.workflows.prepare_public_nod_index`
-4. only then decide whether any rows become honestly usable for later
-   shared-only prep
+1. define the smallest downstream shared-only prep adapter that consumes the
+   now-resolved `36`-row subset
+2. keep the current success narrow:
+   `run-10`, `sub-01..sub-09`, `ses-imagenet01..04`
+3. do not widen to the rest of NOD until the next prepared-index contract is
+   explicit

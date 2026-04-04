@@ -252,21 +252,20 @@ Current live-pod result from the manifest audit:
   - `ciftify_label`: negligible
   - total: about `8.23 GiB`
 
-Current operational blocker:
+Current operational result:
 
-- the visible unresolved files are annex-backed symlinks under `.git/annex`
-- the live pod now has `git-annex`, but the current metadata mirror clone still
-  has no usable annex source for these keys
-- `remote.origin.annex-ignore` is set to `true`
-- `git-annex whereis` on a representative target reports `0 copies`
-- so the repo can now name the exact first payload target and attempt
-  retrieval, but the current clone still cannot materialize those payloads
+- the exact missing-payload subset can be retrieved directly from the official
+  OpenNeuro public S3 bucket
+- base URL:
+  `https://s3.amazonaws.com/openneuro.org/ds004496/`
+- the helper now supports a direct strategy that writes into the existing
+  annex-object targets instead of broadening the dataset clone
 
 Interpretation:
 
 - this is a real readiness improvement for the practical Animus lane
-- it is still **not** a claim that NOD is ready for shared-only prep or
-  training
+- it is still **not** a claim that NOD is threshold evidence or that the whole
+  NOD subset is training-ready
 
 ## Live pod annex-enablement result
 
@@ -283,13 +282,28 @@ Materialization outcome for the current exact subset:
 
 - exact target manifest:
   `cache/indices/public_nod/imagenet_missing_payload_manifest.json`
-- retrieval attempted for the existing `36`-row `run-10` subset
-- result: retrieval still failed because no annex remote is known to contain
-  the requested keys
-- rerunning the prepared index left readiness unchanged:
+- retrieval strategy:
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads --materialize --strategy direct_openneuro_s3`
+- retrieved subset:
+  - `36` rows
+  - `144` files total
+  - `36` `fmriprep` preproc BOLD files
+  - `36` `fmriprep` confounds TSVs
+  - `36` `ciftify` beta files
+  - `36` `ciftify` label files
+  - total downloaded size: about `8.23 GiB`
+- rerunning the prepared index now yields:
   - `324` `incomplete`
-  - `36` `missing_payload`
-  - `0` usable rows
+  - `36` `resolved`
+  - `36` usable rows
+
+This is the first real NOD payload-ready subset for the practical Animus lane.
+It stays narrow:
+
+- `run-10` only
+- `sub-01..sub-09`
+- `ses-imagenet01..04`
+- still no claim that the wider NOD subset is ready
 
 ## Expected remote path
 

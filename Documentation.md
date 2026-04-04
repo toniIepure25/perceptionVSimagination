@@ -95,6 +95,28 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - NOD direct official payload retrieval succeeded for the exact subset
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/materialize_public_nod_payloads.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: audited the official OpenNeuro public S3 bucket, confirmed
+  dataset-relative object paths under
+  `https://s3.amazonaws.com/openneuro.org/ds004496/`, ran
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads --materialize --strategy direct_openneuro_s3`
+  on pod `orchestraiq-jupyter-75555bb5f5-hxwp5`, and reran
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index`
+- Decision: the fixed `36`-row `run-10` subset is now genuinely resolved via
+  official direct download, yielding `36` usable rows for later shared-only
+  prep without widening the NOD contract
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  still a practical Animus-lane data-readiness improvement only
+- Follow-up: implement the smallest shared-only prep adapter over the now
+  resolved `36`-row subset before considering any wider NOD expansion
+
 ## 2026-04-04 - NOD annex enabled but upstream payload source still missing
 
 - Scope: engineering, data acquisition, reproducibility
