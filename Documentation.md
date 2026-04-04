@@ -95,6 +95,27 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - Remote git normalization and NOD prepared-index contract
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/inspect_public_nod.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: precise remote git audit on pod
+  `orchestraiq-jupyter-75555bb5f5-hxwp5`; local focused tests via
+  `./.venv/bin/pytest tests/test_canonical_workflows.py -q -k 'inspect_public_nod_summarizes_minimal_layout or public_dataset_program_docs_and_catalog_exist or acquire_public_nod_wrapper_invokes_official_script or docs_reference_canonical_workflows'`
+- Decision: normalized the live pod checkout back to `origin/main` while
+  preserving the old pod-local commit on a backup branch, and tightened the
+  first NOD prepared-index contract to `imagenet`, `sub-01..sub-09`, common
+  sessions `ses-imagenet01..04`, and `ciftify` beta/label derivatives
+- Claim boundary: no benchmark ordering or evidence interpretation changed; the
+  new contract is still inspection-ready and contract-ready, not training-ready
+- Follow-up: implement the first prepared-index adapter for the `imagenet`
+  multi-session subset using the explicit file-pattern contract now captured in
+  `inspect_public_nod`
+
 ## 2026-04-04 - NOD inspection contract
 
 - Scope: engineering, data acquisition, reproducibility

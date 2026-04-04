@@ -294,28 +294,55 @@ def test_inspect_public_nod_summarizes_minimal_layout(tmp_path):
     (root / "participants.tsv").write_text(
         "participant_id\tage\tsex\tgroup\n"
         "sub-01\t22\tF\tmulti-session\n"
+        "sub-02\t21\tF\tmulti-session\n"
         "sub-10\t21\tM\tsingle-session\n"
     )
     (root / "sub-01" / "ses-imagenet01" / "func").mkdir(parents=True)
     (root / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_events.tsv").write_text("onset\tduration\n")
     (root / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_bold.json").write_text("{}\n")
+    (root / "sub-01" / "ses-imagenet02" / "func").mkdir(parents=True)
+    (root / "sub-01" / "ses-imagenet02" / "func" / "sub-01_ses-imagenet02_task-imagenet_run-1_events.tsv").write_text("onset\tduration\n")
+    (root / "sub-01" / "ses-imagenet02" / "func" / "sub-01_ses-imagenet02_task-imagenet_run-1_bold.json").write_text("{}\n")
+    (root / "sub-02" / "ses-imagenet01" / "func").mkdir(parents=True)
+    (root / "sub-02" / "ses-imagenet01" / "func" / "sub-02_ses-imagenet01_task-imagenet_run-1_events.tsv").write_text("onset\tduration\n")
+    (root / "sub-02" / "ses-imagenet01" / "func" / "sub-02_ses-imagenet01_task-imagenet_run-1_bold.json").write_text("{}\n")
     (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func").mkdir(parents=True)
     (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_space-T1w_desc-preproc_bold.nii.gz").write_text("x")
     (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-1_desc-confounds_timeseries.tsv").write_text("x")
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet02" / "func").mkdir(parents=True)
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet02" / "func" / "sub-01_ses-imagenet02_task-imagenet_run-1_space-T1w_desc-preproc_bold.nii.gz").write_text("x")
+    (root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet02" / "func" / "sub-01_ses-imagenet02_task-imagenet_run-1_desc-confounds_timeseries.tsv").write_text("x")
+    (root / "derivatives" / "fmriprep" / "sub-02" / "ses-imagenet01" / "func").mkdir(parents=True)
+    (root / "derivatives" / "fmriprep" / "sub-02" / "ses-imagenet01" / "func" / "sub-02_ses-imagenet01_task-imagenet_run-1_space-T1w_desc-preproc_bold.nii.gz").write_text("x")
+    (root / "derivatives" / "fmriprep" / "sub-02" / "ses-imagenet01" / "func" / "sub-02_ses-imagenet01_task-imagenet_run-1_desc-confounds_timeseries.tsv").write_text("x")
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1").mkdir(parents=True)
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_Atlas.dtseries.nii").write_text("x")
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_beta.dscalar.nii").write_text("x")
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_label.txt").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet02_task-imagenet_run-1").mkdir(parents=True)
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet02_task-imagenet_run-1" / "ses-imagenet02_task-imagenet_run-1_Atlas.dtseries.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet02_task-imagenet_run-1" / "ses-imagenet02_task-imagenet_run-1_beta.dscalar.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet02_task-imagenet_run-1" / "ses-imagenet02_task-imagenet_run-1_label.txt").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-02" / "results" / "ses-imagenet01_task-imagenet_run-1").mkdir(parents=True)
+    (root / "derivatives" / "ciftify" / "sub-02" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_Atlas.dtseries.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-02" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_beta.dscalar.nii").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-02" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_label.txt").write_text("x")
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-floc_task-floc").mkdir(parents=True)
     (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-floc_task-floc" / "floc-faces.dlabel.nii").write_text("x")
 
     summary = summarize_nod_layout(root)
-    assert summary["subject_count"] == 1
-    assert summary["multi_session_subjects"] == ["sub-01"]
+    assert summary["subject_count"] == 2
+    assert summary["multi_session_subjects"] == ["sub-01", "sub-02"]
     assert summary["readiness"]["metadata_clone_present"] is True
     assert summary["readiness"]["surface_glm_visible"] is True
     assert summary["readiness"]["animus_shared_only_training_ready"] is False
     assert summary["recommended_first_contract"]["task_family"] == "imagenet perception-only"
+    assert summary["prepared_index_contract"]["common_sessions"] == ["ses-imagenet01"]
+    assert summary["prepared_index_contract"]["per_subject_common_session_run_counts"] == {
+        "sub-01": 1,
+        "sub-02": 1,
+    }
+    assert summary["prepared_index_contract"]["expected_common_session_runs_per_subject"] == 1
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
@@ -379,6 +406,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.acquire_public_nod" in acquisition
     assert "metadata_only_git_clone" in nod_note
     assert "fmri2img.workflows.inspect_public_nod" in nod_note
+    assert "prepared_index_contract" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

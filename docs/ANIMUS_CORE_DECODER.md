@@ -174,8 +174,9 @@ Current remote status:
 - full annexed imaging content is still pending a separate storage-aware
   acquisition step
 - the smallest viable NOD contract is now inspection-only:
-  `imagenet`, multi-session subjects `sub-01..sub-09`, and visible
-  `ciftify` beta/label derivatives for a future practical shared-only adapter
+  `imagenet`, multi-session subjects `sub-01..sub-09`, common sessions
+  `ses-imagenet01..04`, and visible `ciftify` beta/label derivatives for a
+  future practical shared-only adapter
 
 ## Current limits
 

@@ -97,6 +97,8 @@ The smallest honest contract is:
 - lane: practical Animus only
 - task family: `imagenet` perception-only
 - subject tier: start with multi-session subjects `sub-01..sub-09`
+- common session set: `ses-imagenet01..04`
+- expected common-session runs per subject: `40`
 - derivative source: `ciftify` `*_beta.dscalar.nii` with paired `*_label.txt`
 - status: inspection-ready, not training-ready
 
@@ -104,6 +106,9 @@ Why this is the smallest viable contract:
 
 - `imagenet` is the cleanest perception task visible across the dataset
 - the multi-session subjects provide the richest repeated structure
+- `ses-imagenet01..04` is the shared session core across `sub-01..sub-09`
+- `sub-01` has an extra `ses-imagenet05`, so it should stay outside the first
+  prepared-index contract
 - the surface GLM beta plus label pairing is already visible in the clone
 
 What is still missing before a real shared-only run:
@@ -126,6 +131,13 @@ JSON summary:
 ```bash
 ./.venv/bin/python -m fmri2img.workflows.inspect_public_nod --json
 ```
+
+This now includes a `prepared_index_contract` block that names:
+
+- the common `imagenet` session set
+- the multi-session subject subset
+- the expected common-session run count per subject
+- the exact raw and derivative file patterns the first adapter must rely on
 
 ## Expected remote path
 

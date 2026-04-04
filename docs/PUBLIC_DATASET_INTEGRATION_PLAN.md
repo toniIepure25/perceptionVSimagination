@@ -77,8 +77,20 @@ Current status:
 
 - steps `1` and `2` are now complete on the live pod
 - the next minimal contract is `imagenet` + multi-session subjects
-  `sub-01..sub-09` + `ciftify` `*_beta.dscalar.nii` / `*_label.txt`
-  inspection, still short of training readiness
+  `sub-01..sub-09` + common sessions `ses-imagenet01..04` +
+  `ciftify` `*_beta.dscalar.nii` / `*_label.txt` inspection, still short of
+  training readiness
+
+Prepared-index contract now defined:
+
+- task: `imagenet`
+- subjects: `sub-01..sub-09`
+- common sessions: `ses-imagenet01..04`
+- expected runs per subject inside the first contract: `40`
+- derivative dependence:
+  - raw `events.tsv`
+  - `fmriprep` preproc BOLD + confounds
+  - `ciftify` beta + label pairs
 
 ### Priority 2. Secondary imagery benchmark
 

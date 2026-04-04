@@ -535,3 +535,11 @@ Risk:
   `fmri2img.workflows.inspect_public_nod` helper and tightened NOD docs were
   added so the repo can distinguish “inspection-ready” from “training-ready”
   without altering the primary threshold ladder
+- 2026-04-04: the live pod git state was normalized back onto `origin/main`
+  after earlier copy-based sync drift, with the old pod-local `517b77b` commit
+  preserved on a backup branch and remote-only `.pod_deps/` artifacts excluded
+  from status noise. The NOD helper was then extended to expose the first
+  explicit prepared-index contract: `imagenet`, multi-session subjects
+  `sub-01..sub-09`, common sessions `ses-imagenet01..04`, and expected
+  common-session run counts, still without claiming shared-only training
+  readiness

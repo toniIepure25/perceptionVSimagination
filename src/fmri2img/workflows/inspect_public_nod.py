@@ -33,6 +33,31 @@ def _read_multi_session_subjects(dataset_root: Path) -> list[str]:
     return sorted(multi_session)
 
 
+def _imagenet_sessions_for_subject(dataset_root: Path, subject: str) -> list[str]:
+    subject_root = dataset_root / subject
+    return sorted(path.name for path in subject_root.glob("ses-imagenet*") if path.is_dir())
+
+
+def _common_imagenet_sessions(dataset_root: Path, subjects: list[str]) -> list[str]:
+    if not subjects:
+        return []
+    session_sets = [set(_imagenet_sessions_for_subject(dataset_root, subject)) for subject in subjects]
+    common = set.intersection(*session_sets) if session_sets else set()
+    return sorted(common)
+
+
+def _subject_run_count_for_sessions(dataset_root: Path, subject: str, sessions: list[str]) -> int:
+    total = 0
+    for session in sessions:
+        pattern = f"{session}_task-imagenet_run-*"
+        total += sum(
+            1
+            for path in (dataset_root / "derivatives" / "ciftify" / subject / "results").glob(pattern)
+            if path.is_dir()
+        )
+    return total
+
+
 def summarize_nod_layout(dataset_root: Path) -> dict:
     dataset_root = dataset_root.resolve()
     subjects = _collect_subjects(dataset_root)
@@ -50,6 +75,16 @@ def summarize_nod_layout(dataset_root: Path) -> dict:
     ciftify_labels = sorted(dataset_root.glob("derivatives/ciftify/sub-*/results/**/*_label.txt"))
     ciftify_dtseries = sorted(dataset_root.glob("derivatives/ciftify/sub-*/results/**/*_Atlas.dtseries.nii"))
     floc_labels = sorted(dataset_root.glob("derivatives/ciftify/sub-*/results/ses-floc_task-floc/*.dlabel.nii"))
+    common_imagenet_sessions = _common_imagenet_sessions(dataset_root, multi_session_subjects)
+    imagenet_run_counts = {
+        subject: _subject_run_count_for_sessions(dataset_root, subject, common_imagenet_sessions)
+        for subject in multi_session_subjects
+    }
+    extra_imagenet_sessions = {
+        subject: [session for session in _imagenet_sessions_for_subject(dataset_root, subject) if session not in common_imagenet_sessions]
+        for subject in multi_session_subjects
+        if [session for session in _imagenet_sessions_for_subject(dataset_root, subject) if session not in common_imagenet_sessions]
+    }
 
     sessions = sorted(
         {
@@ -91,6 +126,26 @@ def summarize_nod_layout(dataset_root: Path) -> dict:
         "derivative_source": "ciftify beta.dscalar.nii with paired label.txt",
         "status": "inspection_ready_not_training_ready",
     }
+    prepared_index_contract = {
+        "status": "contract_ready_not_adapter_ready",
+        "task": "imagenet",
+        "subjects": multi_session_subjects,
+        "common_sessions": common_imagenet_sessions,
+        "per_subject_common_session_run_counts": imagenet_run_counts,
+        "expected_common_session_runs_per_subject": (
+            next(iter(imagenet_run_counts.values())) if imagenet_run_counts and len(set(imagenet_run_counts.values())) == 1 else None
+        ),
+        "extra_sessions_outside_first_contract": extra_imagenet_sessions,
+        "required_inputs": {
+            "raw_events": "sub-*/ses-imagenet*/func/*_events.tsv",
+            "fmriprep_bold": "derivatives/fmriprep/sub-*/ses-imagenet*/func/*_space-T1w_desc-preproc_bold.nii.gz",
+            "fmriprep_confounds": "derivatives/fmriprep/sub-*/ses-imagenet*/func/*_desc-confounds_timeseries.tsv",
+            "surface_beta": "derivatives/ciftify/sub-*/results/ses-imagenet*_task-imagenet_run-*/"
+            "*_beta.dscalar.nii",
+            "surface_labels": "derivatives/ciftify/sub-*/results/ses-imagenet*_task-imagenet_run-*/"
+            "*_label.txt",
+        },
+    }
 
     return {
         "dataset_root": str(dataset_root),
@@ -111,6 +166,7 @@ def summarize_nod_layout(dataset_root: Path) -> dict:
         },
         "readiness": readiness,
         "recommended_first_contract": recommended_first_contract,
+        "prepared_index_contract": prepared_index_contract,
         "missing_for_first_runnable_path": missing_for_first_runnable_path,
     }
 
@@ -148,6 +204,12 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(value, list):
             value = ", ".join(value)
         print(f"  {key}: {value}")
+    print("prepared_index_contract:")
+    print(f"  status: {summary['prepared_index_contract']['status']}")
+    print(f"  task: {summary['prepared_index_contract']['task']}")
+    print(f"  common_sessions: {', '.join(summary['prepared_index_contract']['common_sessions'])}")
+    expected_runs = summary["prepared_index_contract"]["expected_common_session_runs_per_subject"]
+    print(f"  expected_common_session_runs_per_subject: {expected_runs}")
     print("missing_for_first_runnable_path:")
     for item in summary["missing_for_first_runnable_path"]:
         print(f"  - {item}")
