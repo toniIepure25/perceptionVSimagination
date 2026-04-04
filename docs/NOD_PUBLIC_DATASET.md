@@ -114,6 +114,7 @@ Why this is the smallest viable contract:
 What is still missing before a real shared-only run:
 
 - a canonical target-selection contract for NOD stimuli
+- a canonical target-embedding cache contract over the fixed NOD target slice
 - an ROI materialization contract aligned to NOD derivatives
 - a real shared-only train/eval config that points to a prepared NOD index
 
@@ -384,6 +385,57 @@ What still blocks training after target selection:
 - an ROI materialization contract aligned to the NOD derivatives
 - a shared-only training/eval config that points to both the adapter and the
   target-selection outputs
+
+## Fixed target-embedding cache surface
+
+The smallest canonical target-embedding workflow for the fixed target-selection
+slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache
+```
+
+Default outputs:
+
+- target-embedding manifest parquet:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_manifest.parquet`
+- target-embedding report:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_manifest.report.json`
+
+What it uses:
+
+- the fixed `3600`-row target-selection parquet
+- the expected stimulus paths under:
+  `cache/public_datasets/ds004496/stimuli/`
+- the canonical embedding target space:
+  - model id: `openai/clip-vit-large-patch14`
+  - dimension: `768`
+  - embedding column: `clip_target_768`
+
+Current live-pod interpretation:
+
+- the target-selection slice is deterministic and fixed
+- the referenced JPEG files are currently visible as annex-backed paths but are
+  still unresolved
+- this workflow therefore produces a canonical embedding-cache manifest, not a
+  real embedding cache
+
+Current meaning:
+
+- target-embedding-ready: no
+- downstream-prep-ready: no
+- training-ready: no
+
+What still blocks training after the embedding-cache contract:
+
+- exact NOD stimulus JPEG payloads must be materialized for the fixed `3600`
+  target rows
+- the canonical `768`-D ViT-L/14 embeddings must then be computed from those
+  resolved images
+- an ROI materialization contract aligned to the NOD derivatives is still
+  required
+- a shared-only training/eval config must point to the adapter,
+  target-selection artifact, and real target cache
 
 ## Expected remote path
 

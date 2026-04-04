@@ -208,3 +208,14 @@ Current target-selection target:
 - purpose:
   turn the fixed adapter slice into a deterministic trial-level target
   selection contract without yet claiming target-cache or training readiness
+
+Current target-embedding target:
+
+- `fmri2img.workflows.prepare_public_nod_target_embedding_cache`
+- output:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_manifest.parquet`
+- purpose:
+  turn the fixed target-selection slice into a canonical target-embedding
+  manifest that names the expected `768`-D ViT-L/14 cache contract while
+  explicitly reporting that the current stimulus JPEG payloads are still
+  unresolved and embeddings are not yet materialized

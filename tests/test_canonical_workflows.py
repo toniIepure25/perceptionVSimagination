@@ -862,6 +862,111 @@ def test_prepare_public_nod_target_selection_rejects_label_mismatch(tmp_path):
     assert "deterministic agreement between events.tsv stim_file and label.txt" in str(excinfo.value)
 
 
+def test_prepare_public_nod_target_embedding_manifest_reports_missing_stimulus_payloads(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_target_embedding_cache import build_public_nod_target_embedding_manifest
+    import pandas as pd
+
+    repo_root = tmp_path
+    input_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_selection.parquet"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496" / "stimuli"
+
+    selection_rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            for trial_index in range(1, 101):
+                stim_rel = Path("imagenet") / f"class_{trial_index:04d}" / f"{subject}_{session}_{trial_index:03d}.JPEG"
+                stim_path = dataset_root / stim_rel
+                stim_path.parent.mkdir(parents=True, exist_ok=True)
+                if trial_index == 1:
+                    stim_path.write_bytes(b"jpeg-bytes")
+                else:
+                    target = (
+                        repo_root
+                        / "cache"
+                        / "public_datasets"
+                        / "ds004496"
+                        / ".git"
+                        / "annex"
+                        / "objects"
+                        / f"{subject}_{session}_{trial_index:03d}.JPEG"
+                    )
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    stim_path.symlink_to(target)
+                selection_rows.append(
+                    {
+                        "dataset_id": "ds004496",
+                        "dataset_label": "Natural Object Dataset (NOD)",
+                        "lane": "practical_animus",
+                        "task": "imagenet",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "stim_file": str(stim_rel),
+                        "target_identifier": f"{subject}_{session}_{trial_index:03d}.JPEG",
+                        "target_source": "events_stim_file_and_ciftify_label_match",
+                        "target_domain": "imagenet",
+                        "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                        "adapter_status": "adapter_ready_not_training_ready",
+                    }
+                )
+
+    pd.DataFrame(selection_rows).to_parquet(input_path, index=False)
+
+    manifest, report = build_public_nod_target_embedding_manifest(input_path)
+    assert len(manifest) == 3600
+    assert report["target_selection_rows"] == 3600
+    assert report["unique_target_identifiers"] == 3600
+    assert report["visible_stimulus_payloads"] == 3600
+    assert report["resolved_stimulus_payloads"] == 36
+    assert report["state"] == {
+        "target_embedding_ready": False,
+        "downstream_prep_ready": False,
+        "training_ready": False,
+    }
+    assert manifest.loc[0, "embedding_status"] == "embedding_pending"
+    assert manifest.loc[1, "embedding_status"] == "missing_image_payload"
+
+
+def test_prepare_public_nod_target_embedding_manifest_rejects_slice_drift(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_target_embedding_cache import build_public_nod_target_embedding_manifest
+    import pandas as pd
+
+    repo_root = tmp_path
+    input_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_selection.parquet"
+    input_path.parent.mkdir(parents=True, exist_ok=True)
+
+    selection_rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            for trial_index in range(1, 101):
+                selection_rows.append(
+                    {
+                        "dataset_id": "ds004496",
+                        "dataset_label": "Natural Object Dataset (NOD)",
+                        "lane": "practical_animus",
+                        "task": "imagenet",
+                        "subject": subject,
+                        "session": session,
+                        "run": 11 if subject == "sub-01" and session == "ses-imagenet01" and trial_index == 1 else 10,
+                        "trial_index": trial_index,
+                        "stim_file": f"imagenet/class_{trial_index:04d}/{subject}_{session}_{trial_index:03d}.JPEG",
+                        "target_identifier": f"{subject}_{session}_{trial_index:03d}.JPEG",
+                        "target_source": "events_stim_file_and_ciftify_label_match",
+                        "target_domain": "imagenet",
+                        "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                        "adapter_status": "adapter_ready_not_training_ready",
+                    }
+                )
+
+    pd.DataFrame(selection_rows).to_parquet(input_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_target_embedding_manifest(input_path)
+    assert "requires the fixed 3600-row target-selection slice" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -928,6 +1033,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.materialize_public_nod_payloads" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_shared_only_adapter" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_target_selection" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_target_embedding_cache" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

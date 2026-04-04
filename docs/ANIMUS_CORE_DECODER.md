@@ -209,6 +209,9 @@ Current live result:
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter`
 - the next downstream surface after that is fixed target selection:
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_selection`
+- the next downstream surface after that is the fixed target-embedding cache
+  contract:
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits
