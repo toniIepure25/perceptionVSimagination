@@ -29,17 +29,11 @@ Verified on `2026-04-04`:
   - `/home/jovyan/local-data/perceptionVSimagination/outputs`
 - free space before any new download: about `215G`
 
-Current remote constraint:
-
-- the pod currently exposes `/opt/conda/bin/python` but does **not** yet have
-  `/home/jovyan/local-data/perceptionVSimagination/.venv/bin/python`
-
 Operational rule:
 
 - inspect storage and mounted paths on the pod first
 - verify whether the target dataset already exists before downloading
-- do not start canonical acquisition, prep, or rerun commands on the pod until
-  the repo `.venv` is provisioned there
+- run canonical acquisition, prep, and readiness commands from the repo `.venv`
 
 Current remote status after environment provisioning:
 
@@ -110,6 +104,16 @@ Current live result:
   - `36` rows `missing_payload`
   - `0` rows currently usable for later shared-only prep
 
+Current exact materialization target:
+
+- `fmri2img.workflows.materialize_public_nod_payloads` now names the first
+  unresolved payload subset directly from the prepared index
+- the target is the `36` `run-10` rows across `sub-01..sub-09` and
+  `ses-imagenet01..04`
+- the estimated missing payload set is about `8.23 GiB`
+- current blocker: the live pod does not have `git-annex`, so exact payload
+  materialization is still blocked even though the target subset is now known
+
 ### Priority 2. Secondary imagery benchmark
 
 Target:
@@ -173,10 +177,9 @@ What to implement next:
 
 The next implementation step should be:
 
-1. provision the project `.venv` on
-   `/home/jovyan/local-data/perceptionVSimagination`
-2. verify remote download tooling and target storage on the live pod
-3. run the first metadata-only remote acquisition for `ds004496`
-4. add a minimal provenance-aware integration note for it
-5. keep the threshold ladder untouched while the practical lane gains a public
-   strengthening path
+1. add `git-annex` to the live pod image or otherwise provide it on the pod
+2. run `fmri2img.workflows.materialize_public_nod_payloads --materialize`
+   against the `36` exact `missing_payload` rows
+3. rerun `fmri2img.workflows.prepare_public_nod_index`
+4. only then decide whether any rows become honestly usable for later
+   shared-only prep

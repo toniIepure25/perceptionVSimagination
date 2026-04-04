@@ -188,10 +188,22 @@ subset:
 This is still a readiness/indexing step, not a claim that NOD is already ready
 for shared-only training.
 
+The next exact-subset readiness surface is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads
+```
+
+This does not broaden acquisition. It names the current `missing_payload`
+subset precisely and estimates the annex-backed payload size before any remote
+materialization attempt.
+
 Current live result:
 
 - a real NOD prepared index exists for the `imagenet` common-session subset
 - the current clone still yields `0` rows usable for later shared-only prep
+- the first exact payload target is now known: the `36` `run-10` rows, about
+  `8.23 GiB` total, still blocked by missing `git-annex` on the live pod
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

@@ -216,6 +216,55 @@ Interpretation:
 - it proves the subset contract and the visibility/resolution surface
 - it does **not** justify shared-only training yet
 
+## Exact missing-payload manifest surface
+
+The next checked-in surface is a tight materialization manifest helper:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_payloads
+```
+
+Default outputs:
+
+- manifest:
+  `cache/indices/public_nod/imagenet_missing_payload_manifest.json`
+- report:
+  `cache/indices/public_nod/imagenet_missing_payload_report.json`
+
+What it does:
+
+- reads the current prepared index
+- selects rows with `row_status == missing_payload`
+- records the exact unresolved file paths per row
+- estimates payload size from the annex symlink targets
+- optionally runs `git annex get` only if `git-annex` is actually available
+
+Current live-pod result from the manifest audit:
+
+- first materialization target rows:
+  - `36` rows
+  - exactly the `run-10` rows across `sub-01..sub-09` and
+    `ses-imagenet01..04`
+- estimated missing payload size:
+  - `preproc_bold`: about `7.382 GiB`
+  - `confounds`: about `0.040 GiB`
+  - `ciftify_beta`: about `0.808 GiB`
+  - `ciftify_label`: negligible
+  - total: about `8.23 GiB`
+
+Current operational blocker:
+
+- the visible unresolved files are annex-backed symlinks under `.git/annex`
+- the live pod currently lacks `git-annex`
+- so the repo can now name the exact first payload target, but cannot
+  materialize it yet from the current pod image
+
+Interpretation:
+
+- this is a real readiness improvement for the practical Animus lane
+- it is still **not** a claim that NOD is ready for shared-only prep or
+  training
+
 ## Expected remote path
 
 On the verified live pod:

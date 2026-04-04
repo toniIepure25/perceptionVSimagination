@@ -555,3 +555,11 @@ Risk:
   `0` rows currently usable for later shared-only prep, establishing an honest
   operational boundary between “prepared index exists” and “dataset is
   training-ready”
+- 2026-04-04: the next NOD readiness step was tightened into an exact payload
+  manifest rather than a broad annex pull. The repo can now name the first
+  unresolved subset precisely as the `36` `run-10` rows across
+  `sub-01..sub-09` and `ses-imagenet01..04`, with an estimated unresolved
+  payload size of about `8.23 GiB`. A guarded
+  `fmri2img.workflows.materialize_public_nod_payloads` helper now writes the
+  manifest/report and refuses materialization when `git-annex` is missing,
+  recording the current live-pod blocker without inflating NOD readiness

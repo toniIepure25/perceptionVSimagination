@@ -95,6 +95,27 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - NOD exact payload manifest and annex-tooling blocker
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/materialize_public_nod_payloads.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: remote audit on pod `orchestraiq-jupyter-75555bb5f5-hxwp5`
+  confirmed `216G` free space, identified the exact `36` `missing_payload`
+  rows, and measured their estimated unresolved payload size at about
+  `8.23 GiB`; local focused tests cover the new manifest helper
+- Decision: added a tight manifest/report workflow for the first unresolved NOD
+  payload subset and kept the materialization boundary honest by refusing
+  `--materialize` when `git-annex` is absent on the live pod
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  still a practical Animus-lane readiness pass only
+- Follow-up: add `git-annex` to the live pod image or runtime, then rerun
+  `fmri2img.workflows.materialize_public_nod_payloads --materialize` and
+  rebuild the prepared index before considering any later shared-only prep step
+
 ## 2026-04-04 - NOD prepared index built on live pod
 
 - Scope: engineering, data acquisition, reproducibility

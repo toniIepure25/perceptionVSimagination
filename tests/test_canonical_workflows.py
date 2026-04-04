@@ -384,6 +384,102 @@ def test_prepare_public_nod_index_marks_resolved_and_missing_payload(tmp_path):
     assert report["status_counts"]["missing_payload"] == 1
 
 
+def test_materialize_public_nod_payloads_builds_exact_manifest(tmp_path):
+    from fmri2img.workflows.materialize_public_nod_payloads import build_missing_payload_manifest
+    import pandas as pd
+
+    root = tmp_path / "ds004496"
+    root.mkdir()
+    index_path = tmp_path / "index.parquet"
+
+    bold_target = "../../.git/annex/objects/aa/bb/SHA256E-s100--bold.nii.gz/SHA256E-s100--bold.nii.gz"
+    confounds_target = "../../.git/annex/objects/aa/bb/SHA256E-s20--confounds.tsv/SHA256E-s20--confounds.tsv"
+    beta_target = "../../.git/annex/objects/aa/bb/SHA256E-s30--beta.nii/SHA256E-s30--beta.nii"
+    label_target = "../../.git/annex/objects/aa/bb/SHA256E-s4--label.txt/SHA256E-s4--label.txt"
+
+    events = root / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-10_events.tsv"
+    events.parent.mkdir(parents=True, exist_ok=True)
+    events.write_text("onset\tduration\n")
+
+    preproc = root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-10_space-T1w_desc-preproc_bold.nii.gz"
+    confounds = root / "derivatives" / "fmriprep" / "sub-01" / "ses-imagenet01" / "func" / "sub-01_ses-imagenet01_task-imagenet_run-10_desc-confounds_timeseries.tsv"
+    beta = root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-10" / "ses-imagenet01_task-imagenet_run-10_beta.dscalar.nii"
+    label = root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-10" / "ses-imagenet01_task-imagenet_run-10_label.txt"
+    preproc.parent.mkdir(parents=True, exist_ok=True)
+    beta.parent.mkdir(parents=True, exist_ok=True)
+    preproc.symlink_to(bold_target)
+    confounds.symlink_to(confounds_target)
+    beta.symlink_to(beta_target)
+    label.symlink_to(label_target)
+
+    pd.DataFrame(
+        [
+            {
+                "subject": "sub-01",
+                "session": "ses-imagenet01",
+                "run": 10,
+                "task": "imagenet",
+                "row_status": "missing_payload",
+                "usable_for_later_shared_only_prep": False,
+                "events_path": str(events.relative_to(root)),
+                "preproc_bold_path": str(preproc.relative_to(root)),
+                "confounds_path": str(confounds.relative_to(root)),
+                "ciftify_beta_path": str(beta.relative_to(root)),
+                "ciftify_label_path": str(label.relative_to(root)),
+                "events_visible": True,
+                "preproc_bold_visible": True,
+                "confounds_visible": True,
+                "ciftify_beta_visible": True,
+                "ciftify_label_visible": True,
+                "events_resolved": True,
+                "preproc_bold_resolved": False,
+                "confounds_resolved": False,
+                "ciftify_beta_resolved": False,
+                "ciftify_label_resolved": False,
+            }
+        ]
+    ).to_parquet(index_path, index=False)
+
+    manifest, report = build_missing_payload_manifest(root, index_path)
+    assert report["entry_count"] == 1
+    assert report["runs"] == [10]
+    assert report["total_estimated_bytes"] == 154
+    assert report["bytes_by_class"] == {
+        "preproc_bold": 100,
+        "confounds": 20,
+        "ciftify_beta": 30,
+        "ciftify_label": 4,
+    }
+    entry = manifest["entries"][0]
+    assert entry["subject"] == "sub-01"
+    assert entry["files"]["preproc_bold"]["resolved"] is False
+    assert entry["files"]["preproc_bold"]["estimated_bytes"] == 100
+
+
+def test_materialize_public_nod_payloads_refuses_without_git_annex(monkeypatch, tmp_path, capsys):
+    import fmri2img.workflows.materialize_public_nod_payloads as workflow
+
+    dataset_root = tmp_path / "ds004496"
+    dataset_root.mkdir()
+    manifest = {
+        "entries": [
+            {
+                "files": {
+                    "preproc_bold": {"path": "a.nii.gz", "visible": True, "resolved": False},
+                    "confounds": {"path": "a.tsv", "visible": True, "resolved": False},
+                    "ciftify_beta": {"path": "a_beta.nii", "visible": True, "resolved": False},
+                    "ciftify_label": {"path": "a_label.txt", "visible": True, "resolved": False},
+                }
+            }
+        ]
+    }
+    monkeypatch.setattr(workflow.shutil, "which", lambda name: None)
+    rc = workflow._materialize_paths(dataset_root, manifest)
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "git-annex is not available" in captured.err
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -447,6 +543,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.inspect_public_nod" in nod_note
     assert "prepared_index_contract" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_index" in nod_note
+    assert "fmri2img.workflows.materialize_public_nod_payloads" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 
