@@ -580,3 +580,11 @@ Risk:
   `324` `incomplete`, `36` `resolved`, and `36` usable rows for later
   shared-only prep, without changing the frozen threshold ladder or evidence
   interpretation
+- 2026-04-05: the first downstream shared-only adapter surface for NOD was
+  added on top of the resolved `36`-row slice. The checked-in
+  `fmri2img.workflows.prepare_public_nod_shared_only_adapter` workflow now
+  emits a stable adapter parquet and report for exactly `sub-01..sub-09`,
+  `ses-imagenet01..04`, `run-10`, with `adapter_ready=true`,
+  `prep_ready=true`, and `training_ready=false`. This makes the practical
+  Animus lane more reusable without widening the NOD contract or changing any
+  scientific claims

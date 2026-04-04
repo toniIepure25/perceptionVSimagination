@@ -137,3 +137,16 @@ Copy this block:
 - Result summary: downloaded `144` exact files for the fixed `run-10` subset (`36` BOLD, `36` confounds, `36` beta, `36` label) totaling about `8.23 GiB`; rerunning the prepared index changed readiness to `{'incomplete': 324, 'resolved': 36}` with `36` usable rows
 - Interpretation summary: the first NOD subset is now genuinely payload-ready for later shared-only prep, but this remains a narrow practical Animus-lane data-readiness result and not threshold evidence
 - Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-SHARED-ONLY-ADAPTER
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane downstream shared-only adapter over the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter`
+- Dataset / prepared artifacts: prepared index `cache/indices/public_nod/imagenet_multisession_common_sessions.parquet` with the resolved `run-10` subset
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet`
+- Status: done
+- Result summary: built a `36`-row adapter artifact for `sub-01..sub-09`, `ses-imagenet01..04`, `run-10`, with `all_payloads_resolved=true`, `adapter_ready=true`, `prep_ready=true`, and `training_ready=false`
+- Interpretation summary: the first NOD slice is now packaged as a stable downstream shared-only prep artifact, but target-selection and ROI-materialization contracts still block honest model training
+- Promoted to evidence?: no

@@ -95,6 +95,29 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-05 - NOD shared-only adapter built for the fixed resolved slice
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/prepare_public_nod_shared_only_adapter.py`,
+  `docs/NOD_PUBLIC_DATASET.md`, `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused tests via
+  `./.venv/bin/pytest tests/test_canonical_workflows.py -q -k 'prepare_public_nod_shared_only_adapter_keeps_only_fixed_resolved_subset or prepare_public_nod_shared_only_adapter_requires_full_fixed_slice or materialize_public_nod_payloads_uses_direct_openneuro_s3_by_default or public_dataset_program_docs_and_catalog_exist'`;
+  remote build via
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_adapter`
+  and remote focused tests from the pod `.venv`
+- Decision: added the smallest downstream shared-only adapter surface over the
+  already resolved NOD `run-10` subset and kept the state boundary explicit:
+  adapter-ready, prep-ready, not training-ready
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is
+  still a narrow practical Animus-lane prep artifact only
+- Follow-up: define the smallest target-selection and ROI-materialization
+  contracts needed before any real shared-only training config can point to
+  this adapter output
+
 ## 2026-04-04 - NOD direct official payload retrieval succeeded for the exact subset
 
 - Scope: engineering, data acquisition, reproducibility
