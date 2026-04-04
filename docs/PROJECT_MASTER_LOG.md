@@ -543,3 +543,9 @@ Risk:
   `sub-01..sub-09`, common sessions `ses-imagenet01..04`, and expected
   common-session run counts, still without claiming shared-only training
   readiness
+- 2026-04-04: the first real NOD prepared-index workflow was added for the
+  practical Animus lane. `fmri2img.workflows.prepare_public_nod_index` now
+  builds a row-level index for the `imagenet` multi-session common-session
+  subset and records visible-versus-resolved path states for raw events,
+  `fmriprep` BOLD/confounds, and `ciftify` beta/label inputs so the repo can
+  track NOD readiness without inflating it into training readiness

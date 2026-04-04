@@ -92,6 +92,14 @@ Prepared-index contract now defined:
   - `fmriprep` preproc BOLD + confounds
   - `ciftify` beta + label pairs
 
+First checked-in build surface:
+
+- `fmri2img.workflows.prepare_public_nod_index`
+
+This builds a row-level prepared index for the first NOD subset and records
+payload visibility versus real payload resolution, without overstating
+training readiness.
+
 ### Priority 2. Secondary imagery benchmark
 
 Target:

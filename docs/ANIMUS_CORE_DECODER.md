@@ -178,6 +178,16 @@ Current remote status:
   `ses-imagenet01..04`, and visible `ciftify` beta/label derivatives for a
   future practical shared-only adapter
 
+The practical lane now also has a first prepared-index build surface for that
+subset:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index
+```
+
+This is still a readiness/indexing step, not a claim that NOD is already ready
+for shared-only training.
+
 ## Current limits
 
 - current overlap benchmark remains extremely small

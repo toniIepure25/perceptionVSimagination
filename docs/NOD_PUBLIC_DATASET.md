@@ -139,6 +139,48 @@ This now includes a `prepared_index_contract` block that names:
 - the expected common-session run count per subject
 - the exact raw and derivative file patterns the first adapter must rely on
 
+## First prepared-index build surface
+
+The first checked-in prepared-index workflow is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_index
+```
+
+Default output:
+
+- `cache/indices/public_nod/imagenet_multisession_common_sessions.parquet`
+
+Default report:
+
+- `cache/indices/public_nod/imagenet_multisession_common_sessions.report.json`
+
+## What the prepared index records
+
+Each row captures:
+
+- subject
+- session
+- run
+- task
+- path to `events.tsv`
+- path to `fmriprep` preproc BOLD
+- path to `fmriprep` confounds
+- path to `ciftify` beta
+- path to `ciftify` label
+- `visible` flags
+- `resolved` flags
+- `row_status`
+- `usable_for_later_shared_only_prep`
+
+Current row-level status meanings:
+
+- `resolved`: all required payloads are actually present
+- `missing_payload`: all required paths are visible, but at least one payload is
+  not materialized behind the visible path
+- `incomplete`: only part of the row contract is visible
+- `missing`: none of the required inputs are visible
+
 ## Expected remote path
 
 On the verified live pod:

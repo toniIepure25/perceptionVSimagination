@@ -191,6 +191,7 @@ def test_docs_reference_canonical_workflows():
         "fmri2img.workflows.acquire_public_nsd_imagery",
         "fmri2img.workflows.acquire_public_nod",
         "fmri2img.workflows.inspect_public_nod",
+        "fmri2img.workflows.prepare_public_nod_index",
         "fmri2img.workflows.preflight_animus_core_decoder",
         "fmri2img.workflows.train_animus_core_decoder",
         "fmri2img.workflows.eval_animus_core_decoder",
@@ -345,6 +346,44 @@ def test_inspect_public_nod_summarizes_minimal_layout(tmp_path):
     assert summary["prepared_index_contract"]["expected_common_session_runs_per_subject"] == 1
 
 
+def test_prepare_public_nod_index_marks_resolved_and_missing_payload(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_index import build_public_nod_index
+
+    root = tmp_path / "ds004496"
+    root.mkdir()
+    (root / "dataset_description.json").write_text("{}\n")
+    (root / "participants.tsv").write_text(
+        "participant_id\tage\tsex\tgroup\n"
+        "sub-01\t22\tF\tmulti-session\n"
+        "sub-02\t21\tF\tmulti-session\n"
+    )
+    for subject in ("sub-01", "sub-02"):
+        (root / subject / "ses-imagenet01" / "func").mkdir(parents=True)
+        (root / subject / "ses-imagenet01" / "func" / f"{subject}_ses-imagenet01_task-imagenet_run-1_events.tsv").write_text("onset\tduration\n")
+        (root / subject / "ses-imagenet01" / "func" / f"{subject}_ses-imagenet01_task-imagenet_run-1_bold.json").write_text("{}\n")
+        (root / "derivatives" / "fmriprep" / subject / "ses-imagenet01" / "func").mkdir(parents=True)
+        (root / "derivatives" / "fmriprep" / subject / "ses-imagenet01" / "func" / f"{subject}_ses-imagenet01_task-imagenet_run-1_space-T1w_desc-preproc_bold.nii.gz").write_text("x")
+        (root / "derivatives" / "fmriprep" / subject / "ses-imagenet01" / "func" / f"{subject}_ses-imagenet01_task-imagenet_run-1_desc-confounds_timeseries.tsv").write_text("x")
+        run_dir = root / "derivatives" / "ciftify" / subject / "results" / "ses-imagenet01_task-imagenet_run-1"
+        run_dir.mkdir(parents=True)
+        (run_dir / "ses-imagenet01_task-imagenet_run-1_Atlas.dtseries.nii").write_text("x")
+        (run_dir / "ses-imagenet01_task-imagenet_run-1_label.txt").write_text("x")
+    (root / "derivatives" / "ciftify" / "sub-01" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_beta.dscalar.nii").write_text("x")
+    broken_target = root / "missing_beta.nii"
+    (root / "derivatives" / "ciftify" / "sub-02" / "results" / "ses-imagenet01_task-imagenet_run-1" / "ses-imagenet01_task-imagenet_run-1_beta.dscalar.nii").symlink_to(broken_target)
+
+    df, report = build_public_nod_index(root)
+    row1 = df[(df["subject"] == "sub-01") & (df["run"] == 1)].iloc[0]
+    row2 = df[(df["subject"] == "sub-02") & (df["run"] == 1)].iloc[0]
+    assert row1["row_status"] == "resolved"
+    assert bool(row1["usable_for_later_shared_only_prep"]) is True
+    assert row2["row_status"] == "missing_payload"
+    assert bool(row2["ciftify_beta_visible"]) is True
+    assert bool(row2["ciftify_beta_resolved"]) is False
+    assert report["status_counts"]["resolved"] == 1
+    assert report["status_counts"]["missing_payload"] == 1
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -407,6 +446,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "metadata_only_git_clone" in nod_note
     assert "fmri2img.workflows.inspect_public_nod" in nod_note
     assert "prepared_index_contract" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_index" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

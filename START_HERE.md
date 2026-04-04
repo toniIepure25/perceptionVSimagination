@@ -63,6 +63,12 @@ Practical public-data inspection:
 python -m fmri2img.workflows.inspect_public_nod
 ```
 
+Practical public-data prepared index:
+
+```bash
+python -m fmri2img.workflows.prepare_public_nod_index
+```
+
 Primary threshold-testing research model:
 
 ```bash

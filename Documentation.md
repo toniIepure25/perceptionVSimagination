@@ -95,6 +95,28 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-04 - NOD prepared-index adapter
+
+- Scope: engineering, data acquisition, reproducibility
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/prepare_public_nod_index.py`,
+  `src/fmri2img/workflows/inspect_public_nod.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`, `docs/ANIMUS_CORE_DECODER.md`,
+  `START_HERE.md`, `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused tests via
+  `./.venv/bin/pytest tests/test_canonical_workflows.py -q -k 'prepare_public_nod_index_marks_resolved_and_missing_payload or inspect_public_nod_summarizes_minimal_layout or public_dataset_program_docs_and_catalog_exist or docs_reference_canonical_workflows'`
+- Decision: added the first real prepared-index workflow for the NOD
+  `imagenet` multi-session common-session subset, with row-level visibility and
+  payload-resolution flags so the repo can distinguish `resolved` rows from
+  `missing_payload` rows
+- Claim boundary: no threshold-benchmark or evidence-boundary change; this is a
+  practical Animus-lane indexing surface only
+- Follow-up: build the first remote prepared index on the live pod and decide
+  whether enough rows are actually `resolved` to justify a later prepared-index
+  adapter into the shared-only train/eval path
+
 ## 2026-04-04 - Remote git normalization and NOD prepared-index contract
 
 - Scope: engineering, data acquisition, reproducibility
