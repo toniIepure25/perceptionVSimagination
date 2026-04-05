@@ -221,6 +221,10 @@ Current live result:
 - that cache now exists for the fixed NOD slice, with
   `target_embedding_ready=true`, `downstream_prep_ready=true`, and
   `training_ready=false`
+- the next narrow downstream contracts are:
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
+  and
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_roi_materialization_contract`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

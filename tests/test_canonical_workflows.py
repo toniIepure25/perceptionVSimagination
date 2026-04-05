@@ -1164,6 +1164,250 @@ def test_build_public_nod_target_embedding_cache_rejects_unresolved_manifest(tmp
     assert "still has 3600 unresolved payloads" in str(excinfo.value)
 
 
+def test_prepare_public_nod_shared_only_join_contract_builds_fixed_machine_readable_join(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_join_contract import build_public_nod_shared_only_join_contract
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    adapter_path = base / "imagenet_run10_shared_only_adapter.parquet"
+    selection_path = base / "imagenet_run10_target_selection.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+
+    adapter_rows = []
+    selection_rows = []
+    cache_rows = []
+    pair_id = 1
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session_idx, session in enumerate([f"ses-imagenet{index:02d}" for index in range(1, 5)], start=1):
+            adapter_rows.append(
+                {
+                    "dataset_id": "ds004496",
+                    "dataset_label": "Natural Object Dataset (NOD)",
+                    "lane": "practical_animus",
+                    "task": "imagenet",
+                    "subject": subject,
+                    "session": session,
+                    "run": 10,
+                    "contract_scope": "imagenet_multisession_common_sessions",
+                    "usable_for_later_shared_only_prep": True,
+                    "events_path": f"{subject}/{session}/func/events.tsv",
+                    "preproc_bold_path": f"{subject}/{session}/func/bold.nii.gz",
+                    "confounds_path": f"{subject}/{session}/func/confounds.tsv",
+                    "ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                    "ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                }
+            )
+            for trial_index in range(1, 101):
+                stim_rel = f"cache/public_datasets/ds004496/stimuli/imagenet/{subject}/{session}_{trial_index:03d}.JPEG"
+                target_identifier = f"{subject}_{session}_{trial_index:03d}.JPEG"
+                selection_rows.append(
+                    {
+                        "dataset_id": "ds004496",
+                        "dataset_label": "Natural Object Dataset (NOD)",
+                        "lane": "practical_animus",
+                        "task": "imagenet",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "stimulus_path": stim_rel,
+                        "target_identifier": target_identifier,
+                        "target_source": "events_stim_file_and_ciftify_label_match",
+                        "target_domain": "imagenet",
+                        "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                        "adapter_status": "adapter_ready_not_training_ready",
+                    }
+                )
+                cache_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "target_identifier": target_identifier,
+                        "stimulus_path": stim_rel,
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "clip_target_768": [0.0] * 768,
+                    }
+                )
+                pair_id += 1
+
+    pd.DataFrame(adapter_rows).to_parquet(adapter_path, index=False)
+    pd.DataFrame(selection_rows).to_parquet(selection_path, index=False)
+    pd.DataFrame(cache_rows).to_parquet(cache_path, index=False)
+
+    artifact, report = build_public_nod_shared_only_join_contract(adapter_path, selection_path, cache_path)
+    assert len(artifact) == 3600
+    assert artifact["pair_id"].nunique() == 3600
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": False,
+        "downstream_prep_ready": False,
+        "training_ready": False,
+    }
+    assert "pair_id" in report["required_downstream_columns"]
+
+
+def test_prepare_public_nod_shared_only_join_contract_rejects_selection_drift(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_join_contract import build_public_nod_shared_only_join_contract
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    adapter_path = base / "imagenet_run10_shared_only_adapter.parquet"
+    selection_path = base / "imagenet_run10_target_selection.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+
+    pd.DataFrame(
+        [
+            {
+                "dataset_id": "ds004496",
+                "dataset_label": "Natural Object Dataset (NOD)",
+                "lane": "practical_animus",
+                "task": "imagenet",
+                "subject": "sub-01",
+                "session": "ses-imagenet01",
+                "run": 10,
+                "contract_scope": "imagenet_multisession_common_sessions",
+                "usable_for_later_shared_only_prep": True,
+                "events_path": "a",
+                "preproc_bold_path": "b",
+                "confounds_path": "c",
+                "ciftify_beta_path": "d",
+                "ciftify_label_path": "e",
+            }
+        ]
+    ).to_parquet(adapter_path, index=False)
+    pd.DataFrame([{"task": "imagenet", "run": 10, "lane": "practical_animus", "target_domain": "imagenet", "adapter_scope": "public_nod_imagenet_run10_shared_only", "subject": "sub-01", "session": "ses-imagenet01", "trial_index": 1, "target_identifier": "x", "stimulus_path": "y", "target_source": "z", "adapter_status": "adapter_ready_not_training_ready"}]).to_parquet(selection_path, index=False)
+    pd.DataFrame([{"pair_id": 1, "target_identifier": "x", "stimulus_path": "y", "embedding_model_id": "openai/clip-vit-large-patch14", "embedding_dimension": 768, "clip_target_768": [0.0] * 768}]).to_parquet(cache_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_shared_only_join_contract(adapter_path, selection_path, cache_path)
+    assert "requires the fixed 36-row adapter slice" in str(excinfo.value)
+
+
+def test_prepare_public_nod_roi_materialization_contract_builds_verified_source_manifest(tmp_path, monkeypatch):
+    from fmri2img.workflows.prepare_public_nod_roi_materialization_contract import build_public_nod_roi_materialization_contract
+    import pandas as pd
+
+    repo_root = tmp_path
+    join_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_shared_only_join_contract.parquet"
+    join_path.parent.mkdir(parents=True, exist_ok=True)
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+
+    rows = []
+    pair_id = 1
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            for trial_index in range(1, 101):
+                rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "adapter_row_id": f"{subject}|{session}|run-10",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "target_identifier": f"{subject}_{session}_{trial_index:03d}.JPEG",
+                        "stimulus_path": f"cache/public_datasets/ds004496/stimuli/imagenet/{subject}/{session}_{trial_index:03d}.JPEG",
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "target_embedding_column": "clip_target_768",
+                        "events_path": f"{subject}/{session}/func/events.tsv",
+                        "preproc_bold_path": f"{subject}/{session}/func/bold.nii.gz",
+                        "confounds_path": f"{subject}/{session}/func/confounds.tsv",
+                        "ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                        "ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                        "target_cache_path": "cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet",
+                        "roi_contract_key": pair_id,
+                        "join_contract_version": "public_nod_imagenet_run10_v1",
+                        "target_ready": True,
+                        "roi_ready": False,
+                        "training_ready": False,
+                    }
+                )
+                pair_id += 1
+            label = dataset_root / f"derivatives/ciftify/{subject}/{session}/labels.txt"
+            label.parent.mkdir(parents=True, exist_ok=True)
+            label.write_text("\n".join([f"{subject}_{session}_{idx:03d}.JPEG" for idx in range(1, 101)]) + "\n")
+    pd.DataFrame(rows).to_parquet(join_path, index=False)
+
+    class _FakeImg:
+        shape = (100, 59412)
+
+    monkeypatch.setattr("fmri2img.workflows.prepare_public_nod_roi_materialization_contract.nib.load", lambda path: _FakeImg())
+
+    artifact, report = build_public_nod_roi_materialization_contract(join_path)
+    assert len(artifact) == 36
+    assert report["verified_join_rows"] == 3600
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": False,
+        "downstream_prep_ready": False,
+        "training_ready": False,
+    }
+
+
+def test_prepare_public_nod_roi_materialization_contract_rejects_alignment_drift(tmp_path, monkeypatch):
+    from fmri2img.workflows.prepare_public_nod_roi_materialization_contract import build_public_nod_roi_materialization_contract
+    import pandas as pd
+
+    repo_root = tmp_path
+    join_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_shared_only_join_contract.parquet"
+    join_path.parent.mkdir(parents=True, exist_ok=True)
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+    rows = []
+    pair_id = 1
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            label = dataset_root / f"derivatives/ciftify/{subject}/{session}/labels.txt"
+            label.parent.mkdir(parents=True, exist_ok=True)
+            label.write_text("one\n")
+            for trial_index in range(1, 101):
+                rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "adapter_row_id": f"{subject}|{session}|run-10",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "target_identifier": f"id_{pair_id}",
+                        "stimulus_path": f"path_{pair_id}",
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "target_embedding_column": "clip_target_768",
+                        "events_path": "a",
+                        "preproc_bold_path": "b",
+                        "confounds_path": "c",
+                        "ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                        "ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                        "target_cache_path": "cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet",
+                        "roi_contract_key": pair_id,
+                        "join_contract_version": "public_nod_imagenet_run10_v1",
+                        "target_ready": True,
+                        "roi_ready": False,
+                        "training_ready": False,
+                    }
+                )
+                pair_id += 1
+    pd.DataFrame(rows).to_parquet(join_path, index=False)
+
+    class _FakeImg:
+        shape = (99, 59412)
+
+    monkeypatch.setattr("fmri2img.workflows.prepare_public_nod_roi_materialization_contract.nib.load", lambda path: _FakeImg())
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_roi_materialization_contract(join_path)
+    assert "requires per-run beta rows, label rows, and join rows to match" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -1233,6 +1477,8 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.prepare_public_nod_target_embedding_cache" in nod_note
     assert "fmri2img.workflows.materialize_public_nod_stimuli" in nod_note
     assert "fmri2img.workflows.build_public_nod_target_embedding_cache" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_shared_only_join_contract" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_roi_materialization_contract" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

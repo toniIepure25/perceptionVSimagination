@@ -516,6 +516,68 @@ What still blocks honest shared-only training even after the cache exists:
 - a checked-in shared-only train/eval config that points to the adapter,
   target-selection artifact, and target cache
 
+## Fixed dataset-side join contract
+
+The smallest machine-readable downstream join surface for the fixed slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_join_contract
+```
+
+Default outputs:
+
+- join contract parquet:
+  `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`
+- join contract report:
+  `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.report.json`
+
+What it defines:
+
+- primary row id: `pair_id`
+- exact join from adapter row -> target-selection rows -> target cache rows
+- canonical downstream columns for the fixed slice only
+- the neural-side source paths that still need ROI-side materialization
+
+Current meaning:
+
+- join-ready: yes
+- ROI-ready: no
+- downstream-prep-ready: no
+- training-ready: no
+
+## Fixed ROI materialization contract
+
+The smallest ROI-side contract for the same fixed slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_roi_materialization_contract
+```
+
+Default outputs:
+
+- ROI contract parquet:
+  `cache/indices/public_nod/imagenet_run10_roi_materialization_contract.parquet`
+- ROI contract report:
+  `cache/indices/public_nod/imagenet_run10_roi_materialization_contract.report.json`
+
+What it defines:
+
+- the exact neural source files expected per `adapter_row_id`
+- the verified alignment requirement between:
+  - `ciftify` `beta.dscalar.nii`
+  - `label.txt`
+  - join-contract rows
+- the required future ROI output artifact:
+  `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- the required future ROI output columns keyed by `pair_id`
+
+Current meaning:
+
+- join-ready: yes
+- ROI-ready: no
+- downstream-prep-ready: no
+- training-ready: no
+
 ## Expected remote path
 
 On the verified live pod:

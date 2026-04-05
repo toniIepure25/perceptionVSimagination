@@ -246,3 +246,21 @@ Current live status:
 - this strengthens the practical Animus prep path only; ROI materialization,
   dataset-side join logic, and a checked-in shared-only train/eval config are
   still separate remaining steps
+
+Current dataset-side join target:
+
+- `fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
+- output:
+  `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`
+- purpose:
+  make the fixed adapter, target-selection, and target-cache joins explicit and
+  machine-readable without pretending the ROI side is materialized
+
+Current ROI contract target:
+
+- `fmri2img.workflows.prepare_public_nod_roi_materialization_contract`
+- output:
+  `cache/indices/public_nod/imagenet_run10_roi_materialization_contract.parquet`
+- purpose:
+  define the exact per-run beta/label alignment and future ROI output shape for
+  the fixed slice without widening scope or enabling training
