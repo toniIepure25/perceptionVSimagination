@@ -44,11 +44,11 @@ def build_public_nod_roi_materialization_contract(join_contract_path: Path) -> t
                 "subject",
                 "session",
                 "run",
-                "events_path",
-                "preproc_bold_path",
-                "confounds_path",
-                "ciftify_beta_path",
-                "ciftify_label_path",
+                "source_events_path",
+                "source_preproc_bold_path",
+                "source_confounds_path",
+                "source_ciftify_beta_path",
+                "source_ciftify_label_path",
             ]
         ]
         .drop_duplicates()
@@ -64,11 +64,11 @@ def build_public_nod_roi_materialization_contract(join_contract_path: Path) -> t
     contract_rows = []
     for row in source_rows.to_dict(orient="records"):
         subset = join_df[join_df["adapter_row_id"] == row["adapter_row_id"]].sort_values("trial_index").reset_index(drop=True)
-        beta_path = dataset_root / row["ciftify_beta_path"]
-        label_path = dataset_root / row["ciftify_label_path"]
-        events_path = dataset_root / row["events_path"]
-        preproc_bold_path = dataset_root / row["preproc_bold_path"]
-        confounds_path = dataset_root / row["confounds_path"]
+        beta_path = dataset_root / row["source_ciftify_beta_path"]
+        label_path = dataset_root / row["source_ciftify_label_path"]
+        events_path = dataset_root / row["source_events_path"]
+        preproc_bold_path = dataset_root / row["source_preproc_bold_path"]
+        confounds_path = dataset_root / row["source_confounds_path"]
 
         beta_img = nib.load(beta_path)
         beta_shape = tuple(int(value) for value in beta_img.shape)
@@ -88,11 +88,11 @@ def build_public_nod_roi_materialization_contract(join_contract_path: Path) -> t
                 "session": row["session"],
                 "run": int(row["run"]),
                 "condition": "perception",
-                "source_events_path": row["events_path"],
-                "source_preproc_bold_path": row["preproc_bold_path"],
-                "source_confounds_path": row["confounds_path"],
-                "source_ciftify_beta_path": row["ciftify_beta_path"],
-                "source_ciftify_label_path": row["ciftify_label_path"],
+                "source_events_path": row["source_events_path"],
+                "source_preproc_bold_path": row["source_preproc_bold_path"],
+                "source_confounds_path": row["source_confounds_path"],
+                "source_ciftify_beta_path": row["source_ciftify_beta_path"],
+                "source_ciftify_label_path": row["source_ciftify_label_path"],
                 "source_beta_rows": beta_shape[0],
                 "source_beta_features": beta_shape[1] if len(beta_shape) > 1 else None,
                 "source_label_rows": label_count,

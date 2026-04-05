@@ -119,7 +119,15 @@ def build_public_nod_shared_only_join_contract(
                 "ciftify_beta_path",
                 "ciftify_label_path",
             ]
-        ],
+        ].rename(
+            columns={
+                "events_path": "source_events_path",
+                "preproc_bold_path": "source_preproc_bold_path",
+                "confounds_path": "source_confounds_path",
+                "ciftify_beta_path": "source_ciftify_beta_path",
+                "ciftify_label_path": "source_ciftify_label_path",
+            }
+        ),
         on=["subject", "session", "run"],
         how="inner",
         validate="many_to_one",
@@ -174,11 +182,11 @@ def build_public_nod_shared_only_join_contract(
             "embedding_model_id",
             "embedding_dimension",
             "target_embedding_column",
-            "events_path",
-            "preproc_bold_path",
-            "confounds_path",
-            "ciftify_beta_path",
-            "ciftify_label_path",
+            "source_events_path",
+            "source_preproc_bold_path",
+            "source_confounds_path",
+            "source_ciftify_beta_path",
+            "source_ciftify_label_path",
             "target_cache_path",
             "roi_contract_key",
             "join_contract_version",
