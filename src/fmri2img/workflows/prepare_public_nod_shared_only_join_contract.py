@@ -67,6 +67,14 @@ def _validate_selection(df: pd.DataFrame, input_path: Path) -> pd.DataFrame:
         raise ValueError(
             f"NOD join contract requires one unique target identifier per trial, but {input_path} does not satisfy that."
         )
+    if "stimulus_path" not in required.columns:
+        if "stim_file" not in required.columns:
+            raise ValueError(
+                f"NOD join contract requires either stimulus_path or stim_file in {input_path} to connect target-selection rows to the target cache."
+            )
+        required["stimulus_path"] = required["stim_file"].map(
+            lambda value: f"cache/public_datasets/ds004496/stimuli/{value}"
+        )
     return required
 
 
