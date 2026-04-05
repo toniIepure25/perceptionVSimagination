@@ -638,3 +638,13 @@ Risk:
   lane to `downstream_prep_ready=true` for the fixed slice while keeping
   `training_ready=false` and preserving the boundary that no evidence-facing
   interpretation changed
+- 2026-04-06: the fixed NOD slice now also has a checked-in shared-only config
+  and a real trainer-ingestion preflight surface. The new
+  `configs/canonical/public_nod_imagenet_run10_shared_only.yaml` config points
+  only to the fixed prepared dataset and target cache, and
+  `fmri2img.workflows.preflight_public_nod_shared_only_trainer` now verifies
+  that the canonical trainer path can load the fixed slice, align the target
+  cache and ROI artifact by `pair_id`, build a real batch, and run a real
+  forward packet on the live pod. The dedicated preflight marks
+  `trainer_config_ready=true` and `preflight_ready=true`, while
+  `training_ready` correctly remains `false`

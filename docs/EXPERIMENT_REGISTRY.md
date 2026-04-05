@@ -241,3 +241,16 @@ Copy this block:
 - Result summary: built a real `3600`-row prepared dataset keyed by `pair_id` for the exact fixed NOD slice, with full join/ROI/target-cache alignment, `downstream_prep_ready=true`, and `training_ready=false`
 - Interpretation summary: the fixed NOD slice is now machine-consumable end-to-end for downstream shared-only prep without widening the slice or implying that shared-only training has been validated yet
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-TRAINER-PREFLIGHT
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane trainer-ingestion preflight for the fixed resolved NOD slice
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.preflight_public_nod_shared_only_trainer --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml` and `./.venv/bin/python -m fmri2img.workflows.preflight_data --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml --output outputs/public_nod/train/imagenet_run10_shared_only_preflight/preflight_data.json`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- Output / artifact path: `outputs/public_nod/train/trainer_preflight.json`; canonical preflight report `outputs/public_nod/train/imagenet_run10_shared_only_preflight/preflight_data.json`
+- Status: done
+- Result summary: validated that the canonical trainer path can ingest the exact fixed NOD slice end-to-end without widening scope. The live pod built a real `16`-sample trainer batch with ROI feature dims `{early_visual: 3, ventral_visual: 0, metacognitive: 3}`, produced a real `16 x 768` content-prediction forward packet, and marked `trainer_config_ready=true`, `preflight_ready=true`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has a checked-in shared-only config and a real trainer-ingestion preflight surface, but this is still an operational readiness result only. No benchmark run, no leaderboard claim, and no evidence-facing interpretation changed
+- Promoted to evidence?: no

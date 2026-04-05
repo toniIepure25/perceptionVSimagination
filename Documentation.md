@@ -544,3 +544,33 @@ Paper handoff rule:
 - Follow-up: define the smallest checked-in shared-only preflight/train config
   that points to the fixed prepared dataset and target cache, while keeping
   `training_ready=false` until canonical trainer validation is complete
+
+## 2026-04-06 - NOD trainer-preflight config and canonical ingestion validation
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `configs/canonical/public_nod_imagenet_run10_shared_only.yaml`,
+  `src/fmri2img/workflows/preflight_public_nod_shared_only_trainer.py`,
+  `tests/test_canonical_workflows.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; remote runs of
+  `./.venv/bin/python -m fmri2img.workflows.preflight_public_nod_shared_only_trainer --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml`
+  and
+  `./.venv/bin/python -m fmri2img.workflows.preflight_data --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml --output outputs/public_nod/train/imagenet_run10_shared_only_preflight/preflight_data.json`;
+  focused remote pytest on the pod
+- Decision: added the smallest checked-in shared-only config for the fixed NOD
+  slice and validated that the canonical trainer path can load the prepared
+  dataset, align the target cache and ROI artifact by `pair_id`, build a real
+  batch, and run a real forward packet without widening the slice
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; this remains a narrow practical Animus-lane preflight result only
+- Detail: the dedicated trainer preflight marks
+  `trainer_config_ready=true`, `preflight_ready=true`, and
+  `training_ready=false`; the generic canonical preflight report classifies the
+  same config as `bootstrap_ready`
+- Follow-up: run the smallest controlled `train_decoder` smoke on this exact
+  config to validate trainer output-path artifacts without treating it as a
+  benchmark run
