@@ -212,6 +212,12 @@ Current live result:
 - the next downstream surface after that is the fixed target-embedding cache
   contract:
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache`
+- the next exact-subset operational step after that is fixed JPEG
+  materialization:
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_stimuli --materialize`
+- once those JPEGs are genuinely resolved, the real canonical target cache can
+  be built with:
+  `./.venv/bin/python -m fmri2img.workflows.build_public_nod_target_embedding_cache`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

@@ -219,3 +219,21 @@ Current target-embedding target:
   manifest that names the expected `768`-D ViT-L/14 cache contract while
   explicitly reporting that the current stimulus JPEG payloads are still
   unresolved and embeddings are not yet materialized
+
+Current exact stimulus-materialization target:
+
+- `fmri2img.workflows.materialize_public_nod_stimuli`
+- output:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_retrieval_report.json`
+- purpose:
+  materialize only the `3600` JPEGs referenced by the fixed target-embedding
+  manifest, without widening the NOD slice
+
+Current real target-cache target:
+
+- `fmri2img.workflows.build_public_nod_target_embedding_cache`
+- output:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- purpose:
+  compute the real canonical `clip_target_768` cache for the same fixed slice
+  once those JPEG payloads are resolved

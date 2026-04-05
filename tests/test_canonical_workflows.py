@@ -967,6 +967,203 @@ def test_prepare_public_nod_target_embedding_manifest_rejects_slice_drift(tmp_pa
     assert "requires the fixed 3600-row target-selection slice" in str(excinfo.value)
 
 
+def test_materialize_public_nod_stimuli_downloads_exact_fixed_slice(tmp_path, monkeypatch):
+    from fmri2img.workflows.materialize_public_nod_stimuli import materialize_public_nod_stimuli
+    import pandas as pd
+
+    repo_root = tmp_path
+    manifest_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_embedding_manifest.parquet"
+    report_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_embedding_retrieval_report.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rows = []
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+    for index in range(3600):
+        class_name = f"class_{index:04d}"
+        rel = Path("cache") / "public_datasets" / "ds004496" / "stimuli" / "imagenet" / class_name / f"sample_{index:04d}.JPEG"
+        worktree_path = repo_root / rel
+        worktree_path.parent.mkdir(parents=True, exist_ok=True)
+        target = dataset_root / ".git" / "annex" / "objects" / f"SHA256E-s12--sample_{index:04d}.JPEG"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        worktree_path.symlink_to(target)
+        rows.append(
+            {
+                "dataset_id": "ds004496",
+                "dataset_label": "Natural Object Dataset (NOD)",
+                "lane": "practical_animus",
+                "task": "imagenet",
+                "subject": f"sub-{index // 400 + 1:02d}",
+                "session": f"ses-imagenet{(index % 400) // 100 + 1:02d}",
+                "run": 10,
+                "trial_index": index % 100 + 1,
+                "stim_file": f"imagenet/{class_name}/sample_{index:04d}.JPEG",
+                "target_identifier": f"sample_{index:04d}.JPEG",
+                "target_source": "events_stim_file_and_ciftify_label_match",
+                "target_domain": "imagenet",
+                "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                "adapter_status": "adapter_ready_not_training_ready",
+                "stimulus_path": str(rel),
+                "stimulus_payload_visible": True,
+                "stimulus_payload_resolved": False,
+                "stimulus_is_symlink": True,
+                "embedding_model_id": "openai/clip-vit-large-patch14",
+                "embedding_dimension": 768,
+                "embedding_column": "clip_target_768",
+                "embedding_materialized": False,
+                "cache_kind": "manifest",
+                "cache_key": f"sample_{index:04d}.JPEG",
+                "embedding_status": "missing_image_payload",
+            }
+        )
+    pd.DataFrame(rows).to_parquet(manifest_path, index=False)
+
+    def _fake_download(url, destination, chunk_size=1024 * 1024):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"jpeg-bytes")
+        return len(b"jpeg-bytes")
+
+    monkeypatch.setattr("fmri2img.workflows.materialize_public_nod_stimuli._download_to_path", _fake_download)
+
+    report = materialize_public_nod_stimuli(manifest_path, report_path)
+    refreshed = pd.read_parquet(manifest_path)
+    assert report["downloaded_files"] == 3600
+    assert report["resolved_stimulus_payloads_after"] == 3600
+    assert int(refreshed["stimulus_payload_resolved"].sum()) == 3600
+    assert report_path.exists()
+
+
+def test_build_public_nod_target_embedding_cache_materializes_real_vectors(tmp_path, monkeypatch):
+    from fmri2img.workflows.build_public_nod_target_embedding_cache import build_public_nod_target_embedding_cache
+    import pandas as pd
+    from PIL import Image
+    import numpy as np
+
+    repo_root = tmp_path
+    manifest_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_embedding_manifest.parquet"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rows = []
+    stimuli_root = repo_root / "cache" / "public_datasets" / "ds004496" / "stimuli"
+    for index in range(3600):
+        class_name = f"class_{index:04d}"
+        rel = Path("cache") / "public_datasets" / "ds004496" / "stimuli" / "imagenet" / class_name / f"sample_{index:04d}.JPEG"
+        image_path = repo_root / rel
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (2, 2), color=(index % 255, 0, 0)).save(image_path)
+        rows.append(
+            {
+                "dataset_id": "ds004496",
+                "dataset_label": "Natural Object Dataset (NOD)",
+                "lane": "practical_animus",
+                "task": "imagenet",
+                "subject": f"sub-{index // 400 + 1:02d}",
+                "session": f"ses-imagenet{(index % 400) // 100 + 1:02d}",
+                "run": 10,
+                "trial_index": index % 100 + 1,
+                "stim_file": f"imagenet/{class_name}/sample_{index:04d}.JPEG",
+                "target_identifier": f"sample_{index:04d}.JPEG",
+                "target_source": "events_stim_file_and_ciftify_label_match",
+                "target_domain": "imagenet",
+                "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                "adapter_status": "adapter_ready_not_training_ready",
+                "stimulus_path": str(rel),
+                "stimulus_payload_visible": True,
+                "stimulus_payload_resolved": True,
+                "stimulus_is_symlink": False,
+                "embedding_model_id": "openai/clip-vit-large-patch14",
+                "embedding_dimension": 768,
+                "embedding_column": "clip_target_768",
+                "embedding_materialized": False,
+                "cache_kind": "manifest",
+                "cache_key": f"sample_{index:04d}.JPEG",
+                "embedding_status": "embedding_pending",
+            }
+        )
+    pd.DataFrame(rows).to_parquet(manifest_path, index=False)
+
+    def _fake_load_clip_encoder(model_id, device):
+        return object(), object(), 768
+
+    def _fake_compute_embeddings_batch(images, clip_model, processor, device, batch_size=32):
+        return {
+            pair_id: (np.arange(768, dtype=np.float32) + pair_id).astype(np.float32)
+            for pair_id in images
+        }
+
+    monkeypatch.setattr(
+        "fmri2img.workflows.build_public_nod_target_embedding_cache.load_clip_encoder",
+        _fake_load_clip_encoder,
+    )
+    monkeypatch.setattr(
+        "fmri2img.workflows.build_public_nod_target_embedding_cache.compute_embeddings_batch",
+        _fake_compute_embeddings_batch,
+    )
+
+    cache, report = build_public_nod_target_embedding_cache(manifest_path, device="cpu", inference_batch_size=8)
+    assert len(cache) == 3600
+    assert report["embeddings_materialized"] == 3600
+    assert report["state"] == {
+        "target_embedding_ready": True,
+        "downstream_prep_ready": True,
+        "training_ready": False,
+    }
+    assert cache.columns.tolist() == [
+        "pair_id",
+        "target_identifier",
+        "stimulus_path",
+        "embedding_model_id",
+        "embedding_dimension",
+        "clip_target_768",
+    ]
+    assert len(cache.loc[0, "clip_target_768"]) == 768
+
+
+def test_build_public_nod_target_embedding_cache_rejects_unresolved_manifest(tmp_path):
+    from fmri2img.workflows.build_public_nod_target_embedding_cache import build_public_nod_target_embedding_cache
+    import pandas as pd
+
+    repo_root = tmp_path
+    manifest_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_target_embedding_manifest.parquet"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rows = []
+    for index in range(3600):
+        rows.append(
+            {
+                "dataset_id": "ds004496",
+                "dataset_label": "Natural Object Dataset (NOD)",
+                "lane": "practical_animus",
+                "task": "imagenet",
+                "subject": f"sub-{index // 400 + 1:02d}",
+                "session": f"ses-imagenet{(index % 400) // 100 + 1:02d}",
+                "run": 10,
+                "trial_index": index % 100 + 1,
+                "stim_file": f"imagenet/class_{index:04d}/sample_{index:04d}.JPEG",
+                "target_identifier": f"sample_{index:04d}.JPEG",
+                "target_source": "events_stim_file_and_ciftify_label_match",
+                "target_domain": "imagenet",
+                "adapter_scope": "public_nod_imagenet_run10_shared_only",
+                "adapter_status": "adapter_ready_not_training_ready",
+                "stimulus_path": f"cache/public_datasets/ds004496/stimuli/imagenet/class_{index:04d}/sample_{index:04d}.JPEG",
+                "stimulus_payload_visible": True,
+                "stimulus_payload_resolved": False,
+                "stimulus_is_symlink": True,
+                "embedding_model_id": "openai/clip-vit-large-patch14",
+                "embedding_dimension": 768,
+                "embedding_column": "clip_target_768",
+                "embedding_materialized": False,
+                "cache_kind": "manifest",
+                "cache_key": f"sample_{index:04d}.JPEG",
+                "embedding_status": "missing_image_payload",
+            }
+        )
+    pd.DataFrame(rows).to_parquet(manifest_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_target_embedding_cache(manifest_path, device="cpu")
+    assert "still has 3600 unresolved payloads" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -1034,6 +1231,8 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.prepare_public_nod_shared_only_adapter" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_target_selection" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_target_embedding_cache" in nod_note
+    assert "fmri2img.workflows.materialize_public_nod_stimuli" in nod_note
+    assert "fmri2img.workflows.build_public_nod_target_embedding_cache" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

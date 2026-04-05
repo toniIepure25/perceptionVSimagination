@@ -437,6 +437,72 @@ What still blocks training after the embedding-cache contract:
 - a shared-only training/eval config must point to the adapter,
   target-selection artifact, and real target cache
 
+## Fixed stimulus materialization surface
+
+The smallest exact-subset stimulus retrieval workflow for the same fixed slice
+is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_stimuli
+```
+
+Materialization run:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_stimuli --materialize
+```
+
+Default report:
+
+- `cache/indices/public_nod/imagenet_run10_target_embedding_retrieval_report.json`
+
+What it does:
+
+- consumes the fixed target-embedding manifest
+- keeps the exact `3600`-row `imagenet` / `sub-01..sub-09` /
+  `ses-imagenet01..04` / `run-10` slice fixed
+- downloads only the referenced JPEGs from the official OpenNeuro public S3
+  path
+- writes them into the existing annex-backed stimulus targets
+
+## Fixed real target-cache build surface
+
+Once the exact JPEG payloads are actually resolved, the next workflow is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.build_public_nod_target_embedding_cache
+```
+
+Default outputs:
+
+- target cache parquet:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- target cache report:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_cache.report.json`
+
+What it does:
+
+- consumes the fixed target-embedding manifest
+- verifies that all fixed-slice stimulus JPEGs are resolved
+- computes the real canonical embeddings with:
+  - model id: `openai/clip-vit-large-patch14`
+  - dimension: `768`
+  - output column: `clip_target_768`
+
+Current training boundary after a real target cache exists:
+
+- target-embedding-ready: yes
+- downstream-prep-ready: yes
+- training-ready: still no
+
+What still blocks honest shared-only training even after the cache exists:
+
+- an ROI materialization contract aligned to the NOD derivatives
+- a dataset-side join contract from the fixed NOD slice into the canonical
+  shared-only trainer
+- a checked-in shared-only train/eval config that points to the adapter,
+  target-selection artifact, and target cache
+
 ## Expected remote path
 
 On the verified live pod:
