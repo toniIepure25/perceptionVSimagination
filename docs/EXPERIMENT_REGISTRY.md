@@ -215,3 +215,29 @@ Copy this block:
 - Result summary: built a `36`-row verified ROI contract over the exact fixed NOD slice, confirming beta/label alignment across `3600` join rows while keeping `roi_ready=false`, `downstream_prep_ready=false`, and `training_ready=false`
 - Interpretation summary: the fixed NOD slice now has a precise neural-side contract for the required future ROI artifact, but the ROI-side materialized parquet and loader integration still do not exist and training remains honestly blocked
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-ROI-ARTIFACT
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane real ROI artifact for the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_roi_artifact`
+- Dataset / prepared artifacts: ROI contract `cache/indices/public_nod/imagenet_run10_roi_materialization_contract.parquet`, join contract `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- Status: done
+- Result summary: built a real `3600`-row ROI parquet keyed by `pair_id` for the exact fixed NOD slice, with `3600` unique `pair_id`s, `roi_ready=true`, `downstream_prep_ready=false`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has a real neural-side artifact aligned to the join contract, using only the subject-universal atlas sources available across the slice rather than faking subject-specific floc masks
+- Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-PREPARED-DATASET
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane prepared dataset artifact for the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset`
+- Dataset / prepared artifacts: join contract `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`
+- Status: done
+- Result summary: built a real `3600`-row prepared dataset keyed by `pair_id` for the exact fixed NOD slice, with full join/ROI/target-cache alignment, `downstream_prep_ready=true`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice is now machine-consumable end-to-end for downstream shared-only prep without widening the slice or implying that shared-only training has been validated yet
+- Promoted to evidence?: no

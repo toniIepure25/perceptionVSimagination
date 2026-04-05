@@ -598,10 +598,18 @@ What it does:
 - consumes the fixed ROI materialization contract plus the fixed join contract
 - materializes the exact `3600` `pair_id` rows for the fixed slice only
 - uses the existing resolved `beta.dscalar.nii` run payloads
-- resolves the minimal supporting atlas payloads needed for real pooled branch
-  features
+- resolves only the subject-universal supporting atlas payloads needed for real
+  pooled branch features
 - writes `roi_values_json` and `roi_features_json` without widening the NOD
   slice
+
+Current live-pod feature boundary:
+
+- early visual features come from subject-specific `BA_exvivo` labels
+- metacognitive features come from subject-specific `aparc` labels
+- subject-specific `floc-faces` / `floc-places` masks are not universal across
+  `sub-01..sub-09`, so they are excluded from the materialized fixed-slice ROI
+  artifact rather than being faked or silently imputed
 
 Current meaning after ROI materialization:
 
@@ -633,6 +641,19 @@ What it does:
 - validates full `pair_id` alignment against the real target cache
 - emits the narrowest canonical prepared dataset parquet for later shared-only
   consumption
+
+Current live-pod result:
+
+- rows: `3600`
+- unique `pair_id`: `3600`
+- split counts:
+  - `train`: `2880`
+  - `val`: `360`
+  - `test`: `360`
+- ROI feature dimensions:
+  - `early_visual`: `3`
+  - `ventral_visual`: `0`
+  - `metacognitive`: `3`
 
 Current meaning after the prepared dataset exists:
 

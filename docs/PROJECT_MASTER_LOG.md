@@ -628,3 +628,13 @@ Risk:
   `downstream_prep_ready=false`, and `training_ready=false`. This makes the
   fixed NOD slice downstream-consumable without widening the slice or
   pretending that neural-side materialization or training is already ready
+- 2026-04-06: the fixed NOD slice now has a real ROI parquet and a real
+  prepared dataset artifact on the live pod. The checked-in
+  `fmri2img.workflows.materialize_public_nod_roi_artifact` workflow built the
+  `3600`-row `pair_id`-keyed ROI artifact for the exact slice, and
+  `fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset` built
+  the aligned `3600`-row prepared dataset that consumes the join contract, ROI
+  artifact, and target cache end-to-end. This advances the practical Animus
+  lane to `downstream_prep_ready=true` for the fixed slice while keeping
+  `training_ready=false` and preserving the boundary that no evidence-facing
+  interpretation changed

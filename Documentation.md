@@ -514,3 +514,33 @@ Paper handoff rule:
 - Follow-up: materialize the actual ROI-side artifact keyed by `pair_id`, then
   add the dataset-side loader path that consumes the NOD join contract, ROI
   artifact, and target cache without widening the slice
+
+## 2026-04-06 - NOD ROI artifact and prepared dataset built on the live pod
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/materialize_public_nod_roi_artifact.py`,
+  `src/fmri2img/workflows/prepare_public_nod_shared_only_prepared_dataset.py`,
+  `tests/test_canonical_workflows.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; remote runs of
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_roi_artifact`
+  and
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset`;
+  focused remote pytest on the pod
+- Decision: materialized the real `pair_id`-keyed ROI parquet for the exact
+  fixed NOD slice and built the first real prepared dataset artifact that
+  consumes the join contract, ROI artifact, and target cache end-to-end
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; this remains a narrow practical Animus-lane downstream-prep result
+  only
+- Detail: the live ROI artifact now uses only the subject-universal atlas
+  sources across the fixed slice (`BA_exvivo` and `aparc`), leaving
+  subject-specific `floc-faces` / `floc-places` masks out of the fixed-slice
+  materialized feature set rather than faking them
+- Follow-up: define the smallest checked-in shared-only preflight/train config
+  that points to the fixed prepared dataset and target cache, while keeping
+  `training_ready=false` until canonical trainer validation is complete
