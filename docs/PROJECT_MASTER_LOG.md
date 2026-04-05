@@ -606,3 +606,14 @@ Risk:
   `0` JPEG payloads are currently resolved, so the report correctly keeps
   `target_embedding_ready=false`, `downstream_prep_ready=false`, and
   `training_ready=false` without changing any evidence-facing interpretation
+- 2026-04-05: the fixed NOD slice now also has a real canonical target cache.
+  `fmri2img.workflows.materialize_public_nod_stimuli` retrieved the exact
+  `3600` JPEG stimulus payloads referenced by the manifest from the official
+  OpenNeuro public S3 path, and
+  `fmri2img.workflows.build_public_nod_target_embedding_cache` then built the
+  real `openai/clip-vit-large-patch14` / `clip_target_768` cache for the same
+  exact slice. The resulting report now marks the slice as
+  `target_embedding_ready=true`, `downstream_prep_ready=true`, and
+  `training_ready=false`, preserving the boundary that ROI materialization,
+  dataset-side join logic, and a checked-in shared-only train/eval config are
+  still separate engineering steps

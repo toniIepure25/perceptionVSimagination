@@ -237,3 +237,12 @@ Current real target-cache target:
 - purpose:
   compute the real canonical `clip_target_768` cache for the same fixed slice
   once those JPEG payloads are resolved
+
+Current live status:
+
+- the exact `3600` JPEG stimulus payloads for the fixed slice have now been
+  materialized from the official OpenNeuro public S3 path
+- the real `clip_target_768` cache for that same fixed slice now exists
+- this strengthens the practical Animus prep path only; ROI materialization,
+  dataset-side join logic, and a checked-in shared-only train/eval config are
+  still separate remaining steps

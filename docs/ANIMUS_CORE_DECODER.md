@@ -218,6 +218,9 @@ Current live result:
 - once those JPEGs are genuinely resolved, the real canonical target cache can
   be built with:
   `./.venv/bin/python -m fmri2img.workflows.build_public_nod_target_embedding_cache`
+- that cache now exists for the fixed NOD slice, with
+  `target_embedding_ready=true`, `downstream_prep_ready=true`, and
+  `training_ready=false`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

@@ -415,10 +415,11 @@ What it uses:
 Current live-pod interpretation:
 
 - the target-selection slice is deterministic and fixed
-- the referenced JPEG files are currently visible as annex-backed paths but are
-  still unresolved
-- this workflow therefore produces a canonical embedding-cache manifest, not a
-  real embedding cache
+- the manifest now records the exact stimulus JPEG paths and whether they are
+  visible versus resolved
+- before materialization it correctly exposes a manifest-only cache contract
+- after the exact fixed-slice JPEG materialization succeeds, rerunning the
+  workflow promotes the manifest to `target_embedding_ready: yes`
 
 Current meaning:
 
@@ -488,6 +489,18 @@ What it does:
   - model id: `openai/clip-vit-large-patch14`
   - dimension: `768`
   - output column: `clip_target_768`
+
+Current live-pod result for the fixed slice:
+
+- exact JPEG retrieval completed for all `3600` target rows
+- the real target cache now exists at:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- report:
+  `cache/indices/public_nod/imagenet_run10_target_embedding_cache.report.json`
+- current state:
+  - `target_embedding_ready`: yes
+  - `downstream_prep_ready`: yes
+  - `training_ready`: no
 
 Current training boundary after a real target cache exists:
 

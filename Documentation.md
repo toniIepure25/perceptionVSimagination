@@ -459,3 +459,29 @@ Paper handoff rule:
 - Follow-up: materialize the exact `3600` NOD stimulus JPEG payloads, then
   compute the real `clip_target_768` cache before considering any shared-only
   train/eval config
+
+## 2026-04-05 - NOD real target cache built for the fixed slice
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched: `src/fmri2img/workflows/materialize_public_nod_stimuli.py`,
+  `src/fmri2img/workflows/build_public_nod_target_embedding_cache.py`,
+  `tests/test_canonical_workflows.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote exact JPEG
+  materialization on the live pod; remote rerun of
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_target_embedding_cache`;
+  remote real cache build via
+  `./.venv/bin/python -m fmri2img.workflows.build_public_nod_target_embedding_cache`;
+  focused remote pytest on the pod
+- Decision: converted the fixed NOD target-embedding contract into a real
+  canonical `clip_target_768` cache for the exact `3600`-row slice by
+  materializing only the referenced JPEGs from the official OpenNeuro public
+  S3 path and then embedding them with `openai/clip-vit-large-patch14`
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; this remains a narrow practical Animus-lane prep result only
+- Follow-up: define the dataset-side join contract plus ROI materialization
+  contract needed before any honest shared-only train/eval config can consume
+  the fixed NOD slice

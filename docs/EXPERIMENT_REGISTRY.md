@@ -176,3 +176,16 @@ Copy this block:
 - Result summary: built a `3600`-row target-embedding manifest for the fixed `run-10` NOD slice with `3600` visible stimulus paths, `0` resolved JPEG payloads, `target_embedding_ready=false`, `downstream_prep_ready=false`, and `training_ready=false`
 - Interpretation summary: the canonical NOD target-cache contract is now explicit and repo-usable, but the current live-pod stimulus JPEGs are still unresolved annex paths so real embeddings and honest shared-only training remain blocked
 - Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-TARGET-CACHE
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane real canonical target cache for the fixed resolved NOD slice
+- Config: n/a; canonical workflows `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_stimuli --materialize` and `./.venv/bin/python -m fmri2img.workflows.build_public_nod_target_embedding_cache`
+- Dataset / prepared artifacts: target-embedding manifest `cache/indices/public_nod/imagenet_run10_target_embedding_manifest.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- Status: done
+- Result summary: materialized all `3600` fixed-slice stimulus JPEGs from the official OpenNeuro public S3 path (`103592285` bytes, about `0.096 GiB`) and built a real `3600`-row `clip_target_768` cache with `target_embedding_ready=true`, `downstream_prep_ready=true`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has a real canonical target cache for later shared-only prep, but ROI materialization, dataset-side join logic, and a checked-in shared-only train/eval config are still required before honest training
+- Promoted to evidence?: no
