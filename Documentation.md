@@ -485,3 +485,32 @@ Paper handoff rule:
 - Follow-up: define the dataset-side join contract plus ROI materialization
   contract needed before any honest shared-only train/eval config can consume
   the fixed NOD slice
+
+## 2026-04-05 - NOD join contract and ROI contract added for the fixed slice
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/prepare_public_nod_shared_only_join_contract.py`,
+  `src/fmri2img/workflows/prepare_public_nod_roi_materialization_contract.py`,
+  `tests/test_canonical_workflows.py`, `docs/NOD_PUBLIC_DATASET.md`,
+  `docs/PUBLIC_DATASET_INTEGRATION_PLAN.md`,
+  `docs/ANIMUS_CORE_DECODER.md`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; remote runs of
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
+  and
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_roi_materialization_contract`;
+  focused remote pytest on the pod
+- Decision: added the smallest machine-readable dataset-side join contract and
+  the smallest verified ROI materialization contract for the exact fixed NOD
+  slice. The join contract is `join_ready=true`, while the ROI surface remains
+  contract-only and keeps `roi_ready=false`,
+  `downstream_prep_ready=false`, and `training_ready=false`
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; this remains a narrow practical Animus-lane downstream-prep result
+  only
+- Follow-up: materialize the actual ROI-side artifact keyed by `pair_id`, then
+  add the dataset-side loader path that consumes the NOD join contract, ROI
+  artifact, and target cache without widening the slice

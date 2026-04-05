@@ -189,3 +189,29 @@ Copy this block:
 - Result summary: materialized all `3600` fixed-slice stimulus JPEGs from the official OpenNeuro public S3 path (`103592285` bytes, about `0.096 GiB`) and built a real `3600`-row `clip_target_768` cache with `target_embedding_ready=true`, `downstream_prep_ready=true`, and `training_ready=false`
 - Interpretation summary: the fixed NOD slice now has a real canonical target cache for later shared-only prep, but ROI materialization, dataset-side join logic, and a checked-in shared-only train/eval config are still required before honest training
 - Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-JOIN-CONTRACT
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane dataset-side join contract for the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
+- Dataset / prepared artifacts: shared-only adapter `cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet`, target-selection artifact `cache/indices/public_nod/imagenet_run10_target_selection.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`
+- Status: done
+- Result summary: built a `3600`-row machine-readable join contract keyed by `pair_id` for the exact fixed NOD slice, with `join_ready=true`, `roi_ready=false`, `downstream_prep_ready=false`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has an explicit downstream join surface linking adapter rows, trial-level target selection, target cache rows, and future ROI keys without widening the slice or implying that neural-side materialization already exists
+- Promoted to evidence?: no
+
+## EXP-2026-04-05-NOD-ROI-CONTRACT
+
+- Date: 2026-04-05
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane ROI materialization contract for the fixed resolved NOD slice
+- Config: n/a; canonical workflow `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_roi_materialization_contract`
+- Dataset / prepared artifacts: join contract `cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet`
+- Output / artifact path: `cache/indices/public_nod/imagenet_run10_roi_materialization_contract.parquet`
+- Status: done
+- Result summary: built a `36`-row verified ROI contract over the exact fixed NOD slice, confirming beta/label alignment across `3600` join rows while keeping `roi_ready=false`, `downstream_prep_ready=false`, and `training_ready=false`
+- Interpretation summary: the fixed NOD slice now has a precise neural-side contract for the required future ROI artifact, but the ROI-side materialized parquet and loader integration still do not exist and training remains honestly blocked
+- Promoted to evidence?: no

@@ -617,3 +617,14 @@ Risk:
   `training_ready=false`, preserving the boundary that ROI materialization,
   dataset-side join logic, and a checked-in shared-only train/eval config are
   still separate engineering steps
+- 2026-04-05: the fixed NOD slice now also has explicit downstream join and
+  ROI-contract surfaces. `fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
+  emits a `3600`-row `pair_id`-keyed join artifact linking the adapter,
+  target-selection table, target cache, and future ROI keys for the exact
+  fixed slice, and
+  `fmri2img.workflows.prepare_public_nod_roi_materialization_contract`
+  emits a verified `36`-row ROI-source contract that confirms beta/label
+  alignment while keeping `roi_ready=false`,
+  `downstream_prep_ready=false`, and `training_ready=false`. This makes the
+  fixed NOD slice downstream-consumable without widening the slice or
+  pretending that neural-side materialization or training is already ready
