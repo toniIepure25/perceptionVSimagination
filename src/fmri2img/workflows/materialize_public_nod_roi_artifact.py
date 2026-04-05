@@ -29,7 +29,7 @@ DEFAULT_OUTPUT = "cache/indices/public_nod/imagenet_run10_roi_materialized.parqu
 _EARLY_VISUAL_FEATURES = {
     "early_visual_v1": ("V1",),
     "early_visual_v2": ("V2",),
-    "early_visual_v3": ("V3",),
+    "early_visual_mt": ("MT",),
 }
 _VENTRAL_FEATURES = {
     "ventral_visual_faces": (),

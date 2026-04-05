@@ -1476,7 +1476,7 @@ def test_materialize_public_nod_roi_artifact_builds_fixed_pair_id_aligned_rows(t
         masks = {
             "early_visual_v1": np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
             "early_visual_v2": np.array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
-            "early_visual_v3": np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
+            "early_visual_mt": np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
             "ventral_visual_faces": np.array([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], dtype=bool),
             "ventral_visual_places": np.array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0], dtype=bool),
             "metacognitive_precuneus": np.array([0, 0, 0, 0, 0, 0, 0, 1, 0, 0], dtype=bool),
@@ -1583,7 +1583,7 @@ def test_prepare_public_nod_shared_only_prepared_dataset_builds_loader_ready_art
                         "target_identifier": target_identifier,
                         "stimulus_path": f"cache/public_datasets/ds004496/stimuli/{target_identifier}",
                         "source_beta_row_index": trial_index - 1,
-                        "roi_names_json": json.dumps(["early_visual_v1", "early_visual_v2", "early_visual_v3", "ventral_visual_faces", "ventral_visual_places", "metacognitive_precuneus", "metacognitive_superiorparietal", "metacognitive_rostralmiddlefrontal"]),
+                        "roi_names_json": json.dumps(["early_visual_v1", "early_visual_v2", "early_visual_mt", "ventral_visual_faces", "ventral_visual_places", "metacognitive_precuneus", "metacognitive_superiorparietal", "metacognitive_rostralmiddlefrontal"]),
                         "roi_values_json": json.dumps([0.1] * 8),
                         "roi_features_json": json.dumps(
                             {
