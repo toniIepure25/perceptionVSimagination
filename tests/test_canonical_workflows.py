@@ -1649,6 +1649,281 @@ def test_prepare_public_nod_shared_only_prepared_dataset_rejects_target_cache_dr
     assert "requires the fixed 3600-row join contract" in str(excinfo.value)
 
 
+def test_preflight_public_nod_shared_only_trainer_builds_trainer_ready_report(tmp_path):
+    import pandas as pd
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+    from fmri2img.workflows.preflight_public_nod_shared_only_trainer import (
+        build_public_nod_shared_only_trainer_preflight,
+    )
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    prepared_path = base / "imagenet_run10_shared_only_prepared_dataset.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+    roi_path = base / "imagenet_run10_roi_materialized.parquet"
+
+    pair_id = 1
+    prepared_rows = []
+    cache_rows = []
+    roi_rows = []
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            for trial_index in range(1, 101):
+                target_identifier = f"{subject}_{session}_{trial_index:03d}.JPEG"
+                prepared_rows.append(
+                    {
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "pair_id": pair_id,
+                        "nsdId": pair_id,
+                        "nsd_id": pair_id,
+                        "target_identifier": target_identifier,
+                        "stimulus_path": f"stimuli/{target_identifier}",
+                        "roi_names_json": json.dumps(
+                            [
+                                "early_visual_v1",
+                                "early_visual_v2",
+                                "early_visual_mt",
+                                "metacognitive_precuneus",
+                                "metacognitive_superiorparietal",
+                                "metacognitive_rostralmiddlefrontal",
+                            ]
+                        ),
+                        "roi_values_json": json.dumps([0.1] * 6),
+                        "roi_features_json": json.dumps(
+                            {
+                                "early_visual": [0.1, 0.2, 0.3],
+                                "ventral_visual": [],
+                                "metacognitive": [0.4, 0.5, 0.6],
+                            }
+                        ),
+                        "source_beta_row_index": trial_index - 1,
+                        "source_ciftify_beta_path": f"beta/{subject}/{session}.nii",
+                        "source_ciftify_label_path": f"labels/{subject}/{session}.txt",
+                        "source_events_path": f"events/{subject}/{session}.tsv",
+                        "roi_feature_layout_version": "public_nod_imagenet_run10_v2_common_atlas",
+                        "target_cache_path": str(cache_path),
+                        "target_embedding_column": "clip_target_768",
+                        "dataset_contract_version": "public_nod_imagenet_run10_shared_only_prepared_v1",
+                        "split": "train" if trial_index <= 80 else ("val" if trial_index <= 90 else "test"),
+                    }
+                )
+                cache_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "target_identifier": target_identifier,
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "clip_target_768": [0.0] * 768,
+                    }
+                )
+                roi_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "roi_names_json": json.dumps(["a"]),
+                        "roi_values_json": json.dumps([0.1] * 6),
+                        "roi_features_json": json.dumps(
+                            {
+                                "early_visual": [0.1, 0.2, 0.3],
+                                "ventral_visual": [],
+                                "metacognitive": [0.4, 0.5, 0.6],
+                            }
+                        ),
+                    }
+                )
+                pair_id += 1
+
+    pd.DataFrame(prepared_rows).to_parquet(prepared_path, index=False)
+    pd.DataFrame(cache_rows).to_parquet(cache_path, index=False)
+    pd.DataFrame(roi_rows).to_parquet(roi_path, index=False)
+
+    report_payloads = {
+        "imagenet_run10_target_embedding_cache.report.json": {
+            "embedding_model_id": "openai/clip-vit-large-patch14",
+            "embedding_dimension": 768,
+            "embedding_column": "clip_target_768",
+            "state": {"target_embedding_ready": True, "downstream_prep_ready": True, "training_ready": False},
+        },
+        "imagenet_run10_shared_only_join_contract.report.json": {
+            "state": {"join_ready": True, "roi_ready": False, "downstream_prep_ready": False, "training_ready": False}
+        },
+        "imagenet_run10_roi_materialized.report.json": {
+            "roi_feature_dimensions": {"early_visual": 3, "ventral_visual": 0, "metacognitive": 3},
+            "excluded_subject_specific_features": ["ventral_visual_faces", "ventral_visual_places"],
+            "state": {"join_ready": True, "roi_ready": True, "downstream_prep_ready": False, "training_ready": False},
+        },
+        "imagenet_run10_shared_only_prepared_dataset.report.json": {
+            "state": {"join_ready": True, "roi_ready": True, "downstream_prep_ready": True, "training_ready": False}
+        },
+    }
+    for name, payload in report_payloads.items():
+        (base / name).write_text(json.dumps(payload))
+
+    config_path = repo_root / "public_nod_config.yaml"
+    config = {
+        "dataset": {
+            "subject": "nod_imagenet_run10_fixed_slice",
+            "mixed_index": str(prepared_path),
+            "perception_conditions": ["perception"],
+            "imagery_conditions": ["imagery"],
+        },
+        "roi": {
+            "groups": {
+                "early_visual": ["V1", "V2", "MT"],
+                "ventral_visual": [],
+                "metacognitive": ["precuneus", "superiorparietal", "rostralmiddlefrontal"],
+            },
+            "missing_policy": "error",
+            "fallback_policy": "error",
+        },
+        "targets": {
+            "name": "vit_l14_image_768",
+            "dimension": 768,
+            "cache_path": str(cache_path),
+            "id_column": "pair_id",
+        },
+        "model": {
+            "branch_embedding_dim": 16,
+            "shared_dim": 16,
+            "private_dim": 8,
+            "dropout": 0.0,
+            "disentanglement_mode": "shared_only",
+            "use_domain_head": False,
+            "use_vividness_head": False,
+            "vividness_mode": "evidential",
+        },
+        "training": {
+            "batch_size": 8,
+            "epochs": 1,
+            "learning_rate": 0.001,
+            "weight_decay": 0.0001,
+            "domain_weight": 0.0,
+            "vividness_weight": 0.0,
+            "confidence_weight": 0.0,
+            "reconstruction_weight": 0.1,
+            "device": "cpu",
+            "output_dir": str(repo_root / "outputs" / "train"),
+            "seed": 0,
+        },
+        "evaluation": {
+            "batch_size": 8,
+            "output_dir": str(repo_root / "outputs" / "eval"),
+            "transfer_output_dir": str(repo_root / "outputs" / "transfer"),
+        },
+        "analysis": {"output_dir": str(repo_root / "outputs" / "analysis")},
+        "export": {"output_dir": str(repo_root / "outputs" / "export")},
+        "public_nod": {
+            "dataset_id": "ds004496",
+            "lane": "practical_animus",
+            "task": "imagenet",
+            "run": 10,
+            "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+            "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+            "adapter_rows": 36,
+            "pair_rows": 3600,
+            "roi_artifact": str(roi_path.relative_to(repo_root)),
+            "roi_report": str((base / "imagenet_run10_roi_materialized.report.json").relative_to(repo_root)),
+            "prepared_dataset": str(prepared_path.relative_to(repo_root)),
+            "prepared_report": str((base / "imagenet_run10_shared_only_prepared_dataset.report.json").relative_to(repo_root)),
+            "join_report": str((base / "imagenet_run10_shared_only_join_contract.report.json").relative_to(repo_root)),
+            "target_cache_report": str((base / "imagenet_run10_target_embedding_cache.report.json").relative_to(repo_root)),
+        },
+    }
+    config_path.write_text(yaml.safe_dump(config))
+
+    loaded = load_workflow_config(str(config_path))
+    report = build_public_nod_shared_only_trainer_preflight(loaded, config_path=config_path)
+    assert report["prepared_dataset"]["dataset_rows"] == 3600
+    assert report["trainer_packet"]["train_rows"] == 2880
+    assert report["trainer_packet"]["val_rows"] == 360
+    assert report["trainer_packet"]["test_rows"] == 360
+    assert report["trainer_packet"]["roi_feature_dims"] == {
+        "early_visual": 3,
+        "ventral_visual": 0,
+        "metacognitive": 3,
+    }
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": True,
+        "downstream_prep_ready": True,
+        "trainer_config_ready": True,
+        "preflight_ready": True,
+        "training_ready": False,
+    }
+
+
+def test_preflight_public_nod_shared_only_trainer_rejects_prepared_dataset_drift(tmp_path):
+    import pandas as pd
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+    from fmri2img.workflows.preflight_public_nod_shared_only_trainer import (
+        build_public_nod_shared_only_trainer_preflight,
+    )
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    prepared_path = base / "imagenet_run10_shared_only_prepared_dataset.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+    roi_path = base / "imagenet_run10_roi_materialized.parquet"
+
+    pd.DataFrame([{"pair_id": 1, "subject": "sub-01", "session": "ses-imagenet01", "run": 11, "task": "imagenet", "condition": "perception", "nsdId": 1, "nsd_id": 1, "target_identifier": "x", "stimulus_path": "y", "roi_names_json": "[]", "roi_values_json": "[]", "roi_features_json": json.dumps({"early_visual":[0.1],"ventral_visual":[],"metacognitive":[0.2]}), "source_beta_row_index": 0, "source_ciftify_beta_path": "b", "source_ciftify_label_path": "l", "source_events_path": "e", "roi_feature_layout_version": "v", "target_cache_path": str(cache_path), "target_embedding_column": "clip_target_768", "dataset_contract_version": "v", "split": "train"}]).to_parquet(prepared_path, index=False)
+    pd.DataFrame([{"pair_id": 1, "target_identifier": "x", "embedding_model_id": "openai/clip-vit-large-patch14", "embedding_dimension": 768, "clip_target_768": [0.0] * 768}]).to_parquet(cache_path, index=False)
+    pd.DataFrame([{"pair_id": 1, "roi_names_json": "[]", "roi_values_json": "[]", "roi_features_json": json.dumps({"early_visual":[0.1],"ventral_visual":[],"metacognitive":[0.2]})}]).to_parquet(roi_path, index=False)
+    for name in (
+        "imagenet_run10_target_embedding_cache.report.json",
+        "imagenet_run10_shared_only_join_contract.report.json",
+        "imagenet_run10_roi_materialized.report.json",
+        "imagenet_run10_shared_only_prepared_dataset.report.json",
+    ):
+        (base / name).write_text(json.dumps({"state": {"join_ready": True, "roi_ready": True, "downstream_prep_ready": True, "training_ready": False}}))
+
+    config_path = repo_root / "public_nod_config.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "dataset": {"subject": "nod_imagenet_run10_fixed_slice", "mixed_index": str(prepared_path)},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(cache_path), "id_column": "pair_id"},
+                "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
+                "training": {"batch_size": 2, "epochs": 1, "learning_rate": 0.001, "weight_decay": 0.0001, "device": "cpu", "output_dir": str(repo_root / "outputs" / "train")},
+                "evaluation": {"batch_size": 2, "output_dir": str(repo_root / "outputs" / "eval"), "transfer_output_dir": str(repo_root / "outputs" / "transfer")},
+                "analysis": {"output_dir": str(repo_root / "outputs" / "analysis")},
+                "export": {"output_dir": str(repo_root / "outputs" / "export")},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "lane": "practical_animus",
+                    "task": "imagenet",
+                    "run": 10,
+                    "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+                    "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+                    "adapter_rows": 36,
+                    "pair_rows": 3600,
+                    "roi_artifact": str(roi_path.relative_to(repo_root)),
+                    "roi_report": str((base / "imagenet_run10_roi_materialized.report.json").relative_to(repo_root)),
+                    "prepared_dataset": str(prepared_path.relative_to(repo_root)),
+                    "prepared_report": str((base / "imagenet_run10_shared_only_prepared_dataset.report.json").relative_to(repo_root)),
+                    "join_report": str((base / "imagenet_run10_shared_only_join_contract.report.json").relative_to(repo_root)),
+                    "target_cache_report": str((base / "imagenet_run10_target_embedding_cache.report.json").relative_to(repo_root)),
+                },
+            }
+        )
+    )
+
+    loaded = load_workflow_config(str(config_path))
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_shared_only_trainer_preflight(loaded, config_path=config_path)
+    assert "requires the fixed 3600-row prepared dataset" in str(excinfo.value) or "detected run drift" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -1722,6 +1997,8 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.prepare_public_nod_roi_materialization_contract" in nod_note
     assert "fmri2img.workflows.materialize_public_nod_roi_artifact" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset" in nod_note
+    assert "configs/canonical/public_nod_imagenet_run10_shared_only.yaml" in nod_note
+    assert "fmri2img.workflows.preflight_public_nod_shared_only_trainer" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 

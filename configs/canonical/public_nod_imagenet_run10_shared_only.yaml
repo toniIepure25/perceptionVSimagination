@@ -1,0 +1,99 @@
+experiment:
+  name: public_nod_imagenet_run10_shared_only
+  description: >
+    Preflight-only shared-only trainer config for the fixed NOD imagenet run-10
+    slice. This is a practical Animus-lane ingestion surface, not a benchmark
+    config.
+  benchmark_role: practical_animus_preflight_only
+  evidence_tier: operational
+
+dataset:
+  subject: nod_imagenet_run10_fixed_slice
+  mixed_index: cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet
+  perception_conditions: ["perception"]
+  imagery_conditions: ["imagery"]
+
+roi:
+  groups:
+    early_visual: ["V1", "V2", "MT"]
+    ventral_visual: []
+    metacognitive: ["precuneus", "superiorparietal", "rostralmiddlefrontal"]
+  missing_policy: error
+  fallback_policy: error
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet
+  id_column: pair_id
+
+model:
+  branch_embedding_dim: 64
+  shared_dim: 64
+  private_dim: 32
+  dropout: 0.1
+  disentanglement_mode: shared_only
+  use_domain_head: false
+  use_vividness_head: false
+  vividness_mode: evidential
+
+training:
+  batch_size: 16
+  epochs: 1
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.0
+  vividness_weight: 0.0
+  confidence_weight: 0.0
+  reconstruction_weight: 0.1
+  device: cpu
+  output_dir: outputs/public_nod/train/imagenet_run10_shared_only_preflight
+  seed: 0
+
+evaluation:
+  batch_size: 16
+  output_dir: outputs/public_nod/eval/imagenet_run10_shared_only_preflight
+  transfer_output_dir: outputs/public_nod/transfer/imagenet_run10_shared_only_preflight
+
+analysis:
+  output_dir: outputs/public_nod/analysis/imagenet_run10_shared_only_preflight
+
+export:
+  output_dir: outputs/public_nod/export/imagenet_run10_shared_only_preflight
+
+public_nod:
+  dataset_id: ds004496
+  lane: practical_animus
+  task: imagenet
+  run: 10
+  subjects:
+    - sub-01
+    - sub-02
+    - sub-03
+    - sub-04
+    - sub-05
+    - sub-06
+    - sub-07
+    - sub-08
+    - sub-09
+  sessions:
+    - ses-imagenet01
+    - ses-imagenet02
+    - ses-imagenet03
+    - ses-imagenet04
+  adapter_rows: 36
+  pair_rows: 3600
+  adapter_path: cache/indices/public_nod/imagenet_run10_shared_only_adapter.parquet
+  adapter_report: cache/indices/public_nod/imagenet_run10_shared_only_adapter.report.json
+  join_contract: cache/indices/public_nod/imagenet_run10_shared_only_join_contract.parquet
+  join_report: cache/indices/public_nod/imagenet_run10_shared_only_join_contract.report.json
+  roi_contract: cache/indices/public_nod/imagenet_run10_roi_materialization_contract.parquet
+  roi_contract_report: cache/indices/public_nod/imagenet_run10_roi_materialization_contract.report.json
+  roi_artifact: cache/indices/public_nod/imagenet_run10_roi_materialized.parquet
+  roi_report: cache/indices/public_nod/imagenet_run10_roi_materialized.report.json
+  prepared_dataset: cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet
+  prepared_report: cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.report.json
+  target_selection: cache/indices/public_nod/imagenet_run10_target_selection.parquet
+  target_selection_report: cache/indices/public_nod/imagenet_run10_target_selection.report.json
+  target_cache: cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet
+  target_cache_report: cache/indices/public_nod/imagenet_run10_target_embedding_cache.report.json

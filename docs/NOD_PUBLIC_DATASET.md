@@ -662,6 +662,40 @@ Current meaning after the prepared dataset exists:
 - downstream-prep-ready: yes
 - training-ready: still no
 
+## Fixed trainer-preflight surface
+
+The smallest checked-in trainer-facing config for the same fixed slice is:
+
+- `configs/canonical/public_nod_imagenet_run10_shared_only.yaml`
+
+The narrow trainer-ingestion validation workflow is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.preflight_public_nod_shared_only_trainer
+```
+
+Default output:
+
+- trainer preflight report:
+  `outputs/public_nod/train/trainer_preflight.json`
+
+What it proves:
+
+- the fixed prepared dataset loads through the canonical dataset path
+- the fixed target cache aligns by `pair_id`
+- the fixed ROI artifact aligns by `pair_id`
+- train/val/test splits are present
+- one real trainer batch can be constructed
+- one real canonical forward packet can run without widening the slice
+
+Current meaning after trainer preflight:
+
+- join-ready: yes
+- ROI-ready: yes
+- downstream-prep-ready: yes
+- preflight-ready: yes
+- training-ready: still no
+
 ## Expected remote path
 
 On the verified live pod:
