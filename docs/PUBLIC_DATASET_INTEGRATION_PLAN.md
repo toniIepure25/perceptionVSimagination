@@ -264,3 +264,22 @@ Current ROI contract target:
 - purpose:
   define the exact per-run beta/label alignment and future ROI output shape for
   the fixed slice without widening scope or enabling training
+
+Current real ROI artifact target:
+
+- `fmri2img.workflows.materialize_public_nod_roi_artifact`
+- output:
+  `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- purpose:
+  materialize the exact fixed-slice ROI-side parquet keyed by `pair_id` using
+  the resolved `beta.dscalar.nii` runs plus the minimum required supporting
+  atlas payloads
+
+Current prepared dataset target:
+
+- `fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset`
+- output:
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`
+- purpose:
+  prove the fixed NOD slice is machine-consumable end-to-end for later
+  shared-only training code without widening scope or enabling training yet

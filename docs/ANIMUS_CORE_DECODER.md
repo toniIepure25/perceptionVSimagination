@@ -225,6 +225,10 @@ Current live result:
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_join_contract`
   and
   `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_roi_materialization_contract`
+- the next fixed-slice operational steps after that are:
+  `./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_roi_artifact`
+  and
+  `./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset`
 - this strengthens operational clarity for the Animus lane, not empirical claims
 
 ## Current limits

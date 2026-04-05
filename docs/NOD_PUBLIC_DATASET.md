@@ -578,6 +578,69 @@ Current meaning:
 - downstream-prep-ready: no
 - training-ready: no
 
+## Fixed ROI artifact
+
+The smallest real ROI-side artifact for the same fixed slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.materialize_public_nod_roi_artifact
+```
+
+Default outputs:
+
+- ROI materialized parquet:
+  `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- ROI materialized report:
+  `cache/indices/public_nod/imagenet_run10_roi_materialized.report.json`
+
+What it does:
+
+- consumes the fixed ROI materialization contract plus the fixed join contract
+- materializes the exact `3600` `pair_id` rows for the fixed slice only
+- uses the existing resolved `beta.dscalar.nii` run payloads
+- resolves the minimal supporting atlas payloads needed for real pooled branch
+  features
+- writes `roi_values_json` and `roi_features_json` without widening the NOD
+  slice
+
+Current meaning after ROI materialization:
+
+- join-ready: yes
+- ROI-ready: yes
+- downstream-prep-ready: no
+- training-ready: no
+
+## Fixed prepared dataset surface
+
+The smallest dataset-side loader/prepared-dataset surface for the same fixed
+slice is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset
+```
+
+Default outputs:
+
+- prepared dataset parquet:
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`
+- prepared dataset report:
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.report.json`
+
+What it does:
+
+- consumes the fixed join contract
+- consumes the real ROI artifact
+- validates full `pair_id` alignment against the real target cache
+- emits the narrowest canonical prepared dataset parquet for later shared-only
+  consumption
+
+Current meaning after the prepared dataset exists:
+
+- join-ready: yes
+- ROI-ready: yes
+- downstream-prep-ready: yes
+- training-ready: still no
+
 ## Expected remote path
 
 On the verified live pod:

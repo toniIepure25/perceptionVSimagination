@@ -1408,6 +1408,247 @@ def test_prepare_public_nod_roi_materialization_contract_rejects_alignment_drift
     assert "requires per-run beta rows, label rows, and join rows to match" in str(excinfo.value)
 
 
+def test_materialize_public_nod_roi_artifact_builds_fixed_pair_id_aligned_rows(tmp_path, monkeypatch):
+    from fmri2img.workflows.materialize_public_nod_roi_artifact import build_public_nod_roi_materialized
+    import numpy as np
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    contract_path = base / "imagenet_run10_roi_materialization_contract.parquet"
+    join_path = base / "imagenet_run10_shared_only_join_contract.parquet"
+    dataset_root = repo_root / "cache" / "public_datasets" / "ds004496"
+
+    contract_rows = []
+    join_rows = []
+    pair_id = 1
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            contract_rows.append(
+                {
+                    "adapter_row_id": f"{subject}|{session}|run-10",
+                    "subject": subject,
+                    "session": session,
+                    "run": 10,
+                    "condition": "perception",
+                    "source_events_path": f"{subject}/{session}/func/events.tsv",
+                    "source_preproc_bold_path": f"{subject}/{session}/func/bold.nii.gz",
+                    "source_confounds_path": f"{subject}/{session}/func/confounds.tsv",
+                    "source_ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                    "source_ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                    "source_beta_rows": 100,
+                    "source_label_rows": 100,
+                    "join_rows": 100,
+                    "pair_id_start": pair_id,
+                    "pair_id_end": pair_id + 99,
+                }
+            )
+            for trial_index in range(1, 101):
+                join_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "adapter_row_id": f"{subject}|{session}|run-10",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "target_identifier": f"{subject}_{session}_{trial_index:03d}.JPEG",
+                        "stimulus_path": f"cache/public_datasets/ds004496/stimuli/{subject}_{session}_{trial_index:03d}.JPEG",
+                        "source_events_path": f"{subject}/{session}/func/events.tsv",
+                        "source_ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                        "source_ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                    }
+                )
+                pair_id += 1
+    pd.DataFrame(contract_rows).to_parquet(contract_path, index=False)
+    pd.DataFrame(join_rows).to_parquet(join_path, index=False)
+
+    class _FakeBeta:
+        def get_fdata(self):
+            return np.tile(np.arange(10, dtype=np.float32), (100, 1))
+
+    monkeypatch.setattr("fmri2img.workflows.materialize_public_nod_roi_artifact.nib.load", lambda path: _FakeBeta())
+
+    def _fake_feature_masks(*, subject, dataset_root, base_url):
+        masks = {
+            "early_visual_v1": np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
+            "early_visual_v2": np.array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
+            "early_visual_v3": np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool),
+            "ventral_visual_faces": np.array([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], dtype=bool),
+            "ventral_visual_places": np.array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0], dtype=bool),
+            "metacognitive_precuneus": np.array([0, 0, 0, 0, 0, 0, 0, 1, 0, 0], dtype=bool),
+            "metacognitive_superiorparietal": np.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0], dtype=bool),
+            "metacognitive_rostralmiddlefrontal": np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1], dtype=bool),
+        }
+        atlas_sources = {
+            "early_visual": f"derivatives/{subject}/early.dlabel.nii",
+            "ventral_faces": f"derivatives/{subject}/faces.dlabel.nii",
+            "ventral_places": f"derivatives/{subject}/places.dlabel.nii",
+            "metacognitive": f"derivatives/{subject}/aparc.dlabel.nii",
+        }
+        return masks, atlas_sources, atlas_sources, 0, 0
+
+    artifact, report = build_public_nod_roi_materialized(
+        contract_path,
+        join_path,
+        feature_mask_builder=_fake_feature_masks,
+    )
+    assert len(artifact) == 3600
+    assert artifact["pair_id"].nunique() == 3600
+    assert json.loads(artifact.loc[0, "roi_features_json"]).keys() == {
+        "early_visual",
+        "ventral_visual",
+        "metacognitive",
+    }
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": True,
+        "downstream_prep_ready": False,
+        "training_ready": False,
+    }
+
+
+def test_materialize_public_nod_roi_artifact_rejects_contract_drift(tmp_path):
+    from fmri2img.workflows.materialize_public_nod_roi_artifact import build_public_nod_roi_materialized
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    contract_path = base / "imagenet_run10_roi_materialization_contract.parquet"
+    join_path = base / "imagenet_run10_shared_only_join_contract.parquet"
+
+    pd.DataFrame([{"adapter_row_id": "sub-01|ses-imagenet01|run-10"}]).to_parquet(contract_path, index=False)
+    pd.DataFrame([{"pair_id": 1}]).to_parquet(join_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_roi_materialized(contract_path, join_path)
+    assert "requires the fixed 36-row contract" in str(excinfo.value)
+
+
+def test_prepare_public_nod_shared_only_prepared_dataset_builds_loader_ready_artifact(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset import (
+        build_public_nod_shared_only_prepared_dataset,
+    )
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    join_path = base / "imagenet_run10_shared_only_join_contract.parquet"
+    roi_path = base / "imagenet_run10_roi_materialized.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+
+    join_rows = []
+    roi_rows = []
+    cache_rows = []
+    pair_id = 1
+    for subject in [f"sub-{index:02d}" for index in range(1, 10)]:
+        for session in [f"ses-imagenet{index:02d}" for index in range(1, 5)]:
+            for trial_index in range(1, 101):
+                target_identifier = f"{subject}_{session}_{trial_index:03d}.JPEG"
+                join_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "adapter_row_id": f"{subject}|{session}|run-10",
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "target_identifier": target_identifier,
+                        "stimulus_path": f"cache/public_datasets/ds004496/stimuli/{target_identifier}",
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "source_events_path": f"{subject}/{session}/func/events.tsv",
+                        "source_ciftify_beta_path": f"derivatives/ciftify/{subject}/{session}/beta.dscalar.nii",
+                        "source_ciftify_label_path": f"derivatives/ciftify/{subject}/{session}/labels.txt",
+                    }
+                )
+                roi_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "nsdId": pair_id,
+                        "nsd_id": pair_id,
+                        "subject": subject,
+                        "session": session,
+                        "run": 10,
+                        "trial_index": trial_index,
+                        "condition": "perception",
+                        "task": "imagenet",
+                        "target_identifier": target_identifier,
+                        "stimulus_path": f"cache/public_datasets/ds004496/stimuli/{target_identifier}",
+                        "source_beta_row_index": trial_index - 1,
+                        "roi_names_json": json.dumps(["early_visual_v1", "early_visual_v2", "early_visual_v3", "ventral_visual_faces", "ventral_visual_places", "metacognitive_precuneus", "metacognitive_superiorparietal", "metacognitive_rostralmiddlefrontal"]),
+                        "roi_values_json": json.dumps([0.1] * 8),
+                        "roi_features_json": json.dumps(
+                            {
+                                "early_visual": [0.1, 0.2, 0.3],
+                                "ventral_visual": [0.4, 0.5],
+                                "metacognitive": [0.6, 0.7, 0.8],
+                            }
+                        ),
+                        "roi_feature_layout_version": "public_nod_imagenet_run10_v1",
+                    }
+                )
+                cache_rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "target_identifier": target_identifier,
+                        "embedding_model_id": "openai/clip-vit-large-patch14",
+                        "embedding_dimension": 768,
+                        "clip_target_768": [0.0] * 768,
+                    }
+                )
+                pair_id += 1
+
+    pd.DataFrame(join_rows).to_parquet(join_path, index=False)
+    pd.DataFrame(roi_rows).to_parquet(roi_path, index=False)
+    pd.DataFrame(cache_rows).to_parquet(cache_path, index=False)
+
+    artifact, report = build_public_nod_shared_only_prepared_dataset(join_path, roi_path, cache_path)
+    assert len(artifact) == 3600
+    assert artifact["pair_id"].nunique() == 3600
+    assert set(json.loads(artifact.loc[0, "roi_features_json"]).keys()) == {
+        "early_visual",
+        "ventral_visual",
+        "metacognitive",
+    }
+    assert sum(report["split_counts"].values()) == 3600
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": True,
+        "downstream_prep_ready": True,
+        "training_ready": False,
+    }
+
+
+def test_prepare_public_nod_shared_only_prepared_dataset_rejects_target_cache_drift(tmp_path):
+    from fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset import (
+        build_public_nod_shared_only_prepared_dataset,
+    )
+    import pandas as pd
+
+    repo_root = tmp_path
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    join_path = base / "imagenet_run10_shared_only_join_contract.parquet"
+    roi_path = base / "imagenet_run10_roi_materialized.parquet"
+    cache_path = base / "imagenet_run10_target_embedding_cache.parquet"
+
+    pd.DataFrame([{"pair_id": 1}]).to_parquet(join_path, index=False)
+    pd.DataFrame([{"pair_id": 1}]).to_parquet(roi_path, index=False)
+    pd.DataFrame([{"pair_id": 1}]).to_parquet(cache_path, index=False)
+
+    with pytest.raises(ValueError) as excinfo:
+        build_public_nod_shared_only_prepared_dataset(join_path, roi_path, cache_path)
+    assert "requires the fixed 3600-row join contract" in str(excinfo.value)
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -1479,6 +1720,8 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.build_public_nod_target_embedding_cache" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_shared_only_join_contract" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_roi_materialization_contract" in nod_note
+    assert "fmri2img.workflows.materialize_public_nod_roi_artifact" in nod_note
+    assert "fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
 
