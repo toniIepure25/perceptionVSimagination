@@ -34,10 +34,7 @@ _EARLY_VISUAL_FEATURES = {
     "early_visual_v2": ("V2",),
     "early_visual_mt": ("MT",),
 }
-_VENTRAL_FEATURES = {
-    "ventral_visual_faces": (),
-    "ventral_visual_places": (),
-}
+_VENTRAL_FEATURES: dict[str, tuple[str, ...]] = {}
 _METACOGNITIVE_FEATURES = {
     "metacognitive_precuneus": ("precuneus",),
     "metacognitive_superiorparietal": ("superiorparietal",),
@@ -61,8 +58,6 @@ def _dataset_root(repo_root: Path) -> Path:
 def _atlas_relative_paths(subject: str) -> dict[str, str]:
     return {
         "early_visual": f"derivatives/ciftify/{subject}/standard_fsLR_surface/{subject}.BA_exvivo.32k_fs_LR.dlabel.nii",
-        "ventral_faces": f"derivatives/ciftify/{subject}/results/ses-floc_task-floc/floc-faces.dlabel.nii",
-        "ventral_places": f"derivatives/ciftify/{subject}/results/ses-floc_task-floc/floc-places.dlabel.nii",
         "metacognitive": f"derivatives/ciftify/{subject}/standard_fsLR_surface/{subject}.aparc.32k_fs_LR.dlabel.nii",
     }
 
@@ -147,22 +142,16 @@ def _feature_masks_for_subject(
         downloaded_bytes += byte_count
 
     early_values, early_labels = _load_dlabel(dataset_root / atlas_paths["early_visual"])
-    faces_values, _ = _load_dlabel(dataset_root / atlas_paths["ventral_faces"])
-    places_values, _ = _load_dlabel(dataset_root / atlas_paths["ventral_places"])
     meta_values, meta_labels = _load_dlabel(dataset_root / atlas_paths["metacognitive"])
 
     feature_masks: dict[str, np.ndarray] = {}
     for name, aliases in _EARLY_VISUAL_FEATURES.items():
         feature_masks[name] = _mask_for_aliases(early_values, early_labels, aliases)
-    feature_masks["ventral_visual_faces"] = _nonzero_mask(faces_values)
-    feature_masks["ventral_visual_places"] = _nonzero_mask(places_values)
     for name, aliases in _METACOGNITIVE_FEATURES.items():
         feature_masks[name] = _mask_for_aliases(meta_values, meta_labels, aliases)
 
     atlas_sources = {
         "early_visual": atlas_paths["early_visual"],
-        "ventral_faces": atlas_paths["ventral_faces"],
-        "ventral_places": atlas_paths["ventral_places"],
         "metacognitive": atlas_paths["metacognitive"],
     }
     return feature_masks, atlas_sources, resolved_paths, downloaded_files, downloaded_bytes
@@ -273,10 +262,8 @@ def build_public_nod_roi_materialized(
                     "roi_names_json": json.dumps(_ROI_VALUE_NAMES),
                     "roi_values_json": json.dumps(roi_values.tolist()),
                     "roi_features_json": json.dumps(roi_features),
-                    "roi_feature_layout_version": "public_nod_imagenet_run10_v1",
+                    "roi_feature_layout_version": "public_nod_imagenet_run10_v2_common_atlas",
                     "early_visual_atlas_path": atlas_sources["early_visual"],
-                    "ventral_faces_atlas_path": atlas_sources["ventral_faces"],
-                    "ventral_places_atlas_path": atlas_sources["ventral_places"],
                     "metacognitive_atlas_path": atlas_sources["metacognitive"],
                 }
             )
@@ -299,6 +286,10 @@ def build_public_nod_roi_materialized(
             "ventral_visual": len(_VENTRAL_FEATURES),
             "metacognitive": len(_METACOGNITIVE_FEATURES),
         },
+        "excluded_subject_specific_features": [
+            "ventral_visual_faces",
+            "ventral_visual_places",
+        ],
         "state": {
             "join_ready": True,
             "roi_ready": True,
