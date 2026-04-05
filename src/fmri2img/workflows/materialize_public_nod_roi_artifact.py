@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
+import subprocess
 from typing import Callable
+from urllib.error import HTTPError, URLError
 
 import nibabel as nib
 import numpy as np
@@ -70,8 +73,26 @@ def _ensure_dataset_payload(dataset_root: Path, relpath: str, base_url: str) -> 
         return worktree_path, False, 0
     destination = _symlink_target_path(worktree_path)
     url = f"{base_url.rstrip('/')}/ds004496/{relpath}"
-    downloaded_bytes = _download_to_path(url, destination)
-    return worktree_path, True, downloaded_bytes
+    try:
+        downloaded_bytes = _download_to_path(url, destination)
+        return worktree_path, True, downloaded_bytes
+    except (HTTPError, URLError):
+        annex = shutil.which("git-annex")
+        if annex is None:
+            raise
+        result = subprocess.run(
+            [annex, "get", relpath],
+            cwd=dataset_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0 or not worktree_path.exists():
+            raise RuntimeError(
+                "Failed to retrieve a required NOD atlas payload via both the direct OpenNeuro S3 path and "
+                f"git-annex. relpath={relpath}\nstdout={result.stdout}\nstderr={result.stderr}"
+            )
+        return worktree_path, True, worktree_path.stat().st_size
 
 
 def _load_dlabel(path: Path) -> tuple[np.ndarray, dict[int, str]]:
