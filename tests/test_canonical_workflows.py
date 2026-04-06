@@ -2697,6 +2697,29 @@ def test_normalize_condition_semantics_payload_uses_condition_contract_without_p
     }
 
 
+def test_normalize_condition_semantics_payload_uses_legacy_by_condition_and_n_pairs_shape():
+    from fmri2img.evaluation.decoder import normalize_condition_semantics_payload
+
+    payload = {
+        "by_condition": [
+            {"condition": "imagery", "count": 1},
+            {"condition": "perception", "count": 1},
+        ],
+        "pair_metrics": {
+            "n_pairs": 1,
+            "mean_gap_imagery_minus_perception": 0.1,
+        },
+    }
+    normalized = normalize_condition_semantics_payload(payload)
+    assert normalized == {
+        "present_conditions": ["imagery", "perception"],
+        "missing_conditions": [],
+        "paired_metrics_available": True,
+        "paired_metrics_reason": None,
+        "pair_metrics_available_from_payload": True,
+    }
+
+
 def test_normalize_target_spec_payload_preserves_name_shape():
     from fmri2img.export.animus import normalize_target_spec_payload
 
@@ -2969,3 +2992,232 @@ def test_public_nod_downstream_contract_audit_accepts_legacy_name_shape(tmp_path
     report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
     assert report["state"]["downstream_contract_ready"] is True
     assert report["target_spec"]["shared"]["source_field_shape"] == "name"
+
+
+def test_build_downstream_contract_audit_report_marks_condition_mismatch():
+    from fmri2img.workflows._downstream_contract_audit import build_downstream_contract_audit_report
+
+    report = build_downstream_contract_audit_report(
+        config_path="configs/canonical/shared_private_smoke.yaml",
+        artifact_paths={"export_manifest": "manifest.json"},
+        target_spec={
+            "shared": {
+                "target_name_normalized": "vit_l14_image_768",
+                "target_dimension_normalized": 768,
+                "source_field_shape": "target_name",
+                "target_name_from_payload": "vit_l14_image_768",
+            },
+            "decoder_card": {
+                "target_name_normalized": "vit_l14_image_768",
+                "target_dimension_normalized": 768,
+                "source_field_shape": "target_name",
+                "target_name_from_payload": "vit_l14_image_768",
+            },
+        },
+        condition_semantics={
+            "shared": {
+                "present_conditions": ["imagery", "perception"],
+                "missing_conditions": [],
+                "paired_metrics_available": True,
+                "paired_metrics_reason": None,
+                "pair_metrics_available_from_payload": True,
+            },
+            "decoder_card": {
+                "present_conditions": ["perception"],
+                "missing_conditions": ["imagery"],
+                "paired_metrics_available": False,
+                "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                "pair_metrics_available_from_payload": False,
+            },
+        },
+        identity={
+            "experiment_name": {"manifest": "shared_private_smoke", "decoder_card": "shared_private_smoke"},
+            "benchmark_role": {"manifest": None, "decoder_card": None},
+        },
+        state={
+            "eval_smoke_ready": True,
+            "transfer_smoke_ready": True,
+            "export_smoke_ready": True,
+            "training_ready": False,
+        },
+        target_checks=[
+            {
+                "surface_key": "decoder_card",
+                "check_name": "target_manifest_vs_decoder_card",
+                "shared_label": "export manifest",
+                "surface_label": "decoder card",
+            }
+        ],
+        condition_checks=[
+            {
+                "surface_key": "decoder_card",
+                "check_name": "condition_manifest_vs_decoder_card",
+                "shared_label": "export manifest",
+                "surface_label": "decoder card",
+            }
+        ],
+    )
+    assert report["state"]["downstream_contract_ready"] is False
+    assert "normalized condition semantics differ between export manifest and decoder card" in report["blocked_reasons"]
+
+
+def _build_shared_private_downstream_contract_fixture(
+    tmp_path,
+    *,
+    manifest_target=None,
+    decoder_target=None,
+    config_target_name="vit_l14_image_768",
+    config_target_dimension=768,
+    manifest_condition=None,
+    decoder_condition=None,
+    eval_condition=None,
+    transfer_condition=None,
+):
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+
+    repo_root = tmp_path
+    train_dir = repo_root / "outputs" / "canonical" / "train" / "shared_private_smoke"
+    eval_dir = repo_root / "outputs" / "canonical" / "eval" / "shared_private_smoke"
+    transfer_dir = repo_root / "outputs" / "canonical" / "transfer" / "shared_private_smoke"
+    export_dir = repo_root / "outputs" / "canonical" / "export" / "shared_private_smoke"
+    for path in (train_dir, eval_dir, transfer_dir, export_dir):
+        path.mkdir(parents=True, exist_ok=True)
+
+    manifest_target = manifest_target or {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    decoder_target = decoder_target or {
+        "name": "vit_l14_image_768",
+        "dimension": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    manifest_condition = manifest_condition or {
+        "present_conditions": ["imagery", "perception"],
+        "missing_conditions": [],
+        "paired_metrics_available": True,
+        "paired_metrics_reason": None,
+        "pair_metrics_available_from_payload": True,
+    }
+    decoder_condition = decoder_condition or dict(manifest_condition)
+    eval_condition = eval_condition or {
+        "condition_availability": {
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+        },
+        "pair_metrics": {
+            "n_pairs": 1,
+            "available": True,
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+        },
+    }
+    transfer_condition = transfer_condition or dict(eval_condition)
+
+    for name in ("best_decoder.pt", "config_snapshot.json", "roi_summary.json", "target_summary.json", "train_history.json"):
+        (train_dir / name).write_text("{}")
+    (export_dir / "best_decoder.pt").write_text("pt")
+    (export_dir / "config_snapshot.json").write_text("{}")
+    (export_dir / "decoder_card.md").write_text("# card\n")
+    (eval_dir / "roi_summary.json").write_text("{}")
+    (eval_dir / "resolved_roi_groups.json").write_text("{}")
+    (transfer_dir / "per_trial_pairs.csv").write_text("pair_id,condition,cosine\n1,perception,0.1\n")
+
+    (export_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "target_spec": {
+                    "target_name": manifest_target["target_name_normalized"],
+                    "dimension": manifest_target["target_dimension_normalized"],
+                },
+                "metadata": {
+                    "experiment": {"name": "shared_private_smoke", "benchmark_role": None},
+                    "condition_semantics": manifest_condition,
+                    "target_spec_normalized": manifest_target,
+                },
+            }
+        )
+    )
+    (export_dir / "decoder_card.json").write_text(
+        json.dumps(
+            {
+                "experiment": {"name": "shared_private_smoke", "benchmark_role": None},
+                "target": decoder_target,
+                "condition_semantics": decoder_condition,
+            }
+        )
+    )
+    eval_metrics = {"target_space": "vit_l14_image_768", **eval_condition}
+    transfer_metrics = {"target_space": "vit_l14_image_768", **transfer_condition}
+    (eval_dir / "metrics.json").write_text(json.dumps(eval_metrics))
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(transfer_metrics))
+
+    config_path = repo_root / "shared_private_smoke.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "shared_private_smoke", "description": "smoke-only"},
+                "dataset": {"subject": "subj01", "mixed_index": str(repo_root / "mixed.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": config_target_name,
+                    "dimension": config_target_dimension,
+                    "cache_path": str(repo_root / "targets.parquet"),
+                },
+                "model": {
+                    "branch_embedding_dim": 32,
+                    "shared_dim": 32,
+                    "private_dim": 16,
+                    "dropout": 0.0,
+                    "use_domain_head": True,
+                    "use_vividness_head": True,
+                },
+                "training": {"batch_size": 4, "epochs": 2, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 4, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(repo_root / "analysis")},
+                "export": {"output_dir": str(export_dir)},
+            }
+        )
+    )
+    (repo_root / "mixed.parquet").write_bytes(b"")
+    (repo_root / "targets.parquet").write_bytes(b"")
+    return load_workflow_config(str(config_path)), config_path
+
+
+def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
+    from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
+        build_shared_private_smoke_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_shared_private_downstream_contract_fixture(tmp_path)
+    report = build_shared_private_smoke_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is True
+    assert report["state"]["eval_smoke_ready"] is True
+    assert report["target_spec"]["shared"]["target_name_normalized"] == "vit_l14_image_768"
+    assert report["condition_semantics"]["shared"]["paired_metrics_available"] is True
+
+
+def test_shared_private_smoke_downstream_contract_audit_marks_target_dimension_mismatch(tmp_path):
+    from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
+        build_shared_private_smoke_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_shared_private_downstream_contract_fixture(
+        tmp_path,
+        decoder_target={
+            "name": "vit_l14_image_768",
+            "dimension": 512,
+            "source_field_shape": "target_name",
+            "target_name_from_payload": "vit_l14_image_768",
+        },
+    )
+    report = build_shared_private_smoke_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is False
+    assert "normalized target metadata differs between export manifest and decoder card" in report["blocked_reasons"]

@@ -162,6 +162,14 @@ def normalize_condition_semantics_payload(
     if not isinstance(present_conditions, list):
         present_conditions = pair_metrics.get("present_conditions")
     if not isinstance(present_conditions, list):
+        by_condition = payload.get("by_condition")
+        if isinstance(by_condition, list):
+            present_conditions = [
+                str(item.get("condition"))
+                for item in by_condition
+                if isinstance(item, dict) and item.get("condition") is not None
+            ]
+    if not isinstance(present_conditions, list):
         present_conditions = []
     present_conditions = sorted({str(value) for value in present_conditions})
 
@@ -174,7 +182,11 @@ def normalize_condition_semantics_payload(
 
     pair_metrics_available_from_payload = pair_metrics.get("available")
     if not isinstance(pair_metrics_available_from_payload, bool):
-        pair_metrics_available_from_payload = None
+        n_pairs = pair_metrics.get("n_pairs")
+        if isinstance(n_pairs, (int, float)):
+            pair_metrics_available_from_payload = bool(n_pairs > 0)
+        else:
+            pair_metrics_available_from_payload = None
 
     paired_metrics_available = condition_availability.get("paired_metrics_available")
     if not isinstance(paired_metrics_available, bool):
@@ -185,7 +197,7 @@ def normalize_condition_semantics_payload(
     paired_metrics_reason = condition_availability.get("paired_metrics_reason")
     if paired_metrics_reason is None and pair_metrics_available_from_payload is False:
         paired_metrics_reason = pair_metrics.get("reason")
-    if paired_metrics_reason is None and paired_metrics_available is False and present_conditions:
+    if paired_metrics_reason is None and paired_metrics_available is False and missing_conditions:
         paired_metrics_reason = PAIRED_METRICS_UNAVAILABLE_REASON
 
     return {
