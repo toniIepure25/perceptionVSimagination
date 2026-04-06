@@ -644,3 +644,33 @@ Paper handoff rule:
 - Follow-up: add the smallest perception-only-safe eval smoke path or guard in
   the canonical evaluation surface before treating eval smoke as operationally
   ready for this fixed NOD slice
+
+## 2026-04-06 - NOD perception-only eval smoke guard and successful live eval smoke
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/evaluation/decoder.py`,
+  `tests/test_canonical_workflows.py`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.eval_decoder --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: added the smallest canonical perception-only guard in
+  `compute_pair_metrics` so paired metrics remain unchanged when both
+  conditions exist, but perception-only eval now returns an explicit
+  unavailable pair-metrics block instead of crashing
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; the resulting evaluation metrics remain operational smoke outputs
+  only and are not benchmark evidence
+- Detail: the live pod now writes `metrics.json`, `roi_summary.json`, and
+  `resolved_roi_groups.json` under
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/`; the machine-
+  readable eval/export smoke report now marks `eval_smoke_ready=true`,
+  `export_smoke_ready=true`, and `training_ready=false`
+- Follow-up: keep using the explicit `pair_metrics.available=false` contract
+  for perception-only slices unless a later task intentionally scopes a more
+  general evaluation API refinement

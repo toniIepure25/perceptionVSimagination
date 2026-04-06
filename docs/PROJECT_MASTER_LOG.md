@@ -668,3 +668,12 @@ Risk:
   `fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke`
   workflow records this honestly as `export_smoke_ready=true`,
   `eval_smoke_ready=false`, and `training_ready=false`
+- 2026-04-06: canonical eval smoke is now perception-only-safe for the fixed
+  NOD slice. The smallest guard in `fmri2img.evaluation.decoder.compute_pair_metrics`
+  now preserves existing paired behavior when both conditions exist but returns
+  an explicit unavailable pair-metrics block when only `perception` is
+  present. With that guard in place, the live pod successfully wrote
+  `metrics.json`, `roi_summary.json`, and `resolved_roi_groups.json` under
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/`, and the
+  eval/export smoke report now records `eval_smoke_ready=true`,
+  `export_smoke_ready=true`, and `training_ready=false`
