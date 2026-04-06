@@ -3221,3 +3221,67 @@ def test_shared_private_smoke_downstream_contract_audit_marks_target_dimension_m
     report = build_shared_private_smoke_downstream_contract_audit(loaded, config_path=config_path)
     assert report["state"]["downstream_contract_ready"] is False
     assert "normalized target metadata differs between export manifest and decoder card" in report["blocked_reasons"]
+
+
+def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
+    from fmri2img.workflows.audit_downstream_contract import (
+        build_downstream_contract_audit,
+        resolve_downstream_contract_audit_strategy,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(tmp_path)
+    assert resolve_downstream_contract_audit_strategy(loaded) == "public_nod_imagenet_run10_shared_only_smoke"
+    report = build_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["bundle_family"] == "public_nod_imagenet_run10_shared_only_smoke"
+    assert report["state"]["downstream_contract_ready"] is True
+
+
+def test_generic_downstream_contract_dispatch_selects_shared_private_strategy(tmp_path):
+    from fmri2img.workflows.audit_downstream_contract import (
+        build_downstream_contract_audit,
+        resolve_downstream_contract_audit_strategy,
+    )
+
+    loaded, config_path = _build_shared_private_downstream_contract_fixture(tmp_path)
+    assert resolve_downstream_contract_audit_strategy(loaded) == "shared_private_smoke"
+    report = build_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["bundle_family"] == "shared_private_smoke"
+    assert report["state"]["downstream_contract_ready"] is True
+
+
+def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_for_unsupported_bundle(tmp_path):
+    import yaml
+
+    from fmri2img.workflows.audit_downstream_contract import _blocked_report, resolve_downstream_contract_audit_strategy
+    from fmri2img.workflows.common import load_workflow_config
+
+    config_path = tmp_path / "unsupported.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "unsupported_bundle"},
+                "dataset": {"subject": "subj01", "mixed_index": str(tmp_path / "mixed.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": []}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(tmp_path / "targets.parquet")},
+                "model": {"branch_embedding_dim": 32, "shared_dim": 32, "private_dim": 16, "dropout": 0.0},
+                "training": {"batch_size": 4, "epochs": 1, "device": "cpu", "output_dir": str(tmp_path / "train")},
+                "evaluation": {"batch_size": 4, "output_dir": str(tmp_path / "eval"), "transfer_output_dir": str(tmp_path / "transfer")},
+                "analysis": {"output_dir": str(tmp_path / "analysis")},
+                "export": {"output_dir": str(tmp_path / "export")},
+            }
+        )
+    )
+    (tmp_path / "mixed.parquet").write_bytes(b"")
+    (tmp_path / "targets.parquet").write_bytes(b"")
+    loaded = load_workflow_config(str(config_path))
+    with pytest.raises(ValueError, match="No generic downstream contract audit strategy"):
+        resolve_downstream_contract_audit_strategy(loaded)
+
+    report = _blocked_report(config_path, "unsupported")
+    assert report["artifact_paths"] == {}
+    assert report["target_spec"] == {}
+    assert report["condition_semantics"] == {}
+    assert report["identity"] == {}
+    assert report["consistency"] == {}
+    assert report["state"]["downstream_contract_ready"] is False
+    assert report["state"]["training_ready"] is False

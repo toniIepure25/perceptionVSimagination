@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from fmri2img.workflows._venv_guard import ensure_project_venv
 
