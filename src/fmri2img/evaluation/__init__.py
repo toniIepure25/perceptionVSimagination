@@ -5,6 +5,7 @@ from .decoder import (
     compute_decoder_metrics,
     compute_pair_metrics,
     compute_roi_summary,
+    normalize_condition_semantics_payload,
     write_evaluation_bundle,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "compute_decoder_metrics",
     "compute_pair_metrics",
     "compute_roi_summary",
+    "normalize_condition_semantics_payload",
     "write_evaluation_bundle",
 ]

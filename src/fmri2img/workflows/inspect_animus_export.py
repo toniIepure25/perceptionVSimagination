@@ -14,6 +14,7 @@ def _format_summary(card: dict) -> str:
     experiment = card.get("experiment", {})
     animus = card.get("animus", {})
     target = card.get("target", {})
+    condition_semantics = card.get("condition_semantics", {})
     interfaces = card.get("interfaces", {})
     artifacts = card.get("artifacts", {})
 
@@ -25,6 +26,9 @@ def _format_summary(card: dict) -> str:
         f"decoder_role: {animus.get('decoder_role')}",
         f"stability_tier: {animus.get('stability_tier')}",
         f"target: {target.get('name')} ({target.get('dimension')}-D)",
+        f"present_conditions: {condition_semantics.get('present_conditions')}",
+        f"missing_conditions: {condition_semantics.get('missing_conditions')}",
+        f"paired_metrics_available: {condition_semantics.get('paired_metrics_available')}",
         f"content_interface: {interfaces.get('content', {}).get('status')}",
         f"source_interface: {interfaces.get('source', {}).get('status')}",
         f"confidence_interface: {interfaces.get('confidence', {}).get('status')}",

@@ -10,6 +10,7 @@ def _build_decoder_card(manifest: dict[str, Any]) -> dict[str, Any]:
     metadata = manifest.get("metadata", {})
     experiment = metadata.get("experiment", {})
     animus = metadata.get("animus", {})
+    condition_semantics = metadata.get("condition_semantics", {})
     interfaces = animus.get("interfaces", {})
     heads = metadata.get("heads", {})
     roi_spec = manifest.get("roi_spec", {})
@@ -38,6 +39,13 @@ def _build_decoder_card(manifest: dict[str, Any]) -> dict[str, Any]:
             "name": manifest.get("target_spec", {}).get("name"),
             "dimension": manifest.get("target_spec", {}).get("dimension"),
         },
+        "condition_semantics": {
+            "present_conditions": list(condition_semantics.get("present_conditions", [])),
+            "missing_conditions": list(condition_semantics.get("missing_conditions", [])),
+            "paired_metrics_available": condition_semantics.get("paired_metrics_available"),
+            "paired_metrics_reason": condition_semantics.get("paired_metrics_reason"),
+            "pair_metrics_available_from_payload": condition_semantics.get("pair_metrics_available_from_payload"),
+        },
         "roi": {
             "group_names": sorted(roi_groups.keys()),
             "resolved_group_count": len(resolved_roi),
@@ -56,6 +64,7 @@ def _write_decoder_card(output_dir: Path, decoder_card: dict[str, Any]) -> None:
     experiment = decoder_card.get("experiment", {})
     animus = decoder_card.get("animus", {})
     target = decoder_card.get("target", {})
+    condition_semantics = decoder_card.get("condition_semantics", {})
     roi = decoder_card.get("roi", {})
     artifacts = decoder_card.get("artifacts", {})
     interfaces = decoder_card.get("interfaces", {})
@@ -71,6 +80,9 @@ def _write_decoder_card(output_dir: Path, decoder_card: dict[str, Any]) -> None:
         f"- Decoder role: `{animus.get('decoder_role')}`",
         f"- Stability tier: `{animus.get('stability_tier')}`",
         f"- Target: `{target.get('name')}` ({target.get('dimension')}-D)",
+        f"- Present conditions: `{condition_semantics.get('present_conditions')}`",
+        f"- Missing conditions: `{condition_semantics.get('missing_conditions')}`",
+        f"- Paired metrics available: `{condition_semantics.get('paired_metrics_available')}`",
         f"- ROI groups: `{roi.get('resolved_group_count')}` resolved groups from `{len(roi.get('group_names', []))}` configured groups",
         f"- Checkpoint: `{artifacts.get('checkpoint')}`",
         f"- Config snapshot: `{artifacts.get('config_snapshot')}`",

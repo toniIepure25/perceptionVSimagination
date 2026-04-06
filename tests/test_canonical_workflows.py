@@ -2173,7 +2173,22 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
     export_dir.mkdir(parents=True, exist_ok=True)
     (export_dir / "best_decoder.pt").write_bytes(b"pt")
     (export_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke"}}))
-    (export_dir / "manifest.json").write_text(json.dumps({"target_spec": {"name": "vit_l14_image_768", "dimension": 768}}))
+    (export_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "target_spec": {"name": "vit_l14_image_768", "dimension": 768},
+                "metadata": {
+                    "condition_semantics": {
+                        "present_conditions": ["perception"],
+                        "missing_conditions": ["imagery"],
+                        "paired_metrics_available": False,
+                        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                        "pair_metrics_available_from_payload": False,
+                    }
+                },
+            }
+        )
+    )
     (export_dir / "decoder_card.json").write_text(json.dumps({"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke", "benchmark_role": "practical_animus_smoke_only"}}))
     (export_dir / "decoder_card.md").write_text("# Decoder Card\n")
 
@@ -2243,6 +2258,9 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
     assert report["export_smoke"]["manifest_target_dim"] == 768
     assert report["eval_smoke"]["condition_availability"]["paired_metrics_available"] is False
     assert report["transfer_smoke"]["condition_availability"]["missing_conditions"] == ["imagery"]
+    assert report["condition_semantics"]["shared"]["present_conditions"] == ["perception"]
+    assert report["condition_semantics"]["shared"]["pair_metrics_available_from_payload"] is False
+    assert report["export_smoke"]["condition_semantics"]["paired_metrics_available"] is False
 
 
 def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_path):
@@ -2623,4 +2641,52 @@ def test_compute_pair_metrics_marks_perception_only_slice_unavailable_without_cr
         "present_conditions": ["perception"],
         "missing_conditions": ["imagery"],
         "reason": "pair_metrics_require_both_perception_and_imagery",
+    }
+
+
+def test_normalize_condition_semantics_payload_preserves_paired_payload():
+    from fmri2img.evaluation.decoder import normalize_condition_semantics_payload
+
+    payload = {
+        "condition_availability": {
+            "present_conditions": ["perception", "imagery"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+        },
+        "pair_metrics": {
+            "n_pairs": 12,
+            "available": True,
+            "present_conditions": ["perception", "imagery"],
+            "missing_conditions": [],
+        },
+    }
+    normalized = normalize_condition_semantics_payload(payload)
+    assert normalized == {
+        "present_conditions": ["imagery", "perception"],
+        "missing_conditions": [],
+        "paired_metrics_available": True,
+        "paired_metrics_reason": None,
+        "pair_metrics_available_from_payload": True,
+    }
+
+
+def test_normalize_condition_semantics_payload_uses_condition_contract_without_pair_payload():
+    from fmri2img.evaluation.decoder import normalize_condition_semantics_payload
+
+    payload = {
+        "condition_availability": {
+            "present_conditions": ["perception"],
+            "missing_conditions": ["imagery"],
+            "paired_metrics_available": False,
+            "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        }
+    }
+    normalized = normalize_condition_semantics_payload(payload)
+    assert normalized == {
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "paired_metrics_available": False,
+        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        "pair_metrics_available_from_payload": None,
     }

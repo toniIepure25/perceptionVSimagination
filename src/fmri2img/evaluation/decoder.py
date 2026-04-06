@@ -12,6 +12,7 @@ from fmri2img.models.ridge import evaluate_predictions
 
 
 REQUIRED_PAIRED_CONDITIONS = ("perception", "imagery")
+PAIRED_METRICS_UNAVAILABLE_REASON = "pair_metrics_require_both_perception_and_imagery"
 
 
 def _json_safe(value: Any) -> Any:
@@ -118,7 +119,59 @@ def describe_condition_availability(
         "present_conditions": present_conditions,
         "missing_conditions": missing_conditions,
         "paired_metrics_available": paired_metrics_available,
-        "paired_metrics_reason": None if paired_metrics_available else "pair_metrics_require_both_perception_and_imagery",
+        "paired_metrics_reason": None if paired_metrics_available else PAIRED_METRICS_UNAVAILABLE_REASON,
+    }
+
+
+def normalize_condition_semantics_payload(
+    payload: dict[str, Any] | None,
+    *,
+    required_conditions: tuple[str, ...] = REQUIRED_PAIRED_CONDITIONS,
+) -> dict[str, Any]:
+    payload = payload or {}
+    condition_availability = payload.get("condition_availability")
+    if not isinstance(condition_availability, dict):
+        condition_availability = {}
+    pair_metrics = payload.get("pair_metrics")
+    if not isinstance(pair_metrics, dict):
+        pair_metrics = {}
+
+    present_conditions = condition_availability.get("present_conditions")
+    if not isinstance(present_conditions, list):
+        present_conditions = pair_metrics.get("present_conditions")
+    if not isinstance(present_conditions, list):
+        present_conditions = []
+    present_conditions = sorted({str(value) for value in present_conditions})
+
+    missing_conditions = condition_availability.get("missing_conditions")
+    if not isinstance(missing_conditions, list):
+        missing_conditions = pair_metrics.get("missing_conditions")
+    if not isinstance(missing_conditions, list):
+        missing_conditions = [condition for condition in required_conditions if condition not in present_conditions]
+    missing_conditions = [str(value) for value in missing_conditions]
+
+    pair_metrics_available_from_payload = pair_metrics.get("available")
+    if not isinstance(pair_metrics_available_from_payload, bool):
+        pair_metrics_available_from_payload = None
+
+    paired_metrics_available = condition_availability.get("paired_metrics_available")
+    if not isinstance(paired_metrics_available, bool):
+        paired_metrics_available = pair_metrics_available_from_payload
+    if paired_metrics_available is None and present_conditions:
+        paired_metrics_available = len(missing_conditions) == 0
+
+    paired_metrics_reason = condition_availability.get("paired_metrics_reason")
+    if paired_metrics_reason is None and pair_metrics_available_from_payload is False:
+        paired_metrics_reason = pair_metrics.get("reason")
+    if paired_metrics_reason is None and paired_metrics_available is False and present_conditions:
+        paired_metrics_reason = PAIRED_METRICS_UNAVAILABLE_REASON
+
+    return {
+        "present_conditions": present_conditions,
+        "missing_conditions": missing_conditions,
+        "paired_metrics_available": paired_metrics_available,
+        "paired_metrics_reason": paired_metrics_reason,
+        "pair_metrics_available_from_payload": pair_metrics_available_from_payload,
     }
 
 

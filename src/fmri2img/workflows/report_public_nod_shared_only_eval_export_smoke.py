@@ -9,6 +9,7 @@ from fmri2img.workflows._venv_guard import ensure_project_venv
 
 ensure_project_venv("fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke")
 
+from fmri2img.evaluation import normalize_condition_semantics_payload  # noqa: E402
 from fmri2img.workflows.common import load_workflow_config, validate_canonical_workflow_config  # noqa: E402
 from fmri2img.workflows.prep_common import json_safe, write_report  # noqa: E402
 
@@ -46,6 +47,25 @@ def _canonical_preflight_status(payload: dict[str, Any]) -> str | None:
     if status is None and isinstance(payload.get("readiness"), dict):
         status = payload["readiness"].get("status")
     return status
+
+
+def _merge_condition_semantics(*payloads: dict[str, Any]) -> dict[str, Any]:
+    normalized = [normalize_condition_semantics_payload(payload) for payload in payloads]
+    informative = [
+        item
+        for item in normalized
+        if item["present_conditions"] or item["pair_metrics_available_from_payload"] is not None
+    ]
+    if not informative:
+        informative = normalized
+    shared = informative[0] if informative else normalize_condition_semantics_payload({})
+    consistent = all(item == shared for item in informative[1:]) if len(informative) > 1 else True
+    return {
+        "shared": shared,
+        "eval": normalized[0] if len(normalized) > 0 else normalize_condition_semantics_payload({}),
+        "transfer": normalized[1] if len(normalized) > 1 else normalize_condition_semantics_payload({}),
+        "consistent_across_eval_and_transfer": consistent,
+    }
 
 
 def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path: str | Path) -> dict[str, Any]:
@@ -114,6 +134,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
     transfer_metrics = _load_json(transfer_output_dir / "transfer_metrics.json") if transfer_smoke_ready else {}
     export_manifest = _load_json(export_output_dir / "manifest.json") if export_smoke_ready else {}
     export_card = _load_json(export_output_dir / "decoder_card.json") if export_smoke_ready else {}
+    condition_semantics = _merge_condition_semantics(eval_metrics, transfer_metrics)
 
     report = {
         "config": str(Path(config_path).resolve()),
@@ -150,10 +171,12 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "canonical_preflight_status": _canonical_preflight_status(preflight_data),
             "target_embedding_ready": bool(target_cache_report["state"]["target_embedding_ready"]),
         },
+        "condition_semantics": condition_semantics,
         "eval_smoke": {
             "artifacts_present": eval_smoke_ready,
             "target_space": eval_metrics.get("target_space"),
             "condition_availability": eval_metrics.get("condition_availability"),
+            "normalized_condition_semantics": condition_semantics["eval"],
             "pair_metrics": eval_metrics.get("pair_metrics"),
             "by_condition_count": len(eval_metrics.get("by_condition", [])),
             "missing_files": missing_eval_files,
@@ -162,6 +185,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "artifacts_present": transfer_smoke_ready,
             "target_space": transfer_metrics.get("target_space"),
             "condition_availability": transfer_metrics.get("condition_availability"),
+            "normalized_condition_semantics": condition_semantics["transfer"],
             "pair_metrics": transfer_metrics.get("pair_metrics"),
             "by_condition_count": len(transfer_metrics.get("by_condition", [])),
             "missing_files": missing_transfer_files,
@@ -172,6 +196,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "manifest_target_dim": export_manifest.get("target_spec", {}).get("dimension"),
             "decoder_card_experiment_name": export_card.get("experiment", {}).get("name"),
             "decoder_card_benchmark_role": export_card.get("experiment", {}).get("benchmark_role"),
+            "condition_semantics": export_manifest.get("metadata", {}).get("condition_semantics", condition_semantics["shared"]),
             "missing_files": missing_export_files,
         },
         "state": {
@@ -220,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                 "preflight_ready": False,
                 "smoke_ready": False,
                 "eval_smoke_ready": False,
+                "transfer_smoke_ready": False,
                 "export_smoke_ready": False,
                 "training_ready": False,
             },

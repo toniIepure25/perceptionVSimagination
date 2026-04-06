@@ -197,22 +197,32 @@ def test_animus_export_writes_decoder_card(canonical_fixture_dir, tmp_path):
         "confidence_interface_status": "scaffolded",
     }
     _, _, _, _, roi_summary, target_summary = build_datasets(config)
+    artifact_spec = checkpoint_artifact_spec(
+        config,
+        checkpoint_path=str(checkpoint),
+        target_spec=target_summary,
+        roi_summary=roi_summary,
+        effective_config=config.to_dict(),
+    )
+    artifact_spec["metadata"]["condition_semantics"] = {
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "paired_metrics_available": False,
+        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        "pair_metrics_available_from_payload": False,
+    }
     export_dir = export_decoder_bundle(
         output_dir=tmp_path / "animus_export",
         checkpoint_path=checkpoint,
-        artifact_spec=checkpoint_artifact_spec(
-            config,
-            checkpoint_path=str(checkpoint),
-            target_spec=target_summary,
-            roi_summary=roi_summary,
-            effective_config=config.to_dict(),
-        ),
+        artifact_spec=artifact_spec,
     )
     decoder_card = json.loads((export_dir / "decoder_card.json").read_text())
     assert decoder_card["experiment"]["name"] == "animus_core_decoder"
     assert decoder_card["animus"]["stability_tier"] == "current_default"
     assert decoder_card["interfaces"]["source"]["status"] == "scaffolded"
+    assert decoder_card["condition_semantics"]["missing_conditions"] == ["imagery"]
     assert "content decoding" in (export_dir / "decoder_card.md").read_text()
+    assert "Paired metrics available: `False`" in (export_dir / "decoder_card.md").read_text()
 
 
 def test_inspect_animus_export_prints_decoder_summary_and_validates_bundle(canonical_fixture_dir, tmp_path, capsys):
