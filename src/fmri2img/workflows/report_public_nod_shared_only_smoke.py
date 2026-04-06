@@ -88,6 +88,9 @@ def build_public_nod_shared_only_smoke_report(config, *, config_path: str | Path
     trainer_preflight = json.loads(trainer_preflight_path.read_text())
     preflight_data = json.loads(preflight_data_path.read_text())
     last_epoch = train_history[-1]
+    canonical_preflight_status = preflight_data.get("status")
+    if canonical_preflight_status is None and isinstance(preflight_data.get("readiness"), dict):
+        canonical_preflight_status = preflight_data["readiness"].get("status")
 
     report = {
         "config": str(Path(config_path).resolve()),
@@ -117,7 +120,7 @@ def build_public_nod_shared_only_smoke_report(config, *, config_path: str | Path
             "downstream_prep_ready": bool(prepared_report["state"]["downstream_prep_ready"]),
             "trainer_config_ready": bool(trainer_preflight["state"]["trainer_config_ready"]),
             "preflight_ready": bool(trainer_preflight["state"]["preflight_ready"]),
-            "canonical_preflight_status": preflight_data.get("status"),
+            "canonical_preflight_status": canonical_preflight_status,
             "target_embedding_ready": bool(target_cache_report["state"]["target_embedding_ready"]),
         },
         "smoke_run": {
