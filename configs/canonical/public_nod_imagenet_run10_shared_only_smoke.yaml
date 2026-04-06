@@ -29,3 +29,4 @@ export:
 public_nod:
   trainer_preflight_report: outputs/public_nod/train/trainer_preflight.json
   preflight_data_report: outputs/public_nod/train/imagenet_run10_shared_only_preflight/preflight_data.json
+  smoke_report: outputs/public_nod/train/imagenet_run10_shared_only_smoke/smoke_report.json

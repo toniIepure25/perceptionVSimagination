@@ -742,6 +742,42 @@ What it proves:
 - the smoke run completed operationally
 - `training_ready` still remains `false`
 
+## Fixed eval/export smoke surface
+
+The fixed shared-only smoke config also serves as the narrow eval/export smoke
+config:
+
+- `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+
+Run the canonical eval/export entrypoints against the smoke checkpoint:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.eval_decoder \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml \
+  --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt
+./.venv/bin/python -m fmri2img.workflows.export_for_animus \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml \
+  --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt
+./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
+```
+
+Default smoke outputs:
+
+- eval directory:
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/`
+- export directory:
+  `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`
+- eval/export smoke report:
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+
+What it proves:
+
+- the canonical eval path can consume the fixed-slice smoke checkpoint
+- the canonical export path can package the same smoke checkpoint
+- both smoke output trees are written under fixed smoke-only namespaces
+- `training_ready` still remains `false`
+
 ## Expected remote path
 
 On the verified live pod:
