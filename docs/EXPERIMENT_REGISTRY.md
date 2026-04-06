@@ -332,3 +332,16 @@ Copy this block:
 - Result summary: downstream post-train consumers now normalize target metadata from either `target_spec.name` or `target_spec.target_name`. The live export `manifest.json` now preserves `metadata.target_spec_normalized`, `decoder_card.json` now exposes normalized target metadata with `source_field_shape="target_name"`, and the live combined smoke report now carries a normalized top-level `target_spec` block and a normalized `export_smoke.normalized_target_spec`
 - Interpretation summary: this is operational hardening only. It removes a downstream artifact-shape inconsistency without changing dataset scope, benchmark semantics, or any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-NOD-DOWNSTREAM-CONTRACT-AUDIT
+
+- Date: 2026-04-07
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane downstream contract audit for the fixed NOD smoke export/report bundle
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.audit_public_nod_shared_only_downstream_contract --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`, smoke checkpoint `outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`
+- Output / artifact path: downstream contract audit `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: the live pod now writes a machine-readable downstream contract verdict for the fixed NOD smoke bundle. The audit confirms that `manifest.json`, `decoder_card.json`, and `eval_export_smoke_report.json` agree on normalized target metadata, normalized condition semantics, experiment identity, benchmark role, target dimension, and the operational-only readiness state. The real audit report marks `downstream_contract_ready=true` and `training_ready=false`
+- Interpretation summary: this is operational hardening only. It freezes a reproducible downstream contract verdict for the fixed smoke bundle without changing dataset scope, benchmark semantics, or any evidence-facing interpretation
+- Promoted to evidence?: no

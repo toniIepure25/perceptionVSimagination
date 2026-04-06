@@ -787,3 +787,36 @@ Paper handoff rule:
 - Follow-up: if later downstream consumers need target metadata, read
   `metadata.target_spec_normalized` or the combined report `target_spec` block
   first instead of branching on `name` versus `target_name`
+
+## 2026-04-07 - Downstream contract audit for the fixed NOD smoke bundle
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_public_nod_shared_only_downstream_contract.py`,
+  `src/fmri2img/evaluation/decoder.py`,
+  `docs/NOD_PUBLIC_DATASET.md`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest and py_compile from `.venv`; remote
+  `git pull --rebase` on the live pod; real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.audit_public_nod_shared_only_downstream_contract --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: the fixed NOD smoke bundle now has one explicit machine-readable
+  downstream contract verdict instead of relying on manual inspection across
+  `manifest.json`, `decoder_card.json`, and
+  `eval_export_smoke_report.json`
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the live audit report at
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`
+  verifies normalized target metadata, normalized condition semantics,
+  experiment identity, benchmark role, target dimension, source-field-shape
+  preservation, and the expected operational-only readiness state
+- Readiness: the live audit report marks `downstream_contract_ready=true`,
+  `eval_smoke_ready=true`, `transfer_smoke_ready=true`,
+  `export_smoke_ready=true`, and `training_ready=false`
+- Follow-up: if any later post-train consumer needs the fixed smoke bundle
+  contract, read the audit verdict first instead of re-implementing surface-by-
+  surface consistency checks

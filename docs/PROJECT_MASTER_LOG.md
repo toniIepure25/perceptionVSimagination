@@ -706,3 +706,13 @@ Risk:
   `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/` now records a
   top-level normalized `target_spec` block. This remains operational
   hardening only, and `training_ready` correctly remains `false`
+- 2026-04-07: the fixed NOD smoke bundle now has an explicit downstream
+  contract verdict. The new canonical workflow
+  `fmri2img.workflows.audit_public_nod_shared_only_downstream_contract`
+  writes `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`,
+  which confirms that `manifest.json`, `decoder_card.json`, and
+  `eval_export_smoke_report.json` agree on normalized target metadata,
+  normalized condition semantics, experiment identity, benchmark role, target
+  dimension, and operational-only readiness. The live audit report marks
+  `downstream_contract_ready=true` while `training_ready` correctly remains
+  `false`
