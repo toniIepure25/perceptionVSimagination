@@ -77,16 +77,6 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
 
     missing_eval_files = [name for name in EVAL_FILES if not (eval_output_dir / name).exists()]
     missing_export_files = [name for name in EXPORT_FILES if not (export_output_dir / name).exists()]
-    if missing_eval_files:
-        raise FileNotFoundError(
-            "NOD eval smoke output is incomplete. Missing required evaluation artifacts: "
-            + ", ".join(missing_eval_files)
-        )
-    if missing_export_files:
-        raise FileNotFoundError(
-            "NOD export smoke output is incomplete. Missing required export artifacts: "
-            + ", ".join(missing_export_files)
-        )
 
     prepared_report = _load_json(prepared_report_path)
     target_cache_report = _load_json(target_cache_report_path)
@@ -95,12 +85,24 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
     trainer_preflight = _load_json(trainer_preflight_path)
     preflight_data = _load_json(preflight_data_path)
     smoke_report = _load_json(smoke_report_path)
-    eval_metrics = _load_json(eval_output_dir / "metrics.json")
-    export_manifest = _load_json(export_output_dir / "manifest.json")
-    export_card = _load_json(export_output_dir / "decoder_card.json")
-
     if not bool(smoke_report.get("state", {}).get("smoke_ready")):
         raise ValueError("NOD eval/export smoke requires a completed fixed-slice trainer smoke run first.")
+
+    blocked_reasons: list[str] = []
+    eval_smoke_ready = not missing_eval_files
+    export_smoke_ready = not missing_export_files
+    if missing_eval_files:
+        blocked_reasons.append(
+            "canonical eval smoke did not produce the required evaluation artifacts: " + ", ".join(missing_eval_files)
+        )
+    if missing_export_files:
+        blocked_reasons.append(
+            "canonical export smoke did not produce the required export artifacts: " + ", ".join(missing_export_files)
+        )
+
+    eval_metrics = _load_json(eval_output_dir / "metrics.json") if eval_smoke_ready else {}
+    export_manifest = _load_json(export_output_dir / "manifest.json") if export_smoke_ready else {}
+    export_card = _load_json(export_output_dir / "decoder_card.json") if export_smoke_ready else {}
 
     report = {
         "config": str(Path(config_path).resolve()),
@@ -135,15 +137,19 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "target_embedding_ready": bool(target_cache_report["state"]["target_embedding_ready"]),
         },
         "eval_smoke": {
+            "artifacts_present": eval_smoke_ready,
             "target_space": eval_metrics.get("target_space"),
             "pair_metrics": eval_metrics.get("pair_metrics"),
             "by_condition_count": len(eval_metrics.get("by_condition", [])),
+            "missing_files": missing_eval_files,
         },
         "export_smoke": {
+            "artifacts_present": export_smoke_ready,
             "manifest_target_name": export_manifest.get("target_spec", {}).get("name"),
             "manifest_target_dim": export_manifest.get("target_spec", {}).get("dimension"),
             "decoder_card_experiment_name": export_card.get("experiment", {}).get("name"),
             "decoder_card_benchmark_role": export_card.get("experiment", {}).get("benchmark_role"),
+            "missing_files": missing_export_files,
         },
         "state": {
             "join_ready": bool(join_report["state"]["join_ready"]),
@@ -152,10 +158,11 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "trainer_config_ready": bool(trainer_preflight["state"]["trainer_config_ready"]),
             "preflight_ready": bool(trainer_preflight["state"]["preflight_ready"]),
             "smoke_ready": bool(smoke_report["state"]["smoke_ready"]),
-            "eval_smoke_ready": True,
-            "export_smoke_ready": True,
+            "eval_smoke_ready": eval_smoke_ready,
+            "export_smoke_ready": export_smoke_ready,
             "training_ready": False,
         },
+        "blocked_reasons": blocked_reasons,
         "operational_boundary": [
             "this report only verifies that the canonical eval/export entrypoints can consume the fixed NOD smoke checkpoint and write smoke artifacts",
             "evaluation metrics in this smoke are operational outputs only and are not benchmark evidence",

@@ -2275,9 +2275,11 @@ def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_
     (repo_root / "dummy_targets.parquet").write_bytes(b"")
 
     loaded = load_workflow_config(str(config_path))
-    with pytest.raises(FileNotFoundError) as excinfo:
-        build_public_nod_shared_only_eval_export_smoke_report(loaded, config_path=config_path)
-    assert "Missing required evaluation artifacts" in str(excinfo.value)
+    report = build_public_nod_shared_only_eval_export_smoke_report(loaded, config_path=config_path)
+    assert report["state"]["eval_smoke_ready"] is False
+    assert report["state"]["export_smoke_ready"] is True
+    assert report["state"]["training_ready"] is False
+    assert "canonical eval smoke did not produce the required evaluation artifacts" in report["blocked_reasons"][0]
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
