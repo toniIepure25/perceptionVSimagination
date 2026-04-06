@@ -1,0 +1,27 @@
+_base_: public_nod_imagenet_run10_shared_only.yaml
+
+experiment:
+  name: public_nod_imagenet_run10_shared_only_smoke
+  description: >
+    Controlled smoke-only trainer validation for the fixed NOD imagenet run-10
+    slice. This is an operational artifact-creation path only, not a benchmark
+    run.
+  benchmark_role: practical_animus_smoke_only
+  evidence_tier: operational_smoke
+
+training:
+  batch_size: 2880
+  epochs: 1
+  device: cpu
+  output_dir: outputs/public_nod/train/imagenet_run10_shared_only_smoke
+
+evaluation:
+  batch_size: 360
+  output_dir: outputs/public_nod/eval/imagenet_run10_shared_only_smoke
+  transfer_output_dir: outputs/public_nod/transfer/imagenet_run10_shared_only_smoke
+
+analysis:
+  output_dir: outputs/public_nod/analysis/imagenet_run10_shared_only_smoke
+
+export:
+  output_dir: outputs/public_nod/export/imagenet_run10_shared_only_smoke

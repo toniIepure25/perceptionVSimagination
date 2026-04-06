@@ -1924,6 +1924,20 @@ def test_preflight_public_nod_shared_only_trainer_rejects_prepared_dataset_drift
     assert "requires the fixed 3600-row prepared dataset" in str(excinfo.value) or "detected run drift" in str(excinfo.value)
 
 
+def test_public_nod_smoke_config_is_fixed_slice_and_smoke_scoped():
+    import yaml
+
+    config = yaml.safe_load(Path("configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml").read_text())
+    assert config["_base_"] == "public_nod_imagenet_run10_shared_only.yaml"
+    assert config["training"]["batch_size"] == 2880
+    assert config["training"]["epochs"] == 1
+    assert config["training"]["device"] == "cpu"
+    assert "imagenet_run10_shared_only_smoke" in config["training"]["output_dir"]
+    assert config["evaluation"]["batch_size"] == 360
+    assert "smoke" in config["experiment"]["name"]
+    assert "smoke-only" in config["experiment"]["description"]
+
+
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
     scaling = open("docs/EXPANDED_OVERLAP_COMPARISON.md").read()
     assert "shared overlap ids: `5`" in scaling
@@ -1998,6 +2012,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.materialize_public_nod_roi_artifact" in nod_note
     assert "fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset" in nod_note
     assert "configs/canonical/public_nod_imagenet_run10_shared_only.yaml" in nod_note
+    assert "configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml" in nod_note
     assert "fmri2img.workflows.preflight_public_nod_shared_only_trainer" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 

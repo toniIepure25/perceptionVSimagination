@@ -696,6 +696,34 @@ Current meaning after trainer preflight:
 - preflight-ready: yes
 - training-ready: still no
 
+## Fixed trainer smoke surface
+
+The smallest checked-in trainer smoke config for the same fixed slice is:
+
+- `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+
+Run it through the canonical trainer entrypoint:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.train_decoder \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
+```
+
+Smoke intent:
+
+- one epoch only
+- one large train batch for the fixed `2880`-row train split
+- one eval batch for each fixed `360`-row validation/test split
+- smoke-only output path:
+  `outputs/public_nod/train/imagenet_run10_shared_only_smoke/`
+
+Current meaning after a successful smoke:
+
+- trainer-config-ready: yes
+- preflight-ready: yes
+- smoke-ready: yes
+- training-ready: still no
+
 ## Expected remote path
 
 On the verified live pod:
