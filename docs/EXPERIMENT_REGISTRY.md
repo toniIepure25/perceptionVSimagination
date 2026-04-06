@@ -306,3 +306,16 @@ Copy this block:
 - Result summary: generalized the canonical condition-availability contract so transfer smoke now completes on the fixed perception-only NOD slice and writes `transfer_metrics.json` plus `per_trial_pairs.csv`. The live combined report records `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, `pair_metrics.available=false`, `eval_smoke_ready=true`, `transfer_smoke_ready=true`, `export_smoke_ready=true`, and `training_ready=false`
 - Interpretation summary: this hardens canonical post-train evaluation reuse for perception-only public-data slices without inventing imagery rows or changing any benchmark semantics. The resulting eval/transfer outputs remain operational artifacts only and do not change any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-DOWNSTREAM-CONDITION-NORMALIZATION
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane downstream-consumption hardening for incomplete-condition public-data smoke artifacts
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt` and `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`, smoke checkpoint `outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`
+- Output / artifact path: combined smoke report `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`; export bundle `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`
+- Status: done
+- Result summary: normalized downstream condition semantics are now preserved across eval, transfer, and export consumption. The live combined report carries a shared `condition_semantics` block with `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, `paired_metrics_available=false`, and `pair_metrics_available_from_payload=false`; the regenerated export `manifest.json` and `decoder_card.json` now preserve the same explicit condition contract
+- Interpretation summary: this is operational hardening only. It makes downstream post-train consumers safer for perception-only public-data slices without changing paired-slice semantics, benchmark status, or any evidence-facing interpretation
+- Promoted to evidence?: no

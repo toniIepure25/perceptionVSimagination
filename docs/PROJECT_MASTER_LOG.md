@@ -686,3 +686,13 @@ Risk:
   `present_conditions=["perception"]`, `missing_conditions=["imagery"]`,
   `eval_smoke_ready=true`, `transfer_smoke_ready=true`,
   `export_smoke_ready=true`, and `training_ready=false`
+- 2026-04-06: the fixed-slice post-train stack now preserves normalized
+  condition semantics across downstream eval, transfer, and export
+  consumption. The canonical export bundle for
+  `outputs/public_nod/export/imagenet_run10_shared_only_smoke/` now carries
+  explicit `condition_semantics` in both `manifest.json` and
+  `decoder_card.json`, and the combined smoke report under
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/` now records one
+  shared normalized `condition_semantics` block rather than relying on
+  implicit pair-metric inference. This remains operational hardening only, and
+  `training_ready` correctly remains `false`

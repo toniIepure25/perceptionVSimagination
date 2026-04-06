@@ -708,3 +708,42 @@ Paper handoff rule:
 - Follow-up: if a later public-data slice is imagery-only or partially paired,
   reuse the same canonical condition-availability contract instead of adding
   dataset-specific eval guards
+
+## 2026-04-06 - Downstream condition-semantics normalization for eval, transfer, and export
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/evaluation/decoder.py`,
+  `src/fmri2img/workflows/report_public_nod_shared_only_eval_export_smoke.py`,
+  `src/fmri2img/workflows/export_for_animus.py`,
+  `src/fmri2img/export/animus.py`,
+  `src/fmri2img/workflows/inspect_animus_export.py`,
+  `tests/test_canonical_workflows.py`,
+  `tests/test_canonical_trainer_and_export.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest and py_compile from `.venv`; remote
+  `git pull --rebase` on the live pod; real remote rerun of
+  `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  remote regeneration of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: downstream post-train consumers now normalize condition semantics
+  from eval/transfer payloads instead of inferring paired availability from the
+  presence or absence of pair metrics
+- Claim boundary: operational hardening only; no benchmark progress, no
+  evidence-freeze change, and `training_ready` remains `false`
+- Detail: the live export bundle now preserves normalized
+  `condition_semantics` in `manifest.json` and `decoder_card.json`; the
+  combined eval/transfer/export smoke report now exposes one shared normalized
+  `condition_semantics` block plus per-surface normalized views for the fixed
+  perception-only NOD slice
+- Readiness: the live combined report still marks `eval_smoke_ready=true`,
+  `transfer_smoke_ready=true`, `export_smoke_ready=true`, and
+  `training_ready=false`, while explicitly recording
+  `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, and
+  `paired_metrics_available=false`
+- Follow-up: teach any later downstream consumer to read the normalized
+  `condition_semantics` block first instead of guessing from `pair_metrics`
+  presence
