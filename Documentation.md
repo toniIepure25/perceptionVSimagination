@@ -606,3 +606,41 @@ Paper handoff rule:
 - Follow-up: keep the fixed slice unchanged and, if needed later, use this
   smoke path only as an operational gate before any separately-scoped eval or
   benchmark work
+
+## 2026-04-06 - NOD eval/export smoke and honest blocked-state report
+
+- Scope: engineering, data acquisition
+- Status: completed with partial operational success
+- Surfaces touched:
+  `src/fmri2img/workflows/report_public_nod_shared_only_eval_export_smoke.py`,
+  `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`,
+  `START_HERE.md`, `docs/NOD_PUBLIC_DATASET.md`,
+  `tests/test_canonical_workflows.py`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.eval_decoder --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  remote run of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: reused the fixed smoke config and smoke checkpoint, then added the
+  smallest eval/export smoke report workflow so the repo records export success
+  and eval blockage explicitly instead of inferring readiness from missing
+  files
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; export artifacts and the eval blocker are operational only and are
+  not evidence-facing results
+- Detail: the live pod export smoke produced `manifest.json`,
+  `decoder_card.json`, `decoder_card.md`, `config_snapshot.json`, and a copied
+  `best_decoder.pt` under
+  `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`; the canonical
+  eval smoke did not write `metrics.json`, `roi_summary.json`, or
+  `resolved_roi_groups.json` because `compute_pair_metrics` currently assumes
+  both `perception` and `imagery` conditions are present
+- Readiness: the eval/export smoke report marks `eval_smoke_ready=false`,
+  `export_smoke_ready=true`, and `training_ready=false`
+- Follow-up: add the smallest perception-only-safe eval smoke path or guard in
+  the canonical evaluation surface before treating eval smoke as operationally
+  ready for this fixed NOD slice

@@ -778,6 +778,16 @@ What it proves:
 - both smoke output trees are written under fixed smoke-only namespaces
 - `training_ready` still remains `false`
 
+Current live-pod status:
+
+- export smoke: succeeded
+- eval smoke: blocked
+- blocker: the current canonical `eval_decoder` path reaches
+  `compute_pair_metrics`, which assumes both `perception` and `imagery`
+  conditions are present and raises on this fixed perception-only NOD slice
+- machine-readable status:
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+
 ## Expected remote path
 
 On the verified live pod:

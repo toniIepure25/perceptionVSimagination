@@ -267,3 +267,16 @@ Copy this block:
 - Result summary: the live pod completed a one-epoch fixed-slice `train_decoder` smoke run and wrote the canonical trainer artifacts `best_decoder.pt`, `config_snapshot.json`, `roi_summary.json`, `target_summary.json`, and `train_history.json`, plus a machine-readable `smoke_report.json` that marks `trainer_config_ready=true`, `preflight_ready=true`, `smoke_ready=true`, and `training_ready=false`
 - Interpretation summary: this proves the canonical trainer path can create real output artifacts for the exact fixed NOD slice without widening scope, but the run remains operational smoke only. Loss values and checkpoints from this run are not benchmark evidence and do not change any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-EVAL-EXPORT-SMOKE
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane post-train smoke validation for the fixed resolved NOD slice
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.eval_decoder --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`, `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`, and `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`, smoke checkpoint `outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`
+- Output / artifact path: export bundle `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`; eval/export smoke report `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+- Status: partial
+- Result summary: the live pod export smoke succeeded and wrote `best_decoder.pt`, `config_snapshot.json`, `manifest.json`, `decoder_card.json`, and `decoder_card.md` under the fixed smoke export path. The live pod eval smoke remained blocked and did not write `metrics.json`, `roi_summary.json`, or `resolved_roi_groups.json`; the machine-readable report marks `eval_smoke_ready=false`, `export_smoke_ready=true`, and `training_ready=false`
+- Interpretation summary: this validates that the canonical export path can package the fixed NOD smoke checkpoint without widening scope, while also showing that the current canonical eval path still assumes paired perception/imagery conditions and is not yet operationally ready for this perception-only fixed slice. No benchmark claim or evidence-facing interpretation changed
+- Promoted to evidence?: no

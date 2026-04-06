@@ -658,3 +658,13 @@ Risk:
   `fmri2img.workflows.report_public_nod_shared_only_smoke` workflow recorded a
   machine-readable `smoke_report.json` with `smoke_ready=true` while
   `training_ready` correctly remained `false`
+- 2026-04-06: the fixed NOD slice now also has a machine-readable eval/export
+  smoke status surface. The canonical `export_for_animus` path successfully
+  packaged the fixed smoke checkpoint under
+  `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`, while the
+  canonical `eval_decoder` path remained blocked on the same fixed slice
+  because `compute_pair_metrics` still assumes both `perception` and
+  `imagery` conditions are present. The new
+  `fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke`
+  workflow records this honestly as `export_smoke_ready=true`,
+  `eval_smoke_ready=false`, and `training_ready=false`
