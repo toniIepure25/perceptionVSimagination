@@ -1951,7 +1951,7 @@ def test_public_nod_smoke_report_builds_operational_ready_summary(tmp_path):
     from fmri2img.workflows.report_public_nod_shared_only_smoke import build_public_nod_shared_only_smoke_report
 
     repo_root = tmp_path
-    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "public_nod_imagenet_run10_shared_only_smoke"
+    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_smoke"
     smoke_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in {
         "config_snapshot.json": {"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke"}},
@@ -2040,7 +2040,7 @@ def test_public_nod_smoke_report_rejects_missing_artifacts(tmp_path):
     from fmri2img.workflows.report_public_nod_shared_only_smoke import build_public_nod_shared_only_smoke_report
 
     repo_root = tmp_path
-    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "public_nod_imagenet_run10_shared_only_smoke"
+    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_smoke"
     smoke_dir.mkdir(parents=True, exist_ok=True)
     (smoke_dir / "train_history.json").write_text(json.dumps([{"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.1}]))
     (smoke_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke"}}))

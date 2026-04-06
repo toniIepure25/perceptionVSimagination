@@ -45,11 +45,12 @@ def build_public_nod_shared_only_smoke_report(config, *, config_path: str | Path
     validate_canonical_workflow_config(config)
 
     expected_name = "public_nod_imagenet_run10_shared_only_smoke"
+    expected_output_dir_name = "imagenet_run10_shared_only_smoke"
     experiment_name = str(config.get("experiment.name", ""))
     output_dir = Path(config["training"]["output_dir"]).resolve()
     if experiment_name != expected_name:
         raise ValueError("NOD trainer smoke report requires the checked-in fixed-slice smoke config.")
-    if output_dir.name != expected_name:
+    if output_dir.name != expected_output_dir_name:
         raise ValueError("NOD trainer smoke report requires the fixed smoke output directory contract.")
     if int(config["training"].get("epochs", 1)) != 1:
         raise ValueError("NOD trainer smoke report requires epochs=1.")
