@@ -674,3 +674,37 @@ Paper handoff rule:
 - Follow-up: keep using the explicit `pair_metrics.available=false` contract
   for perception-only slices unless a later task intentionally scopes a more
   general evaluation API refinement
+
+## 2026-04-06 - Condition-availability hardening for canonical eval and transfer
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/evaluation/decoder.py`,
+  `src/fmri2img/workflows/report_public_nod_shared_only_eval_export_smoke.py`,
+  `tests/test_canonical_workflows.py`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; real remote run of
+  `./.venv/bin/python -m fmri2img.workflows.eval_transfer --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  remote regeneration of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: generalized the perception-only-safe condition contract into the
+  canonical evaluation module so eval and transfer share the same machine-
+  readable availability semantics instead of relying on scattered ad hoc checks
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; eval/transfer outputs remain operational hardening artifacts only
+- Detail: `compute_pair_metrics` now depends on an explicit reusable
+  condition-availability description; the combined eval/export smoke report now
+  tracks transfer smoke separately; the live pod now writes
+  `transfer_metrics.json` and `per_trial_pairs.csv` for the fixed NOD slice
+  with `present_conditions=["perception"]`,
+  `missing_conditions=["imagery"]`, and
+  `pair_metrics_require_both_perception_and_imagery`
+- Readiness: the live combined report marks `eval_smoke_ready=true`,
+  `transfer_smoke_ready=true`, `export_smoke_ready=true`, and
+  `training_ready=false`
+- Follow-up: if a later public-data slice is imagery-only or partially paired,
+  reuse the same canonical condition-availability contract instead of adding
+  dataset-specific eval guards

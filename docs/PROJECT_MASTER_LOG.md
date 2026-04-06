@@ -677,3 +677,12 @@ Risk:
   `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/`, and the
   eval/export smoke report now records `eval_smoke_ready=true`,
   `export_smoke_ready=true`, and `training_ready=false`
+- 2026-04-06: canonical post-train hardening for incomplete-condition public
+  data now extends through transfer as well as eval. The evaluation module now
+  carries an explicit reusable condition-availability contract, and the live
+  pod successfully wrote `transfer_metrics.json` and `per_trial_pairs.csv`
+  under `outputs/public_nod/transfer/imagenet_run10_shared_only_smoke/` for
+  the fixed perception-only NOD slice. The combined smoke report now records
+  `present_conditions=["perception"]`, `missing_conditions=["imagery"]`,
+  `eval_smoke_ready=true`, `transfer_smoke_ready=true`,
+  `export_smoke_ready=true`, and `training_ready=false`
