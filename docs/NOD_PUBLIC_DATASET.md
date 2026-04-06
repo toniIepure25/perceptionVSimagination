@@ -760,6 +760,8 @@ Run the canonical eval/export entrypoints against the smoke checkpoint:
   --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt
 ./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke \
   --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
+./.venv/bin/python -m fmri2img.workflows.audit_public_nod_shared_only_downstream_contract \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
 ```
 
 Default smoke outputs:
@@ -770,23 +772,36 @@ Default smoke outputs:
   `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`
 - eval/export smoke report:
   `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+- downstream contract audit:
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`
 
 What it proves:
 
 - the canonical eval path can consume the fixed-slice smoke checkpoint
 - the canonical export path can package the same smoke checkpoint
 - both smoke output trees are written under fixed smoke-only namespaces
+- the downstream export/report bundle can now be audited mechanically for
+  normalized target and condition semantics consistency
 - `training_ready` still remains `false`
 
 Current live-pod status:
 
 - export smoke: succeeded
-- eval smoke: blocked
-- blocker: the current canonical `eval_decoder` path reaches
-  `compute_pair_metrics`, which assumes both `perception` and `imagery`
-  conditions are present and raises on this fixed perception-only NOD slice
+- eval smoke: succeeded
+- transfer smoke: succeeded
+- downstream contract audit: ready
+- normalized condition semantics:
+  `present_conditions=["perception"]`,
+  `missing_conditions=["imagery"]`,
+  `paired_metrics_available=false`
+- normalized target metadata:
+  `target_name_normalized="vit_l14_image_768"`,
+  `target_dimension_normalized=768`,
+  `source_field_shape="target_name"`
 - machine-readable status:
   `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+- machine-readable downstream contract verdict:
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`
 
 ## Expected remote path
 

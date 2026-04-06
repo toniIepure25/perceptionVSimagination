@@ -129,12 +129,34 @@ def normalize_condition_semantics_payload(
     required_conditions: tuple[str, ...] = REQUIRED_PAIRED_CONDITIONS,
 ) -> dict[str, Any]:
     payload = payload or {}
-    condition_availability = payload.get("condition_availability")
-    if not isinstance(condition_availability, dict):
-        condition_availability = {}
-    pair_metrics = payload.get("pair_metrics")
-    if not isinstance(pair_metrics, dict):
+    direct_semantics_shape = any(
+        key in payload
+        for key in (
+            "present_conditions",
+            "missing_conditions",
+            "paired_metrics_available",
+            "paired_metrics_reason",
+            "pair_metrics_available_from_payload",
+        )
+    )
+    if direct_semantics_shape:
+        condition_availability = dict(payload)
         pair_metrics = {}
+        if payload.get("pair_metrics_available_from_payload") is not None:
+            pair_metrics["available"] = payload.get("pair_metrics_available_from_payload")
+        if payload.get("paired_metrics_reason") is not None:
+            pair_metrics["reason"] = payload.get("paired_metrics_reason")
+        if payload.get("present_conditions") is not None:
+            pair_metrics["present_conditions"] = payload.get("present_conditions")
+        if payload.get("missing_conditions") is not None:
+            pair_metrics["missing_conditions"] = payload.get("missing_conditions")
+    else:
+        condition_availability = payload.get("condition_availability")
+        if not isinstance(condition_availability, dict):
+            condition_availability = {}
+        pair_metrics = payload.get("pair_metrics")
+        if not isinstance(pair_metrics, dict):
+            pair_metrics = {}
 
     present_conditions = condition_availability.get("present_conditions")
     if not isinstance(present_conditions, list):

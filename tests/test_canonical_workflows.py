@@ -2564,6 +2564,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml" in nod_note
     assert "fmri2img.workflows.report_public_nod_shared_only_smoke" in nod_note
     assert "fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke" in nod_note
+    assert "fmri2img.workflows.audit_public_nod_shared_only_downstream_contract" in nod_note
     assert "fmri2img.workflows.preflight_public_nod_shared_only_trainer" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 
@@ -2718,3 +2719,253 @@ def test_normalize_target_spec_payload_preserves_target_name_shape():
         "source_field_shape": "target_name",
         "target_name_from_payload": "vit_l14_image_768",
     }
+
+
+def _build_public_nod_downstream_contract_fixture(
+    tmp_path,
+    *,
+    manifest_target=None,
+    decoder_target=None,
+    report_target=None,
+    manifest_condition=None,
+    decoder_condition=None,
+    report_condition=None,
+):
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+
+    repo_root = tmp_path
+    train_dir = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_smoke"
+    eval_dir = repo_root / "outputs" / "public_nod" / "eval" / "imagenet_run10_shared_only_smoke"
+    export_dir = repo_root / "outputs" / "public_nod" / "export" / "imagenet_run10_shared_only_smoke"
+    for path in (train_dir, eval_dir, export_dir):
+        path.mkdir(parents=True, exist_ok=True)
+
+    manifest_target = manifest_target or {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    decoder_target = decoder_target or {
+        "name": "vit_l14_image_768",
+        "dimension": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    report_target = report_target or {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    manifest_condition = manifest_condition or {
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "paired_metrics_available": False,
+        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        "pair_metrics_available_from_payload": False,
+    }
+    decoder_condition = decoder_condition or {
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "paired_metrics_available": False,
+        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        "pair_metrics_available_from_payload": False,
+    }
+    report_condition = report_condition or {
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "paired_metrics_available": False,
+        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        "pair_metrics_available_from_payload": False,
+    }
+
+    (train_dir / "best_decoder.pt").write_bytes(b"pt")
+    (export_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "target_spec": {
+                    "target_name": manifest_target["target_name_normalized"],
+                    "dimension": manifest_target["target_dimension_normalized"],
+                },
+                "metadata": {
+                    "experiment": {
+                        "name": "public_nod_imagenet_run10_shared_only_smoke",
+                        "benchmark_role": "practical_animus_smoke_only",
+                    },
+                    "condition_semantics": manifest_condition,
+                    "target_spec_normalized": manifest_target,
+                },
+            }
+        )
+    )
+    (export_dir / "decoder_card.json").write_text(
+        json.dumps(
+            {
+                "experiment": {
+                    "name": "public_nod_imagenet_run10_shared_only_smoke",
+                    "benchmark_role": "practical_animus_smoke_only",
+                },
+                "target": decoder_target,
+                "condition_semantics": decoder_condition,
+                "artifacts": {"checkpoint": "best_decoder.pt", "config_snapshot": "config_snapshot.json"},
+            }
+        )
+    )
+    (eval_dir / "eval_export_smoke_report.json").write_text(
+        json.dumps(
+            {
+                "target_spec": report_target,
+                "condition_semantics": {"shared": report_condition},
+                "export_smoke": {
+                    "decoder_card_experiment_name": "public_nod_imagenet_run10_shared_only_smoke",
+                    "decoder_card_benchmark_role": "practical_animus_smoke_only",
+                },
+                "state": {
+                    "eval_smoke_ready": True,
+                    "transfer_smoke_ready": True,
+                    "export_smoke_ready": True,
+                    "training_ready": False,
+                },
+            }
+        )
+    )
+
+    config_path = repo_root / "public_nod_downstream_contract.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke", "description": "smoke-only"},
+                "dataset": {"mixed_index": str(repo_root / "dummy.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
+                "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
+                "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(repo_root / "outputs" / "public_nod" / "transfer" / "imagenet_run10_shared_only_smoke")},
+                "analysis": {"output_dir": str(repo_root / "analysis")},
+                "export": {"output_dir": str(export_dir)},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "task": "imagenet",
+                    "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+                    "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+                    "run": 10,
+                    "adapter_rows": 36,
+                    "pair_rows": 3600,
+                },
+            }
+        )
+    )
+    (repo_root / "dummy.parquet").write_bytes(b"")
+    (repo_root / "dummy_targets.parquet").write_bytes(b"")
+    return load_workflow_config(str(config_path)), config_path
+
+
+def test_public_nod_downstream_contract_audit_builds_ready_report(tmp_path):
+    from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (
+        build_public_nod_shared_only_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(tmp_path)
+    report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"] == {
+        "downstream_contract_ready": True,
+        "eval_smoke_ready": True,
+        "transfer_smoke_ready": True,
+        "export_smoke_ready": True,
+        "training_ready": False,
+    }
+    assert report["target_spec"]["shared"]["target_name_normalized"] == "vit_l14_image_768"
+    assert report["condition_semantics"]["shared"]["missing_conditions"] == ["imagery"]
+    assert all(report["consistency"].values())
+
+
+def test_public_nod_downstream_contract_audit_marks_target_name_mismatch(tmp_path):
+    from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (
+        build_public_nod_shared_only_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(
+        tmp_path,
+        report_target={
+            "target_name_normalized": "clip768",
+            "target_dimension_normalized": 768,
+            "source_field_shape": "name",
+            "target_name_from_payload": "clip768",
+        },
+    )
+    report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is False
+    assert "normalized target metadata differs between export manifest and combined smoke report" in report["blocked_reasons"]
+
+
+def test_public_nod_downstream_contract_audit_marks_target_dimension_mismatch(tmp_path):
+    from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (
+        build_public_nod_shared_only_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(
+        tmp_path,
+        decoder_target={
+            "name": "vit_l14_image_768",
+            "dimension": 512,
+            "source_field_shape": "target_name",
+            "target_name_from_payload": "vit_l14_image_768",
+        },
+    )
+    report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is False
+    assert "target dimension drift detected across manifest, decoder card, and combined smoke report" in report["blocked_reasons"]
+
+
+def test_public_nod_downstream_contract_audit_marks_condition_semantics_mismatch(tmp_path):
+    from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (
+        build_public_nod_shared_only_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(
+        tmp_path,
+        decoder_condition={
+            "present_conditions": ["imagery"],
+            "missing_conditions": ["perception"],
+            "paired_metrics_available": False,
+            "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+            "pair_metrics_available_from_payload": False,
+        },
+    )
+    report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is False
+    assert "normalized condition semantics differ between export manifest and decoder card" in report["blocked_reasons"]
+
+
+def test_public_nod_downstream_contract_audit_accepts_legacy_name_shape(tmp_path):
+    from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (
+        build_public_nod_shared_only_downstream_contract_audit,
+    )
+
+    loaded, config_path = _build_public_nod_downstream_contract_fixture(
+        tmp_path,
+        manifest_target={
+            "target_name_normalized": "vit_l14_image_768",
+            "target_dimension_normalized": 768,
+            "source_field_shape": "name",
+            "target_name_from_payload": "vit_l14_image_768",
+        },
+        decoder_target={
+            "name": "vit_l14_image_768",
+            "dimension": 768,
+            "source_field_shape": "name",
+            "target_name_from_payload": "vit_l14_image_768",
+        },
+        report_target={
+            "target_name_normalized": "vit_l14_image_768",
+            "target_dimension_normalized": 768,
+            "source_field_shape": "name",
+            "target_name_from_payload": "vit_l14_image_768",
+        },
+    )
+    report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
+    assert report["state"]["downstream_contract_ready"] is True
+    assert report["target_spec"]["shared"]["source_field_shape"] == "name"
