@@ -319,3 +319,16 @@ Copy this block:
 - Result summary: normalized downstream condition semantics are now preserved across eval, transfer, and export consumption. The live combined report carries a shared `condition_semantics` block with `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, `paired_metrics_available=false`, and `pair_metrics_available_from_payload=false`; the regenerated export `manifest.json` and `decoder_card.json` now preserve the same explicit condition contract
 - Interpretation summary: this is operational hardening only. It makes downstream post-train consumers safer for perception-only public-data slices without changing paired-slice semantics, benchmark status, or any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-DOWNSTREAM-TARGET-NORMALIZATION
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane downstream target-metadata hardening for fixed-slice smoke artifacts
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`, `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`, and `./.venv/bin/python -m fmri2img.workflows.inspect_animus_export outputs/public_nod/export/imagenet_run10_shared_only_smoke --validate`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`, smoke checkpoint `outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`
+- Output / artifact path: export bundle `outputs/public_nod/export/imagenet_run10_shared_only_smoke/`; combined smoke report `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`
+- Status: done
+- Result summary: downstream post-train consumers now normalize target metadata from either `target_spec.name` or `target_spec.target_name`. The live export `manifest.json` now preserves `metadata.target_spec_normalized`, `decoder_card.json` now exposes normalized target metadata with `source_field_shape="target_name"`, and the live combined smoke report now carries a normalized top-level `target_spec` block and a normalized `export_smoke.normalized_target_spec`
+- Interpretation summary: this is operational hardening only. It removes a downstream artifact-shape inconsistency without changing dataset scope, benchmark semantics, or any evidence-facing interpretation
+- Promoted to evidence?: no

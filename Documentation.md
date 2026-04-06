@@ -747,3 +747,43 @@ Paper handoff rule:
 - Follow-up: teach any later downstream consumer to read the normalized
   `condition_semantics` block first instead of guessing from `pair_metrics`
   presence
+
+## 2026-04-06 - Downstream target-spec normalization for eval, export, and inspection
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/export/animus.py`,
+  `src/fmri2img/workflows/report_public_nod_shared_only_eval_export_smoke.py`,
+  `src/fmri2img/workflows/inspect_animus_export.py`,
+  `tests/test_canonical_workflows.py`,
+  `tests/test_canonical_trainer_and_export.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest and py_compile from `.venv`; remote
+  `git pull --rebase` on the live pod; real remote rerun of
+  `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml --checkpoint outputs/public_nod/train/imagenet_run10_shared_only_smoke/best_decoder.pt`;
+  remote regeneration of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  remote validation with
+  `./.venv/bin/python -m fmri2img.workflows.inspect_animus_export outputs/public_nod/export/imagenet_run10_shared_only_smoke --validate`;
+  focused remote pytest on the pod
+- Decision: downstream post-train consumers now normalize target metadata from
+  `target_spec.name` and `target_spec.target_name` into one explicit canonical
+  packet instead of depending on one legacy field shape
+- Claim boundary: operational hardening only; no benchmark progress, no
+  evidence-freeze change, and `training_ready` remains `false`
+- Detail: the live export bundle now preserves
+  `metadata.target_spec_normalized` in `manifest.json`; `decoder_card.json`
+  and `inspect_animus_export` now expose normalized target metadata; the live
+  combined smoke report now exposes one shared normalized `target_spec` block
+  and uses it for `manifest_target_name`
+- Readiness: the live combined report still marks `eval_smoke_ready=true`,
+  `transfer_smoke_ready=true`, `export_smoke_ready=true`, and
+  `training_ready=false`, while the normalized target block now records
+  `target_name_normalized="vit_l14_image_768"`,
+  `target_dimension_normalized=768`, and
+  `source_field_shape="target_name"`
+- Follow-up: if later downstream consumers need target metadata, read
+  `metadata.target_spec_normalized` or the combined report `target_spec` block
+  first instead of branching on `name` versus `target_name`

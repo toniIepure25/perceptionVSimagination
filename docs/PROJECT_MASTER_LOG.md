@@ -696,3 +696,13 @@ Risk:
   shared normalized `condition_semantics` block rather than relying on
   implicit pair-metric inference. This remains operational hardening only, and
   `training_ready` correctly remains `false`
+- 2026-04-06: the fixed-slice post-train stack now also preserves normalized
+  target metadata across export, report, and inspection surfaces. The live
+  export bundle under
+  `outputs/public_nod/export/imagenet_run10_shared_only_smoke/` now carries
+  `metadata.target_spec_normalized` in `manifest.json`, the exported
+  `decoder_card.json` now exposes normalized target metadata with
+  `source_field_shape="target_name"`, and the combined smoke report under
+  `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/` now records a
+  top-level normalized `target_spec` block. This remains operational
+  hardening only, and `training_ready` correctly remains `false`
