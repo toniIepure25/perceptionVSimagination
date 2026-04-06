@@ -345,3 +345,16 @@ Copy this block:
 - Result summary: the live pod now writes a machine-readable downstream contract verdict for the fixed NOD smoke bundle. The audit confirms that `manifest.json`, `decoder_card.json`, and `eval_export_smoke_report.json` agree on normalized target metadata, normalized condition semantics, experiment identity, benchmark role, target dimension, and the operational-only readiness state. The real audit report marks `downstream_contract_ready=true` and `training_ready=false`
 - Interpretation summary: this is operational hardening only. It freezes a reproducible downstream contract verdict for the fixed smoke bundle without changing dataset scope, benchmark semantics, or any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-SHARED-PRIVATE-SMOKE-DOWNSTREAM-CONTRACT-AUDIT
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: canonical shared-private smoke downstream contract hardening
+- Config: `configs/canonical/shared_private_smoke.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.train_decoder --config configs/canonical/shared_private_smoke.yaml`, `./.venv/bin/python -m fmri2img.workflows.eval_decoder --config configs/canonical/shared_private_smoke.yaml --checkpoint outputs/canonical/train/shared_private_smoke/best_decoder.pt`, `./.venv/bin/python -m fmri2img.workflows.eval_transfer --config configs/canonical/shared_private_smoke.yaml --checkpoint outputs/canonical/train/shared_private_smoke/best_decoder.pt`, `./.venv/bin/python -m fmri2img.workflows.export_for_animus --config configs/canonical/shared_private_smoke.yaml --checkpoint outputs/canonical/train/shared_private_smoke/best_decoder.pt`, and `./.venv/bin/python -m fmri2img.workflows.audit_shared_private_smoke_downstream_contract --config configs/canonical/shared_private_smoke.yaml`
+- Dataset / prepared artifacts: repository-local smoke fixture `tests/fixtures/canonical_smoke/`, smoke checkpoint `outputs/canonical/train/shared_private_smoke/best_decoder.pt`, eval bundle `outputs/canonical/eval/shared_private_smoke/`, transfer bundle `outputs/canonical/transfer/shared_private_smoke/`, export bundle `outputs/canonical/export/shared_private_smoke/`
+- Output / artifact path: downstream contract audit `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: the reusable downstream audit core is now proven on a second real post-train bundle outside the fixed NOD slice. The live pod shared-private smoke audit confirms that the export manifest, decoder card, eval metrics, transfer metrics, experiment identity, target dimension, and normalized condition semantics all agree, with `present_conditions=["imagery","perception"]`, `paired_metrics_available=true`, `downstream_contract_ready=true`, and `training_ready=false`
+- Interpretation summary: this is operational hardening only. It makes the post-train artifact contract reusable beyond the NOD-specific case without changing benchmark status, threshold interpretation, or any evidence-facing claim
+- Promoted to evidence?: no

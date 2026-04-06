@@ -716,3 +716,15 @@ Risk:
   dimension, and operational-only readiness. The live audit report marks
   `downstream_contract_ready=true` while `training_ready` correctly remains
   `false`
+- 2026-04-07: downstream contract auditing is now reusable beyond the fixed
+  NOD smoke bundle. The repo now has an internal shared audit core plus a
+  second concrete workflow,
+  `fmri2img.workflows.audit_shared_private_smoke_downstream_contract`, and the
+  live pod successfully wrote
+  `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+  after regenerating the canonical `shared_private_smoke` train/eval/transfer/
+  export bundle. The same compact verdict shape now proves normalized target
+  metadata, normalized condition semantics, experiment identity, target
+  dimension, and operational-only readiness on both the perception-only fixed
+  NOD slice and a paired non-NOD canonical smoke bundle, while
+  `training_ready` remains `false`

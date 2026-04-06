@@ -820,3 +820,42 @@ Paper handoff rule:
 - Follow-up: if any later post-train consumer needs the fixed smoke bundle
   contract, read the audit verdict first instead of re-implementing surface-by-
   surface consistency checks
+
+## 2026-04-07 - Reusable downstream contract audit proved on fixed NOD plus shared_private_smoke
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/evaluation/decoder.py`,
+  `src/fmri2img/workflows/_downstream_contract_audit.py`,
+  `src/fmri2img/workflows/audit_public_nod_shared_only_downstream_contract.py`,
+  `src/fmri2img/workflows/audit_shared_private_smoke_downstream_contract.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  `export_for_animus` plus real
+  `audit_shared_private_smoke_downstream_contract` against the existing
+  `outputs/canonical/hardening_smoke/` bundle; remote `git pull --rebase`,
+  real rerun of the fixed NOD audit, real pod regeneration of the canonical
+  `shared_private_smoke` train/eval/transfer/export bundle, real pod run of
+  `audit_shared_private_smoke_downstream_contract`, and focused remote pytest
+- Decision: downstream contract auditing is no longer trapped in the NOD-only
+  workflow. The repo now has one reusable compact audit core plus two concrete
+  consumers:
+  `fmri2img.workflows.audit_public_nod_shared_only_downstream_contract` and
+  `fmri2img.workflows.audit_shared_private_smoke_downstream_contract`
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the normalization helper now also understands legacy eval/transfer
+  payloads that only expose `by_condition` plus `pair_metrics.n_pairs`, which
+  lets the canonical shared-private smoke bundle emit a truthful normalized
+  condition contract without changing paired semantics
+- Readiness: the fixed NOD audit remains
+  `downstream_contract_ready=true` with perception-only unavailable paired
+  metrics explicit, and the new canonical shared-private smoke audit at
+  `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+  also marks `downstream_contract_ready=true` while `training_ready=false`
+- Follow-up: if another post-train bundle needs contract freezing, reuse the
+  internal audit core and keep the verdict shape compact instead of creating a
+  bundle-specific schema
