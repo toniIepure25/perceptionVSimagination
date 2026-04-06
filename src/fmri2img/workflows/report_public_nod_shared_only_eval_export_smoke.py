@@ -16,6 +16,7 @@ from fmri2img.workflows.prep_common import json_safe, write_report  # noqa: E402
 DEFAULT_CONFIG = "configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml"
 EVAL_FILES = ("metrics.json", "roi_summary.json", "resolved_roi_groups.json")
 EXPORT_FILES = ("best_decoder.pt", "config_snapshot.json", "manifest.json", "decoder_card.json", "decoder_card.md")
+TRANSFER_FILES = ("transfer_metrics.json", "per_trial_pairs.csv")
 
 
 def _repo_root() -> Path:
@@ -56,12 +57,15 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
 
     train_output_dir = Path(config["training"]["output_dir"]).resolve()
     eval_output_dir = Path(config["evaluation"]["output_dir"]).resolve()
+    transfer_output_dir = Path(config["evaluation"].get("transfer_output_dir", "outputs/canonical/transfer")).resolve()
     export_output_dir = Path(config["export"]["output_dir"]).resolve()
     checkpoint_path = train_output_dir / "best_decoder.pt"
     if train_output_dir.name != "imagenet_run10_shared_only_smoke":
         raise ValueError("NOD eval/export smoke report requires the fixed smoke training output directory.")
     if eval_output_dir.name != "imagenet_run10_shared_only_smoke":
         raise ValueError("NOD eval/export smoke report requires the fixed smoke evaluation output directory.")
+    if transfer_output_dir.name != "imagenet_run10_shared_only_smoke":
+        raise ValueError("NOD eval/export smoke report requires the fixed smoke transfer output directory.")
     if export_output_dir.name != "imagenet_run10_shared_only_smoke":
         raise ValueError("NOD eval/export smoke report requires the fixed smoke export output directory.")
     if not checkpoint_path.exists():
@@ -76,6 +80,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
     smoke_report_path = _resolve_required_path(config, "smoke_report")
 
     missing_eval_files = [name for name in EVAL_FILES if not (eval_output_dir / name).exists()]
+    missing_transfer_files = [name for name in TRANSFER_FILES if not (transfer_output_dir / name).exists()]
     missing_export_files = [name for name in EXPORT_FILES if not (export_output_dir / name).exists()]
 
     prepared_report = _load_json(prepared_report_path)
@@ -90,10 +95,15 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
 
     blocked_reasons: list[str] = []
     eval_smoke_ready = not missing_eval_files
+    transfer_smoke_ready = not missing_transfer_files
     export_smoke_ready = not missing_export_files
     if missing_eval_files:
         blocked_reasons.append(
             "canonical eval smoke did not produce the required evaluation artifacts: " + ", ".join(missing_eval_files)
+        )
+    if missing_transfer_files:
+        blocked_reasons.append(
+            "canonical transfer smoke did not produce the required transfer artifacts: " + ", ".join(missing_transfer_files)
         )
     if missing_export_files:
         blocked_reasons.append(
@@ -101,6 +111,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
         )
 
     eval_metrics = _load_json(eval_output_dir / "metrics.json") if eval_smoke_ready else {}
+    transfer_metrics = _load_json(transfer_output_dir / "transfer_metrics.json") if transfer_smoke_ready else {}
     export_manifest = _load_json(export_output_dir / "manifest.json") if export_smoke_ready else {}
     export_card = _load_json(export_output_dir / "decoder_card.json") if export_smoke_ready else {}
 
@@ -119,10 +130,13 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "smoke_checkpoint": str(checkpoint_path),
             "smoke_report": str(smoke_report_path),
             "eval_dir": str(eval_output_dir),
+            "transfer_dir": str(transfer_output_dir),
             "export_dir": str(export_output_dir),
             "eval_metrics": str((eval_output_dir / "metrics.json").resolve()),
             "eval_roi_summary": str((eval_output_dir / "roi_summary.json").resolve()),
             "eval_resolved_roi_groups": str((eval_output_dir / "resolved_roi_groups.json").resolve()),
+            "transfer_metrics": str((transfer_output_dir / "transfer_metrics.json").resolve()),
+            "transfer_pairs": str((transfer_output_dir / "per_trial_pairs.csv").resolve()),
             "export_manifest": str((export_output_dir / "manifest.json").resolve()),
             "export_decoder_card": str((export_output_dir / "decoder_card.json").resolve()),
         },
@@ -139,9 +153,18 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
         "eval_smoke": {
             "artifacts_present": eval_smoke_ready,
             "target_space": eval_metrics.get("target_space"),
+            "condition_availability": eval_metrics.get("condition_availability"),
             "pair_metrics": eval_metrics.get("pair_metrics"),
             "by_condition_count": len(eval_metrics.get("by_condition", [])),
             "missing_files": missing_eval_files,
+        },
+        "transfer_smoke": {
+            "artifacts_present": transfer_smoke_ready,
+            "target_space": transfer_metrics.get("target_space"),
+            "condition_availability": transfer_metrics.get("condition_availability"),
+            "pair_metrics": transfer_metrics.get("pair_metrics"),
+            "by_condition_count": len(transfer_metrics.get("by_condition", [])),
+            "missing_files": missing_transfer_files,
         },
         "export_smoke": {
             "artifacts_present": export_smoke_ready,
@@ -159,6 +182,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "preflight_ready": bool(trainer_preflight["state"]["preflight_ready"]),
             "smoke_ready": bool(smoke_report["state"]["smoke_ready"]),
             "eval_smoke_ready": eval_smoke_ready,
+            "transfer_smoke_ready": transfer_smoke_ready,
             "export_smoke_ready": export_smoke_ready,
             "training_ready": False,
         },

@@ -11,6 +11,9 @@ import torch
 from fmri2img.models.ridge import evaluate_predictions
 
 
+REQUIRED_PAIRED_CONDITIONS = ("perception", "imagery")
+
+
 def _json_safe(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _json_safe(item) for key, item in value.items()}
@@ -100,6 +103,25 @@ def collect_predictions(model, loader, device: str = "cpu") -> dict[str, Any]:
     }
 
 
+def describe_condition_availability(
+    df: pd.DataFrame,
+    *,
+    condition_column: str = "condition",
+    required_conditions: tuple[str, ...] = REQUIRED_PAIRED_CONDITIONS,
+) -> dict[str, Any]:
+    if condition_column not in df.columns:
+        raise KeyError(f"Condition availability requires '{condition_column}' to be present.")
+    present_conditions = sorted({str(value) for value in df[condition_column].dropna().astype(str).tolist()})
+    missing_conditions = [condition for condition in required_conditions if condition not in present_conditions]
+    paired_metrics_available = len(missing_conditions) == 0
+    return {
+        "present_conditions": present_conditions,
+        "missing_conditions": missing_conditions,
+        "paired_metrics_available": paired_metrics_available,
+        "paired_metrics_reason": None if paired_metrics_available else "pair_metrics_require_both_perception_and_imagery",
+    }
+
+
 def compute_decoder_metrics(bundle: dict[str, Any]) -> dict[str, Any]:
     pred = bundle["pred"]
     target = bundle["target"]
@@ -120,11 +142,13 @@ def compute_decoder_metrics(bundle: dict[str, Any]) -> dict[str, Any]:
     by_condition = (
         df.groupby("condition")["cosine"].agg(["mean", "std", "count"]).reset_index().to_dict(orient="records")
     )
+    condition_availability = describe_condition_availability(df)
     pair_metrics = compute_pair_metrics(df)
     metrics = {
         "target_space": "vit_l14_image_768",
         "overall": base_metrics,
         "by_condition": by_condition,
+        "condition_availability": condition_availability,
         "pair_metrics": pair_metrics,
     }
     if bundle["domain_logits"] is not None:
@@ -144,31 +168,29 @@ def compute_decoder_metrics(bundle: dict[str, Any]) -> dict[str, Any]:
 
 
 def compute_pair_metrics(df: pd.DataFrame) -> dict[str, Any]:
+    condition_availability = describe_condition_availability(df)
     grouped = df.groupby(["pair_id", "condition"])["cosine"].mean().unstack(fill_value=np.nan)
-    present_conditions = [str(condition) for condition in grouped.columns.tolist()]
-    required_conditions = ["perception", "imagery"]
-    missing_conditions = [condition for condition in required_conditions if condition not in grouped.columns]
-    if missing_conditions:
+    if not condition_availability["paired_metrics_available"]:
         return {
             "n_pairs": 0,
             "available": False,
-            "present_conditions": present_conditions,
-            "missing_conditions": missing_conditions,
-            "reason": "pair_metrics_require_both_perception_and_imagery",
+            "present_conditions": condition_availability["present_conditions"],
+            "missing_conditions": condition_availability["missing_conditions"],
+            "reason": condition_availability["paired_metrics_reason"],
         }
-    grouped = grouped.dropna(subset=required_conditions, how="any")
+    grouped = grouped.dropna(subset=list(REQUIRED_PAIRED_CONDITIONS), how="any")
     if len(grouped) == 0:
         return {
             "n_pairs": 0,
             "available": True,
-            "present_conditions": present_conditions,
+            "present_conditions": condition_availability["present_conditions"],
             "missing_conditions": [],
         }
     gap = grouped["imagery"] - grouped["perception"]
     return {
         "n_pairs": int(len(grouped)),
         "available": True,
-        "present_conditions": present_conditions,
+        "present_conditions": condition_availability["present_conditions"],
         "missing_conditions": [],
         "mean_gap_imagery_minus_perception": float(gap.mean()),
         "median_gap_imagery_minus_perception": float(gap.median()),

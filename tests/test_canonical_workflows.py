@@ -2121,9 +2121,53 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
 
     eval_dir = repo_root / "outputs" / "public_nod" / "eval" / "imagenet_run10_shared_only_smoke"
     eval_dir.mkdir(parents=True, exist_ok=True)
-    (eval_dir / "metrics.json").write_text(json.dumps({"target_space": "vit_l14_image_768", "pair_metrics": {"n_pairs": 0}, "by_condition": []}))
+    (eval_dir / "metrics.json").write_text(
+        json.dumps(
+            {
+                "target_space": "vit_l14_image_768",
+                "condition_availability": {
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "paired_metrics_available": False,
+                    "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "pair_metrics": {
+                    "n_pairs": 0,
+                    "available": False,
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "by_condition": [{"condition": "perception", "count": 360}],
+            }
+        )
+    )
     (eval_dir / "roi_summary.json").write_text(json.dumps([]))
     (eval_dir / "resolved_roi_groups.json").write_text(json.dumps({"early_visual": {"input_dim": 3}}))
+    transfer_dir = repo_root / "outputs" / "public_nod" / "transfer" / "imagenet_run10_shared_only_smoke"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+    (transfer_dir / "transfer_metrics.json").write_text(
+        json.dumps(
+            {
+                "target_space": "vit_l14_image_768",
+                "condition_availability": {
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "paired_metrics_available": False,
+                    "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "pair_metrics": {
+                    "n_pairs": 0,
+                    "available": False,
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "by_condition": [{"condition": "perception", "count": 360}],
+            }
+        )
+    )
+    (transfer_dir / "per_trial_pairs.csv").write_text("pair_id,condition,cosine\n1,perception,0.1\n")
 
     export_dir = repo_root / "outputs" / "public_nod" / "export" / "imagenet_run10_shared_only_smoke"
     export_dir.mkdir(parents=True, exist_ok=True)
@@ -2156,7 +2200,7 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
                 "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
                 "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
                 "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(train_dir)},
-                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(repo_root / "transfer")},
+                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
                 "analysis": {"output_dir": str(repo_root / "analysis")},
                 "export": {"output_dir": str(export_dir)},
                 "public_nod": {
@@ -2191,11 +2235,14 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
         "preflight_ready": True,
         "smoke_ready": True,
         "eval_smoke_ready": True,
+        "transfer_smoke_ready": True,
         "export_smoke_ready": True,
         "training_ready": False,
     }
     assert report["upstream_state"]["canonical_preflight_status"] == "bootstrap_ready"
     assert report["export_smoke"]["manifest_target_dim"] == 768
+    assert report["eval_smoke"]["condition_availability"]["paired_metrics_available"] is False
+    assert report["transfer_smoke"]["condition_availability"]["missing_conditions"] == ["imagery"]
 
 
 def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_path):
@@ -2214,6 +2261,30 @@ def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_
 
     eval_dir = repo_root / "outputs" / "public_nod" / "eval" / "imagenet_run10_shared_only_smoke"
     eval_dir.mkdir(parents=True, exist_ok=True)
+    transfer_dir = repo_root / "outputs" / "public_nod" / "transfer" / "imagenet_run10_shared_only_smoke"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+    (transfer_dir / "transfer_metrics.json").write_text(
+        json.dumps(
+            {
+                "target_space": "vit_l14_image_768",
+                "condition_availability": {
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "paired_metrics_available": False,
+                    "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "pair_metrics": {
+                    "n_pairs": 0,
+                    "available": False,
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "by_condition": [{"condition": "perception", "count": 360}],
+            }
+        )
+    )
+    (transfer_dir / "per_trial_pairs.csv").write_text("pair_id,condition,cosine\n1,perception,0.1\n")
     export_dir = repo_root / "outputs" / "public_nod" / "export" / "imagenet_run10_shared_only_smoke"
     export_dir.mkdir(parents=True, exist_ok=True)
     for name in ("best_decoder.pt", "config_snapshot.json", "manifest.json", "decoder_card.json", "decoder_card.md"):
@@ -2249,7 +2320,7 @@ def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_
                 "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
                 "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
                 "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(train_dir)},
-                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(repo_root / "transfer")},
+                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
                 "analysis": {"output_dir": str(repo_root / "analysis")},
                 "export": {"output_dir": str(export_dir)},
                 "public_nod": {
@@ -2277,9 +2348,121 @@ def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_
     loaded = load_workflow_config(str(config_path))
     report = build_public_nod_shared_only_eval_export_smoke_report(loaded, config_path=config_path)
     assert report["state"]["eval_smoke_ready"] is False
+    assert report["state"]["transfer_smoke_ready"] is True
     assert report["state"]["export_smoke_ready"] is True
     assert report["state"]["training_ready"] is False
     assert "canonical eval smoke did not produce the required evaluation artifacts" in report["blocked_reasons"][0]
+
+
+def test_public_nod_eval_export_smoke_report_marks_missing_transfer_artifacts(tmp_path):
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+    from fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke import (
+        build_public_nod_shared_only_eval_export_smoke_report,
+    )
+
+    repo_root = tmp_path
+    train_dir = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_smoke"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    (train_dir / "best_decoder.pt").write_bytes(b"pt")
+    (train_dir / "smoke_report.json").write_text(json.dumps({"state": {"smoke_ready": True}}))
+
+    eval_dir = repo_root / "outputs" / "public_nod" / "eval" / "imagenet_run10_shared_only_smoke"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    (eval_dir / "metrics.json").write_text(
+        json.dumps(
+            {
+                "target_space": "vit_l14_image_768",
+                "condition_availability": {
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "paired_metrics_available": False,
+                    "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "pair_metrics": {
+                    "n_pairs": 0,
+                    "available": False,
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "reason": "pair_metrics_require_both_perception_and_imagery",
+                },
+                "by_condition": [{"condition": "perception", "count": 360}],
+            }
+        )
+    )
+    (eval_dir / "roi_summary.json").write_text(json.dumps([]))
+    (eval_dir / "resolved_roi_groups.json").write_text(json.dumps({}))
+    transfer_dir = repo_root / "outputs" / "public_nod" / "transfer" / "imagenet_run10_shared_only_smoke"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+
+    export_dir = repo_root / "outputs" / "public_nod" / "export" / "imagenet_run10_shared_only_smoke"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("best_decoder.pt", "config_snapshot.json", "manifest.json", "decoder_card.json", "decoder_card.md"):
+        path = export_dir / name
+        if name.endswith(".pt"):
+            path.write_bytes(b"pt")
+        else:
+            path.write_text("{}")
+
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "imagenet_run10_shared_only_prepared_dataset.report.json",
+        "imagenet_run10_target_embedding_cache.report.json",
+        "imagenet_run10_roi_materialized.report.json",
+        "imagenet_run10_shared_only_join_contract.report.json",
+    ):
+        (base / name).write_text(json.dumps({"state": {"join_ready": True, "roi_ready": True, "downstream_prep_ready": True, "target_embedding_ready": True}}))
+    trainer_preflight = repo_root / "outputs" / "public_nod" / "train" / "trainer_preflight.json"
+    trainer_preflight.parent.mkdir(parents=True, exist_ok=True)
+    trainer_preflight.write_text(json.dumps({"state": {"trainer_config_ready": True, "preflight_ready": True}}))
+    preflight_data = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_preflight" / "preflight_data.json"
+    preflight_data.parent.mkdir(parents=True, exist_ok=True)
+    preflight_data.write_text(json.dumps({"readiness": {"status": "bootstrap_ready"}}))
+
+    config_path = repo_root / "public_nod_eval_export_smoke.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke", "description": "smoke-only"},
+                "dataset": {"mixed_index": str(repo_root / "dummy.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
+                "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
+                "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 360, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(repo_root / "analysis")},
+                "export": {"output_dir": str(export_dir)},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "task": "imagenet",
+                    "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+                    "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+                    "run": 10,
+                    "adapter_rows": 36,
+                    "pair_rows": 3600,
+                    "prepared_report": str((base / "imagenet_run10_shared_only_prepared_dataset.report.json").relative_to(repo_root)),
+                    "target_cache_report": str((base / "imagenet_run10_target_embedding_cache.report.json").relative_to(repo_root)),
+                    "roi_report": str((base / "imagenet_run10_roi_materialized.report.json").relative_to(repo_root)),
+                    "join_report": str((base / "imagenet_run10_shared_only_join_contract.report.json").relative_to(repo_root)),
+                    "trainer_preflight_report": str(trainer_preflight.relative_to(repo_root)),
+                    "preflight_data_report": str(preflight_data.relative_to(repo_root)),
+                    "smoke_report": str((train_dir / "smoke_report.json").relative_to(repo_root)),
+                },
+            }
+        )
+    )
+    (repo_root / "dummy.parquet").write_bytes(b"")
+    (repo_root / "dummy_targets.parquet").write_bytes(b"")
+
+    loaded = load_workflow_config(str(config_path))
+    report = build_public_nod_shared_only_eval_export_smoke_report(loaded, config_path=config_path)
+    assert report["state"]["eval_smoke_ready"] is True
+    assert report["state"]["transfer_smoke_ready"] is False
+    assert report["state"]["export_smoke_ready"] is True
+    assert report["state"]["training_ready"] is False
+    assert "canonical transfer smoke did not produce the required transfer artifacts" in report["blocked_reasons"][0]
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
