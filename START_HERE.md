@@ -83,6 +83,8 @@ Smoke check:
 ```bash
 python -m fmri2img.workflows.train_decoder \
   --config configs/canonical/shared_private_smoke.yaml
+python -m fmri2img.workflows.report_public_nod_shared_only_smoke \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
 ```
 
 Bootstrap prep:

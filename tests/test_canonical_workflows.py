@@ -203,6 +203,7 @@ def test_docs_reference_canonical_workflows():
         "fmri2img.workflows.prepare_roi_features",
         "fmri2img.workflows.preflight_data",
         "fmri2img.workflows.train_decoder",
+        "fmri2img.workflows.report_public_nod_shared_only_smoke",
         "fmri2img.workflows.eval_decoder",
         "fmri2img.workflows.eval_transfer",
         "fmri2img.workflows.run_analysis",
@@ -1936,6 +1937,168 @@ def test_public_nod_smoke_config_is_fixed_slice_and_smoke_scoped():
     assert config["evaluation"]["batch_size"] == 360
     assert "smoke" in config["experiment"]["name"]
     assert "smoke-only" in config["experiment"]["description"]
+    assert config["public_nod"]["trainer_preflight_report"] == "outputs/public_nod/train/trainer_preflight.json"
+    assert (
+        config["public_nod"]["preflight_data_report"]
+        == "outputs/public_nod/train/imagenet_run10_shared_only_preflight/preflight_data.json"
+    )
+
+
+def test_public_nod_smoke_report_builds_operational_ready_summary(tmp_path):
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+    from fmri2img.workflows.report_public_nod_shared_only_smoke import build_public_nod_shared_only_smoke_report
+
+    repo_root = tmp_path
+    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "public_nod_imagenet_run10_shared_only_smoke"
+    smoke_dir.mkdir(parents=True, exist_ok=True)
+    for name, payload in {
+        "config_snapshot.json": {"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke"}},
+        "roi_summary.json": {"groups": {"early_visual": 3}},
+        "target_summary.json": {"name": "vit_l14_image_768"},
+        "train_history.json": [{"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.1}],
+    }.items():
+        (smoke_dir / name).write_text(json.dumps(payload))
+    (smoke_dir / "best_decoder.pt").write_bytes(b"pt")
+
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "imagenet_run10_shared_only_prepared_dataset.report.json").write_text(
+        json.dumps({"state": {"downstream_prep_ready": True}})
+    )
+    (base / "imagenet_run10_target_embedding_cache.report.json").write_text(
+        json.dumps({"state": {"target_embedding_ready": True}})
+    )
+    (base / "imagenet_run10_roi_materialized.report.json").write_text(json.dumps({"state": {"roi_ready": True}}))
+    (base / "imagenet_run10_shared_only_join_contract.report.json").write_text(
+        json.dumps({"state": {"join_ready": True}})
+    )
+    trainer_preflight = repo_root / "outputs" / "public_nod" / "train" / "trainer_preflight.json"
+    trainer_preflight.parent.mkdir(parents=True, exist_ok=True)
+    trainer_preflight.write_text(
+        json.dumps({"state": {"trainer_config_ready": True, "preflight_ready": True}})
+    )
+    preflight_data = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_preflight" / "preflight_data.json"
+    preflight_data.parent.mkdir(parents=True, exist_ok=True)
+    preflight_data.write_text(json.dumps({"status": "bootstrap_ready"}))
+
+    config_path = repo_root / "public_nod_smoke.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke", "description": "smoke-only"},
+                "dataset": {"mixed_index": str(repo_root / "dummy.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
+                "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
+                "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(smoke_dir)},
+                "evaluation": {"batch_size": 360, "output_dir": str(repo_root / "eval"), "transfer_output_dir": str(repo_root / "transfer")},
+                "analysis": {"output_dir": str(repo_root / "analysis")},
+                "export": {"output_dir": str(repo_root / "export")},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "task": "imagenet",
+                    "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+                    "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+                    "run": 10,
+                    "adapter_rows": 36,
+                    "pair_rows": 3600,
+                    "prepared_report": str((base / "imagenet_run10_shared_only_prepared_dataset.report.json").relative_to(repo_root)),
+                    "target_cache_report": str((base / "imagenet_run10_target_embedding_cache.report.json").relative_to(repo_root)),
+                    "roi_report": str((base / "imagenet_run10_roi_materialized.report.json").relative_to(repo_root)),
+                    "join_report": str((base / "imagenet_run10_shared_only_join_contract.report.json").relative_to(repo_root)),
+                    "trainer_preflight_report": str(trainer_preflight.relative_to(repo_root)),
+                    "preflight_data_report": str(preflight_data.relative_to(repo_root)),
+                },
+            }
+        )
+    )
+    (repo_root / "dummy.parquet").write_bytes(b"")
+    (repo_root / "dummy_targets.parquet").write_bytes(b"")
+
+    loaded = load_workflow_config(str(config_path))
+    report = build_public_nod_shared_only_smoke_report(loaded, config_path=config_path)
+    assert report["state"] == {
+        "join_ready": True,
+        "roi_ready": True,
+        "downstream_prep_ready": True,
+        "trainer_config_ready": True,
+        "preflight_ready": True,
+        "smoke_ready": True,
+        "training_ready": False,
+    }
+    assert report["smoke_run"]["epochs_completed"] == 1
+    assert report["smoke_config"]["train_batch_size"] == 2880
+    assert report["upstream_state"]["canonical_preflight_status"] == "bootstrap_ready"
+
+
+def test_public_nod_smoke_report_rejects_missing_artifacts(tmp_path):
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+    from fmri2img.workflows.report_public_nod_shared_only_smoke import build_public_nod_shared_only_smoke_report
+
+    repo_root = tmp_path
+    smoke_dir = repo_root / "outputs" / "public_nod" / "train" / "public_nod_imagenet_run10_shared_only_smoke"
+    smoke_dir.mkdir(parents=True, exist_ok=True)
+    (smoke_dir / "train_history.json").write_text(json.dumps([{"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.1}]))
+    (smoke_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke"}}))
+
+    base = repo_root / "cache" / "indices" / "public_nod"
+    base.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "imagenet_run10_shared_only_prepared_dataset.report.json",
+        "imagenet_run10_target_embedding_cache.report.json",
+        "imagenet_run10_roi_materialized.report.json",
+        "imagenet_run10_shared_only_join_contract.report.json",
+    ):
+        (base / name).write_text(json.dumps({"state": {"join_ready": True, "roi_ready": True, "downstream_prep_ready": True, "target_embedding_ready": True}}))
+    trainer_preflight = repo_root / "outputs" / "public_nod" / "train" / "trainer_preflight.json"
+    trainer_preflight.parent.mkdir(parents=True, exist_ok=True)
+    trainer_preflight.write_text(json.dumps({"state": {"trainer_config_ready": True, "preflight_ready": True}}))
+    preflight_data = repo_root / "outputs" / "public_nod" / "train" / "imagenet_run10_shared_only_preflight" / "preflight_data.json"
+    preflight_data.parent.mkdir(parents=True, exist_ok=True)
+    preflight_data.write_text(json.dumps({"status": "bootstrap_ready"}))
+
+    config_path = repo_root / "public_nod_smoke.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "public_nod_imagenet_run10_shared_only_smoke", "description": "smoke-only"},
+                "dataset": {"mixed_index": str(repo_root / "dummy.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
+                "model": {"branch_embedding_dim": 8, "shared_dim": 8, "private_dim": 4, "dropout": 0.0, "disentanglement_mode": "shared_only", "use_domain_head": False, "use_vividness_head": False},
+                "training": {"batch_size": 2880, "epochs": 1, "device": "cpu", "output_dir": str(smoke_dir)},
+                "evaluation": {"batch_size": 360, "output_dir": str(repo_root / "eval"), "transfer_output_dir": str(repo_root / "transfer")},
+                "analysis": {"output_dir": str(repo_root / "analysis")},
+                "export": {"output_dir": str(repo_root / "export")},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "task": "imagenet",
+                    "subjects": [f"sub-{index:02d}" for index in range(1, 10)],
+                    "sessions": [f"ses-imagenet{index:02d}" for index in range(1, 5)],
+                    "run": 10,
+                    "adapter_rows": 36,
+                    "pair_rows": 3600,
+                    "prepared_report": str((base / "imagenet_run10_shared_only_prepared_dataset.report.json").relative_to(repo_root)),
+                    "target_cache_report": str((base / "imagenet_run10_target_embedding_cache.report.json").relative_to(repo_root)),
+                    "roi_report": str((base / "imagenet_run10_roi_materialized.report.json").relative_to(repo_root)),
+                    "join_report": str((base / "imagenet_run10_shared_only_join_contract.report.json").relative_to(repo_root)),
+                    "trainer_preflight_report": str(trainer_preflight.relative_to(repo_root)),
+                    "preflight_data_report": str(preflight_data.relative_to(repo_root)),
+                },
+            }
+        )
+    )
+    (repo_root / "dummy.parquet").write_bytes(b"")
+    (repo_root / "dummy_targets.parquet").write_bytes(b"")
+
+    loaded = load_workflow_config(str(config_path))
+    with pytest.raises(FileNotFoundError) as excinfo:
+        build_public_nod_shared_only_smoke_report(loaded, config_path=config_path)
+    assert "Missing required smoke artifacts" in str(excinfo.value)
 
 
 def test_scaling_audit_doc_exists_and_references_overlap_ceiling():
@@ -2013,6 +2176,7 @@ def test_public_dataset_program_docs_and_catalog_exist():
     assert "fmri2img.workflows.prepare_public_nod_shared_only_prepared_dataset" in nod_note
     assert "configs/canonical/public_nod_imagenet_run10_shared_only.yaml" in nod_note
     assert "configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml" in nod_note
+    assert "fmri2img.workflows.report_public_nod_shared_only_smoke" in nod_note
     assert "fmri2img.workflows.preflight_public_nod_shared_only_trainer" in nod_note
     assert any(item["id"] == "ds004496" for item in catalog["datasets"])
 

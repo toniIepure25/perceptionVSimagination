@@ -724,6 +724,24 @@ Current meaning after a successful smoke:
 - smoke-ready: yes
 - training-ready: still no
 
+The checked-in smoke summarizer is:
+
+```bash
+./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_smoke \
+  --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml
+```
+
+Default smoke report:
+
+- `outputs/public_nod/train/imagenet_run10_shared_only_smoke/smoke_report.json`
+
+What it proves:
+
+- the smoke output directory contains the canonical trainer artifacts
+- the upstream fixed-slice readiness reports still align
+- the smoke run completed operationally
+- `training_ready` still remains `false`
+
 ## Expected remote path
 
 On the verified live pod:
