@@ -254,3 +254,16 @@ Copy this block:
 - Result summary: validated that the canonical trainer path can ingest the exact fixed NOD slice end-to-end without widening scope. The live pod built a real `16`-sample trainer batch with ROI feature dims `{early_visual: 3, ventral_visual: 0, metacognitive: 3}`, produced a real `16 x 768` content-prediction forward packet, and marked `trainer_config_ready=true`, `preflight_ready=true`, and `training_ready=false`
 - Interpretation summary: the fixed NOD slice now has a checked-in shared-only config and a real trainer-ingestion preflight surface, but this is still an operational readiness result only. No benchmark run, no leaderboard claim, and no evidence-facing interpretation changed
 - Promoted to evidence?: no
+
+## EXP-2026-04-06-NOD-TRAINER-SMOKE
+
+- Date: 2026-04-06
+- Lane: Data acquisition
+- Benchmark rung / role: practical Animus-lane operational smoke validation for the fixed resolved NOD slice
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`; canonical workflows `./.venv/bin/python -m fmri2img.workflows.train_decoder --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml` and `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`
+- Dataset / prepared artifacts: prepared dataset `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`, target cache `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`, ROI artifact `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`
+- Output / artifact path: `outputs/public_nod/train/imagenet_run10_shared_only_smoke/`; smoke report `outputs/public_nod/train/imagenet_run10_shared_only_smoke/smoke_report.json`
+- Status: done
+- Result summary: the live pod completed a one-epoch fixed-slice `train_decoder` smoke run and wrote the canonical trainer artifacts `best_decoder.pt`, `config_snapshot.json`, `roi_summary.json`, `target_summary.json`, and `train_history.json`, plus a machine-readable `smoke_report.json` that marks `trainer_config_ready=true`, `preflight_ready=true`, `smoke_ready=true`, and `training_ready=false`
+- Interpretation summary: this proves the canonical trainer path can create real output artifacts for the exact fixed NOD slice without widening scope, but the run remains operational smoke only. Loss values and checkpoints from this run are not benchmark evidence and do not change any evidence-facing interpretation
+- Promoted to evidence?: no

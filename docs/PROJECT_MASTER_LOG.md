@@ -648,3 +648,13 @@ Risk:
   forward packet on the live pod. The dedicated preflight marks
   `trainer_config_ready=true` and `preflight_ready=true`, while
   `training_ready` correctly remains `false`
+- 2026-04-06: the fixed NOD slice now has a successful smoke-only canonical
+  trainer artifact path on the live pod. The checked-in
+  `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml` config
+  drove a one-epoch `train_decoder` smoke run that wrote
+  `best_decoder.pt`, `config_snapshot.json`, `roi_summary.json`,
+  `target_summary.json`, and `train_history.json` under
+  `outputs/public_nod/train/imagenet_run10_shared_only_smoke/`, and the new
+  `fmri2img.workflows.report_public_nod_shared_only_smoke` workflow recorded a
+  machine-readable `smoke_report.json` with `smoke_ready=true` while
+  `training_ready` correctly remained `false`

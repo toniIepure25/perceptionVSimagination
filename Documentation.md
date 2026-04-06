@@ -574,3 +574,35 @@ Paper handoff rule:
 - Follow-up: run the smallest controlled `train_decoder` smoke on this exact
   config to validate trainer output-path artifacts without treating it as a
   benchmark run
+
+## 2026-04-06 - NOD shared-only trainer smoke artifacts and smoke report
+
+- Scope: engineering, data acquisition
+- Status: completed
+- Surfaces touched:
+  `configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`,
+  `src/fmri2img/workflows/report_public_nod_shared_only_smoke.py`,
+  `START_HERE.md`, `docs/NOD_PUBLIC_DATASET.md`,
+  `tests/test_canonical_workflows.py`, `Documentation.md`,
+  `docs/EXPERIMENT_REGISTRY.md`, `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused pytest from `.venv`; remote `git pull --rebase`
+  on the live pod; remote run of
+  `./.venv/bin/python -m fmri2img.workflows.train_decoder --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  remote run of
+  `./.venv/bin/python -m fmri2img.workflows.report_public_nod_shared_only_smoke --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`;
+  focused remote pytest on the pod
+- Decision: added the smallest checked-in smoke-only trainer config and a
+  machine-readable smoke report workflow, then confirmed on the live pod that
+  the canonical trainer can write real smoke artifacts for the exact fixed NOD
+  slice without widening scope
+- Claim boundary: no threshold-benchmark, evidence-freeze, or paper-claim
+  changes; smoke losses and checkpoint outputs are operational only and are
+  not benchmark evidence
+- Detail: the live smoke output path now contains `best_decoder.pt`,
+  `config_snapshot.json`, `roi_summary.json`, `target_summary.json`,
+  `train_history.json`, and `smoke_report.json`; the smoke report marks
+  `trainer_config_ready=true`, `preflight_ready=true`, `smoke_ready=true`,
+  and `training_ready=false`
+- Follow-up: keep the fixed slice unchanged and, if needed later, use this
+  smoke path only as an operational gate before any separately-scoped eval or
+  benchmark work
