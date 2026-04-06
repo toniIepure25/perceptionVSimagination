@@ -10,6 +10,7 @@ from fmri2img.workflows._venv_guard import ensure_project_venv
 ensure_project_venv("fmri2img.workflows.report_public_nod_shared_only_eval_export_smoke")
 
 from fmri2img.evaluation import normalize_condition_semantics_payload  # noqa: E402
+from fmri2img.export.animus import normalize_target_spec_payload  # noqa: E402
 from fmri2img.workflows.common import load_workflow_config, validate_canonical_workflow_config  # noqa: E402
 from fmri2img.workflows.prep_common import json_safe, write_report  # noqa: E402
 
@@ -135,6 +136,9 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
     export_manifest = _load_json(export_output_dir / "manifest.json") if export_smoke_ready else {}
     export_card = _load_json(export_output_dir / "decoder_card.json") if export_smoke_ready else {}
     condition_semantics = _merge_condition_semantics(eval_metrics, transfer_metrics)
+    normalized_target_spec = export_manifest.get("metadata", {}).get("target_spec_normalized")
+    if not isinstance(normalized_target_spec, dict):
+        normalized_target_spec = normalize_target_spec_payload(export_manifest.get("target_spec", {}))
 
     report = {
         "config": str(Path(config_path).resolve()),
@@ -172,6 +176,7 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
             "target_embedding_ready": bool(target_cache_report["state"]["target_embedding_ready"]),
         },
         "condition_semantics": condition_semantics,
+        "target_spec": normalized_target_spec,
         "eval_smoke": {
             "artifacts_present": eval_smoke_ready,
             "target_space": eval_metrics.get("target_space"),
@@ -192,8 +197,9 @@ def build_public_nod_shared_only_eval_export_smoke_report(config, *, config_path
         },
         "export_smoke": {
             "artifacts_present": export_smoke_ready,
-            "manifest_target_name": export_manifest.get("target_spec", {}).get("name"),
-            "manifest_target_dim": export_manifest.get("target_spec", {}).get("dimension"),
+            "manifest_target_name": normalized_target_spec.get("target_name_normalized"),
+            "manifest_target_dim": normalized_target_spec.get("target_dimension_normalized"),
+            "normalized_target_spec": normalized_target_spec,
             "decoder_card_experiment_name": export_card.get("experiment", {}).get("name"),
             "decoder_card_benchmark_role": export_card.get("experiment", {}).get("benchmark_role"),
             "condition_semantics": export_manifest.get("metadata", {}).get("condition_semantics", condition_semantics["shared"]),

@@ -216,13 +216,19 @@ def test_animus_export_writes_decoder_card(canonical_fixture_dir, tmp_path):
         checkpoint_path=checkpoint,
         artifact_spec=artifact_spec,
     )
+    manifest = json.loads((export_dir / "manifest.json").read_text())
     decoder_card = json.loads((export_dir / "decoder_card.json").read_text())
+    assert manifest["metadata"]["target_spec_normalized"]["target_name_normalized"] == "vit_l14_image_768"
+    assert manifest["metadata"]["target_spec_normalized"]["source_field_shape"] == "target_name"
     assert decoder_card["experiment"]["name"] == "animus_core_decoder"
     assert decoder_card["animus"]["stability_tier"] == "current_default"
     assert decoder_card["interfaces"]["source"]["status"] == "scaffolded"
+    assert decoder_card["target"]["name"] == "vit_l14_image_768"
+    assert decoder_card["target"]["source_field_shape"] == "target_name"
     assert decoder_card["condition_semantics"]["missing_conditions"] == ["imagery"]
     assert "content decoding" in (export_dir / "decoder_card.md").read_text()
     assert "Paired metrics available: `False`" in (export_dir / "decoder_card.md").read_text()
+    assert "Target source field: `target_name`" in (export_dir / "decoder_card.md").read_text()
 
 
 def test_inspect_animus_export_prints_decoder_summary_and_validates_bundle(canonical_fixture_dir, tmp_path, capsys):
@@ -260,6 +266,7 @@ def test_inspect_animus_export_prints_decoder_summary_and_validates_bundle(canon
     output = capsys.readouterr().out
     assert "Animus Export Summary" in output
     assert "benchmark_role: canonical_neural_baseline" in output
+    assert "target_source_field_shape: target_name" in output
     assert "Bundle validation: OK" in output
 
 

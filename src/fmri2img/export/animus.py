@@ -6,11 +6,31 @@ from pathlib import Path
 from typing import Any
 
 
+def normalize_target_spec_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
+    payload = payload or {}
+    target_name_from_payload = payload.get("target_name")
+    source_field_shape = "target_name"
+    if target_name_from_payload is None:
+        target_name_from_payload = payload.get("name")
+        source_field_shape = "name"
+    if target_name_from_payload is None:
+        source_field_shape = "missing"
+    return {
+        "target_name_normalized": target_name_from_payload,
+        "target_dimension_normalized": payload.get("dimension"),
+        "source_field_shape": source_field_shape,
+        "target_name_from_payload": target_name_from_payload,
+    }
+
+
 def _build_decoder_card(manifest: dict[str, Any]) -> dict[str, Any]:
     metadata = manifest.get("metadata", {})
     experiment = metadata.get("experiment", {})
     animus = metadata.get("animus", {})
     condition_semantics = metadata.get("condition_semantics", {})
+    normalized_target_spec = metadata.get("target_spec_normalized") or normalize_target_spec_payload(
+        manifest.get("target_spec", {})
+    )
     interfaces = animus.get("interfaces", {})
     heads = metadata.get("heads", {})
     roi_spec = manifest.get("roi_spec", {})
@@ -36,8 +56,10 @@ def _build_decoder_card(manifest: dict[str, Any]) -> dict[str, Any]:
         "interfaces": interfaces,
         "heads": heads,
         "target": {
-            "name": manifest.get("target_spec", {}).get("name"),
-            "dimension": manifest.get("target_spec", {}).get("dimension"),
+            "name": normalized_target_spec.get("target_name_normalized"),
+            "dimension": normalized_target_spec.get("target_dimension_normalized"),
+            "source_field_shape": normalized_target_spec.get("source_field_shape"),
+            "target_name_from_payload": normalized_target_spec.get("target_name_from_payload"),
         },
         "condition_semantics": {
             "present_conditions": list(condition_semantics.get("present_conditions", [])),
@@ -80,6 +102,7 @@ def _write_decoder_card(output_dir: Path, decoder_card: dict[str, Any]) -> None:
         f"- Decoder role: `{animus.get('decoder_role')}`",
         f"- Stability tier: `{animus.get('stability_tier')}`",
         f"- Target: `{target.get('name')}` ({target.get('dimension')}-D)",
+        f"- Target source field: `{target.get('source_field_shape')}`",
         f"- Present conditions: `{condition_semantics.get('present_conditions')}`",
         f"- Missing conditions: `{condition_semantics.get('missing_conditions')}`",
         f"- Paired metrics available: `{condition_semantics.get('paired_metrics_available')}`",
@@ -134,6 +157,9 @@ def export_decoder_bundle(
     missing_keys = required_manifest_keys - set(manifest)
     if missing_keys:
         raise ValueError(f"Animus export manifest is missing keys: {sorted(missing_keys)}")
+    metadata = dict(manifest.get("metadata", {}))
+    metadata["target_spec_normalized"] = normalize_target_spec_payload(manifest.get("target_spec", {}))
+    manifest["metadata"] = metadata
     with open(output_dir / "manifest.json", "w") as f:
         json.dump(manifest, f, indent=2)
     _write_decoder_card(output_dir, _build_decoder_card(manifest))

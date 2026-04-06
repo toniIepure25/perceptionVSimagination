@@ -2255,12 +2255,16 @@ def test_public_nod_eval_export_smoke_report_builds_operational_summary(tmp_path
         "training_ready": False,
     }
     assert report["upstream_state"]["canonical_preflight_status"] == "bootstrap_ready"
+    assert report["target_spec"]["target_name_normalized"] == "vit_l14_image_768"
+    assert report["target_spec"]["source_field_shape"] == "name"
+    assert report["export_smoke"]["manifest_target_name"] == "vit_l14_image_768"
     assert report["export_smoke"]["manifest_target_dim"] == 768
     assert report["eval_smoke"]["condition_availability"]["paired_metrics_available"] is False
     assert report["transfer_smoke"]["condition_availability"]["missing_conditions"] == ["imagery"]
     assert report["condition_semantics"]["shared"]["present_conditions"] == ["perception"]
     assert report["condition_semantics"]["shared"]["pair_metrics_available_from_payload"] is False
     assert report["export_smoke"]["condition_semantics"]["paired_metrics_available"] is False
+    assert report["export_smoke"]["normalized_target_spec"]["target_name_normalized"] == "vit_l14_image_768"
 
 
 def test_public_nod_eval_export_smoke_report_rejects_missing_eval_artifacts(tmp_path):
@@ -2689,4 +2693,28 @@ def test_normalize_condition_semantics_payload_uses_condition_contract_without_p
         "paired_metrics_available": False,
         "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
         "pair_metrics_available_from_payload": None,
+    }
+
+
+def test_normalize_target_spec_payload_preserves_name_shape():
+    from fmri2img.export.animus import normalize_target_spec_payload
+
+    normalized = normalize_target_spec_payload({"name": "vit_l14_image_768", "dimension": 768})
+    assert normalized == {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+
+
+def test_normalize_target_spec_payload_preserves_target_name_shape():
+    from fmri2img.export.animus import normalize_target_spec_payload
+
+    normalized = normalize_target_spec_payload({"target_name": "vit_l14_image_768", "dimension": 768})
+    assert normalized == {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
     }

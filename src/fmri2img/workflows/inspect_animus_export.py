@@ -26,6 +26,7 @@ def _format_summary(card: dict) -> str:
         f"decoder_role: {animus.get('decoder_role')}",
         f"stability_tier: {animus.get('stability_tier')}",
         f"target: {target.get('name')} ({target.get('dimension')}-D)",
+        f"target_source_field_shape: {target.get('source_field_shape')}",
         f"present_conditions: {condition_semantics.get('present_conditions')}",
         f"missing_conditions: {condition_semantics.get('missing_conditions')}",
         f"paired_metrics_available: {condition_semantics.get('paired_metrics_available')}",
