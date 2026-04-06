@@ -358,3 +358,16 @@ Copy this block:
 - Result summary: the reusable downstream audit core is now proven on a second real post-train bundle outside the fixed NOD slice. The live pod shared-private smoke audit confirms that the export manifest, decoder card, eval metrics, transfer metrics, experiment identity, target dimension, and normalized condition semantics all agree, with `present_conditions=["imagery","perception"]`, `paired_metrics_available=true`, `downstream_contract_ready=true`, and `training_ready=false`
 - Interpretation summary: this is operational hardening only. It makes the post-train artifact contract reusable beyond the NOD-specific case without changing benchmark status, threshold interpretation, or any evidence-facing claim
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-DOWNSTREAM-AUDIT-DISPATCHER
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: generic downstream contract audit routing for supported canonical post-train bundles
+- Config: top-level workflow `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config ...`
+- Dataset / prepared artifacts: fixed NOD smoke bundle under `outputs/public_nod/...` and canonical shared-private smoke bundle under `outputs/canonical/...`
+- Output / artifact path: fixed NOD generic audit at `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`; shared-private generic audit at `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: the repo now has one top-level dispatcher that routes by `experiment.name` to the supported downstream audit strategies. The live pod proved the generic path on both supported families: fixed NOD still reports `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, `paired_metrics_available=false`, and `downstream_contract_ready=true`; shared-private smoke still reports `present_conditions=["imagery","perception"]`, `paired_metrics_available=true`, and `downstream_contract_ready=true`. Unsupported bundle families are now reported as blocked instead of being implicitly treated as auditable
+- Interpretation summary: this is operational hardening only. It adds one stable canonical entrypoint for downstream contract audits without changing dataset scope, benchmark status, or any evidence-facing interpretation
+- Promoted to evidence?: no

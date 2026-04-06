@@ -728,3 +728,12 @@ Risk:
   dimension, and operational-only readiness on both the perception-only fixed
   NOD slice and a paired non-NOD canonical smoke bundle, while
   `training_ready` remains `false`
+- 2026-04-07: the repo now also has one top-level canonical dispatcher for
+  downstream contract audits:
+  `fmri2img.workflows.audit_downstream_contract`. The live pod proved the
+  generic path on both currently supported families,
+  `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`,
+  while preserving their concrete semantics and compact verdict shape.
+  Unsupported bundle families now return an explicit blocked report instead of
+  silently pretending to be generically supported. This remains operational
+  hardening only, and `training_ready` remains `false`

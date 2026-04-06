@@ -859,3 +859,37 @@ Paper handoff rule:
 - Follow-up: if another post-train bundle needs contract freezing, reuse the
   internal audit core and keep the verdict shape compact instead of creating a
   bundle-specific schema
+
+## 2026-04-07 - Generic downstream contract audit dispatcher proved on both supported bundle families
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_downstream_contract.py`,
+  `src/fmri2img/workflows/audit_public_nod_shared_only_downstream_contract.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  generic audit invocation against the existing `outputs/canonical/hardening_smoke/`
+  bundle, remote `git pull --rebase`, real pod rerun of
+  `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config configs/canonical/public_nod_imagenet_run10_shared_only_smoke.yaml`,
+  real pod rerun of
+  `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config configs/canonical/shared_private_smoke.yaml`,
+  and focused remote pytest
+- Decision: the repo now has one top-level canonical downstream audit entrypoint
+  that dispatches by `experiment.name` to the supported concrete bundle families
+  without changing their verdict shape or readiness semantics
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the dispatcher currently supports exactly
+  `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`.
+  Unsupported configs now produce a truthful blocked report instead of an
+  implicit or fake generic success
+- Readiness: both supported live bundle families still mark
+  `downstream_contract_ready=true` through the generic path; fixed NOD remains
+  perception-only with explicit unavailable paired metrics, and
+  `shared_private_smoke` remains paired with
+  `paired_metrics_available=true`
+- Follow-up: if another bundle family is added later, register it explicitly in
+  the dispatcher only after a real concrete audit path exists
