@@ -145,12 +145,31 @@ def compute_decoder_metrics(bundle: dict[str, Any]) -> dict[str, Any]:
 
 def compute_pair_metrics(df: pd.DataFrame) -> dict[str, Any]:
     grouped = df.groupby(["pair_id", "condition"])["cosine"].mean().unstack(fill_value=np.nan)
-    grouped = grouped.dropna(subset=["perception", "imagery"], how="any")
+    present_conditions = [str(condition) for condition in grouped.columns.tolist()]
+    required_conditions = ["perception", "imagery"]
+    missing_conditions = [condition for condition in required_conditions if condition not in grouped.columns]
+    if missing_conditions:
+        return {
+            "n_pairs": 0,
+            "available": False,
+            "present_conditions": present_conditions,
+            "missing_conditions": missing_conditions,
+            "reason": "pair_metrics_require_both_perception_and_imagery",
+        }
+    grouped = grouped.dropna(subset=required_conditions, how="any")
     if len(grouped) == 0:
-        return {"n_pairs": 0}
+        return {
+            "n_pairs": 0,
+            "available": True,
+            "present_conditions": present_conditions,
+            "missing_conditions": [],
+        }
     gap = grouped["imagery"] - grouped["perception"]
     return {
         "n_pairs": int(len(grouped)),
+        "available": True,
+        "present_conditions": present_conditions,
+        "missing_conditions": [],
         "mean_gap_imagery_minus_perception": float(gap.mean()),
         "median_gap_imagery_minus_perception": float(gap.median()),
     }

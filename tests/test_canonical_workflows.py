@@ -2398,3 +2398,46 @@ def test_checked_in_mvp_config_fails_with_actionable_missing_artifact_message():
     )
     assert result.returncode != 0
     assert "Canonical workflow prerequisites are missing" in result.stderr
+
+
+def test_compute_pair_metrics_preserves_paired_condition_behavior():
+    import pandas as pd
+
+    from fmri2img.evaluation.decoder import compute_pair_metrics
+
+    df = pd.DataFrame(
+        [
+            {"pair_id": 1, "condition": "perception", "cosine": 0.2},
+            {"pair_id": 1, "condition": "imagery", "cosine": 0.5},
+            {"pair_id": 2, "condition": "perception", "cosine": 0.1},
+            {"pair_id": 2, "condition": "imagery", "cosine": 0.4},
+        ]
+    )
+    metrics = compute_pair_metrics(df)
+    assert metrics["n_pairs"] == 2
+    assert metrics["available"] is True
+    assert metrics["present_conditions"] == ["imagery", "perception"] or metrics["present_conditions"] == ["perception", "imagery"]
+    assert metrics["missing_conditions"] == []
+    assert metrics["mean_gap_imagery_minus_perception"] == pytest.approx(0.3)
+    assert metrics["median_gap_imagery_minus_perception"] == pytest.approx(0.3)
+
+
+def test_compute_pair_metrics_marks_perception_only_slice_unavailable_without_crashing():
+    import pandas as pd
+
+    from fmri2img.evaluation.decoder import compute_pair_metrics
+
+    df = pd.DataFrame(
+        [
+            {"pair_id": 1, "condition": "perception", "cosine": 0.2},
+            {"pair_id": 2, "condition": "perception", "cosine": 0.1},
+        ]
+    )
+    metrics = compute_pair_metrics(df)
+    assert metrics == {
+        "n_pairs": 0,
+        "available": False,
+        "present_conditions": ["perception"],
+        "missing_conditions": ["imagery"],
+        "reason": "pair_metrics_require_both_perception_and_imagery",
+    }
