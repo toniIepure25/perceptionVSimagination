@@ -3521,6 +3521,283 @@ def _build_full_imagery_overlap_shared_only_readiness_fixture(
     return load_workflow_config(str(config_path)), config_path
 
 
+def _write_paired_mixed_index(path, split_pair_counts):
+    import pandas as pd
+
+    rows = []
+    pair_id = 1000
+    for split, count in split_pair_counts.items():
+        for _ in range(count):
+            for condition in ("perception", "imagery"):
+                rows.append(
+                    {
+                        "subject": "subj02",
+                        "nsdId": pair_id,
+                        "nsd_id": pair_id,
+                        "pair_id": pair_id,
+                        "condition": condition,
+                        "split": split,
+                    }
+                )
+            pair_id += 1
+    pd.DataFrame(rows).to_parquet(path, index=False)
+
+
+def _write_candidate_bundle(root, *, complete_bundle, cosine=0.1, mse=0.0023, pair_count=1):
+    train_dir = root / "train"
+    eval_dir = root / "eval"
+    transfer_dir = root / "transfer"
+    export_dir = root / "export"
+    for directory in (train_dir, eval_dir, transfer_dir, export_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+    if not complete_bundle:
+        return train_dir, eval_dir, transfer_dir, export_dir
+
+    (train_dir / "best_decoder.pt").write_text("pt")
+    (train_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": root.name}}))
+    (train_dir / "roi_summary.json").write_text(json.dumps({"ready": True}))
+    (train_dir / "target_summary.json").write_text(json.dumps({"target_space": "vit_l14_image_768"}))
+    (train_dir / "train_history.json").write_text(json.dumps([{"epoch": 1, "train_loss": 1.0, "val_loss": 0.9}]))
+
+    metrics = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": cosine, "mse": mse},
+        "pair_metrics": {"n_pairs": pair_count},
+    }
+    (eval_dir / "metrics.json").write_text(json.dumps(metrics))
+    (eval_dir / "roi_summary.json").write_text(json.dumps({"ready": True}))
+    (eval_dir / "resolved_roi_groups.json").write_text(json.dumps({"early_visual": {"input_dim": 2}}))
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(metrics))
+    (transfer_dir / "per_trial_pairs.csv").write_text("pair_id,condition,cosine\n")
+    (export_dir / "best_decoder.pt").write_text("pt")
+    (export_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": root.name}}))
+    (export_dir / "manifest.json").write_text(json.dumps({"target_spec": {"target_name": "vit_l14_image_768", "dimension": 768}}))
+    (export_dir / "decoder_card.json").write_text(json.dumps({"target": {"name": "vit_l14_image_768", "dimension": 768}}))
+    (export_dir / "decoder_card.md").write_text("# Decoder\n")
+    return train_dir, eval_dir, transfer_dir, export_dir
+
+
+def _write_promotion_candidate_config(
+    repo_root,
+    *,
+    experiment_name,
+    benchmark_role,
+    evidence_tier,
+    description,
+    mixed_index_path,
+    targets_path,
+    output_root,
+    complete_bundle,
+    pair_count=1,
+):
+    from fmri2img.workflows.common import load_workflow_config
+    import yaml
+
+    train_dir, eval_dir, transfer_dir, export_dir = _write_candidate_bundle(
+        output_root,
+        complete_bundle=complete_bundle,
+        pair_count=pair_count,
+    )
+    config_path = repo_root / f"{experiment_name}.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": experiment_name,
+                    "description": description,
+                    "benchmark_role": benchmark_role,
+                    "evidence_tier": evidence_tier,
+                },
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(mixed_index_path),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(targets_path),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "branch_embedding_dim": 128,
+                    "shared_dim": 128,
+                    "private_dim": 64,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 8, "epochs": 5, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 16, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(output_root / "analysis")},
+                "export": {"output_dir": str(export_dir)},
+                "preparation": {"preflight": {"paper_pair_threshold": 32}},
+            }
+        )
+    )
+    return load_workflow_config(str(config_path)), config_path
+
+
+def _build_full_overlap_promotion_path_fixture(
+    tmp_path,
+    *,
+    stronger_candidate=False,
+    stronger_candidate_complete=True,
+):
+    from fmri2img.workflows.common import load_workflow_config
+    import yaml
+
+    repo_root = tmp_path
+    targets_path = repo_root / "targets.parquet"
+    targets_path.write_bytes(b"")
+
+    current_mixed = repo_root / "current_mixed.parquet"
+    _write_paired_mixed_index(current_mixed, {"train": 3, "val": 1, "test": 1})
+    current_root = repo_root / "current_lane"
+    current_root.mkdir(parents=True, exist_ok=True)
+    current_train = current_root / "train"
+    current_eval = current_root / "eval"
+    current_transfer = current_root / "transfer"
+    current_export = current_root / "export"
+    for directory in (current_train, current_eval, current_transfer, current_export):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    current_config_path = repo_root / "full_imagery_overlap_shared_only.yaml"
+    current_config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": "full_imagery_overlap_shared_only",
+                    "description": "checked-in shared-only canonical neural baseline",
+                    "benchmark_role": "canonical_neural_baseline",
+                    "evidence_tier": "validated",
+                },
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(current_mixed),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(targets_path),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "branch_embedding_dim": 128,
+                    "shared_dim": 128,
+                    "private_dim": 64,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 8, "epochs": 5, "device": "cpu", "output_dir": str(current_train)},
+                "evaluation": {"batch_size": 16, "output_dir": str(current_eval), "transfer_output_dir": str(current_transfer)},
+                "analysis": {"output_dir": str(current_root / "analysis")},
+                "export": {"output_dir": str(current_export)},
+                "preparation": {"preflight": {"paper_pair_threshold": 32}},
+            }
+        )
+    )
+    (current_eval / "readiness_audit.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "operational_ready": True,
+                    "downstream_contract_ready": True,
+                    "evidence_ready_candidate": True,
+                    "training_ready": False,
+                },
+                "heldout_support": {
+                    "mixed_index": str(current_mixed),
+                    "dataset_rows": 10,
+                    "split_row_counts": {"train": 6, "val": 2, "test": 2},
+                    "dataset_pair_group_count": 5,
+                    "split_pair_group_counts": {"train": 3, "val": 1, "test": 1},
+                    "heldout_pair_count_from_metrics": 1,
+                    "heldout_pair_count_matches_prepared_test_split": True,
+                    "training_pair_threshold": 32,
+                    "current_dataset_can_meet_training_pair_threshold": False,
+                    "dataset_ceiling_blocks_training": True,
+                    "threshold_gap_from_total_pairs": 27,
+                    "threshold_gap_from_heldout_pairs": 31,
+                    "ceiling_blocked_reason": "current prepared dataset exposes only 5 paired groups total, below the 32-group training gate",
+                },
+            }
+        )
+    )
+
+    candidate_paths = []
+    _, same_support_path = _write_promotion_candidate_config(
+        repo_root,
+        experiment_name="max_available_overlap",
+        benchmark_role="fixed_threshold_benchmark",
+        evidence_tier="validated_dataset",
+        description="same support comparison lane",
+        mixed_index_path=current_mixed,
+        targets_path=targets_path,
+        output_root=repo_root / "max_available_overlap",
+        complete_bundle=True,
+        pair_count=1,
+    )
+    candidate_paths.append(same_support_path)
+
+    _, missing_bundle_path = _write_promotion_candidate_config(
+        repo_root,
+        experiment_name="animus_core_decoder",
+        benchmark_role="canonical_neural_baseline",
+        evidence_tier="validated",
+        description="practical animus lane",
+        mixed_index_path=current_mixed,
+        targets_path=targets_path,
+        output_root=repo_root / "animus_core_decoder",
+        complete_bundle=False,
+        pair_count=1,
+    )
+    candidate_paths.append(missing_bundle_path)
+
+    bootstrap_mixed = repo_root / "bootstrap_mixed.parquet"
+    _write_paired_mixed_index(bootstrap_mixed, {"train": 2, "val": 1, "test": 1})
+    _, bootstrap_path = _write_promotion_candidate_config(
+        repo_root,
+        experiment_name="multisubj_overlap_bootstrap",
+        benchmark_role=None,
+        evidence_tier=None,
+        description="bootstrap baseline",
+        mixed_index_path=bootstrap_mixed,
+        targets_path=targets_path,
+        output_root=repo_root / "multisubj_overlap_bootstrap",
+        complete_bundle=True,
+        pair_count=1,
+    )
+    candidate_paths.append(bootstrap_path)
+
+    if stronger_candidate:
+        stronger_mixed = repo_root / "stronger_mixed.parquet"
+        _write_paired_mixed_index(stronger_mixed, {"train": 40, "val": 8, "test": 32})
+        _, stronger_path = _write_promotion_candidate_config(
+            repo_root,
+            experiment_name="stronger_lane",
+            benchmark_role="canonical_neural_baseline",
+            evidence_tier="validated",
+            description="stronger real lane",
+            mixed_index_path=stronger_mixed,
+            targets_path=targets_path,
+            output_root=repo_root / "stronger_lane",
+            complete_bundle=stronger_candidate_complete,
+            pair_count=32,
+        )
+        candidate_paths.append(stronger_path)
+
+    return load_workflow_config(str(current_config_path)), current_config_path, candidate_paths
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -3652,6 +3929,65 @@ def test_full_imagery_overlap_shared_only_readiness_audit_can_mark_training_read
     assert report["heldout_support"]["dataset_ceiling_blocks_training"] is False
     assert report["heldout_support"]["current_dataset_can_meet_training_pair_threshold"] is True
     assert report["blocked_reasons"]["training_ready"] == []
+
+
+def test_full_overlap_promotion_path_audit_keeps_current_lane_when_no_stronger_candidate_exists(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_promotion_path import (
+        build_full_imagery_overlap_promotion_path_audit,
+    )
+
+    loaded, config_path, candidate_paths = _build_full_overlap_promotion_path_fixture(tmp_path)
+    report = build_full_imagery_overlap_promotion_path_audit(
+        loaded,
+        config_path=config_path,
+        candidate_config_paths=candidate_paths,
+    )
+    assert report["selection"]["selected_main_promotion_lane"] == "full_imagery_overlap_shared_only"
+    assert report["selection"]["stronger_paired_support_available"] is False
+    assert report["selection"]["stronger_real_candidate_available"] is False
+    assert report["state"]["training_ready"] is False
+    assert report["current_main_lane"]["heldout_support"]["dataset_pair_group_count"] == 5
+    assert "no checked-in canonical config currently exposes stronger paired support" in " ".join(report["blocked_reasons"])
+
+
+def test_full_overlap_promotion_path_audit_can_detect_stronger_real_candidate(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_promotion_path import (
+        build_full_imagery_overlap_promotion_path_audit,
+    )
+
+    loaded, config_path, candidate_paths = _build_full_overlap_promotion_path_fixture(
+        tmp_path,
+        stronger_candidate=True,
+        stronger_candidate_complete=True,
+    )
+    report = build_full_imagery_overlap_promotion_path_audit(
+        loaded,
+        config_path=config_path,
+        candidate_config_paths=candidate_paths,
+    )
+    assert report["selection"]["selected_main_promotion_lane"] == "stronger_lane"
+    assert report["selection"]["stronger_paired_support_available"] is True
+    assert report["selection"]["stronger_real_candidate_available"] is True
+
+
+def test_full_overlap_promotion_path_audit_does_not_promote_incomplete_stronger_candidate(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_promotion_path import (
+        build_full_imagery_overlap_promotion_path_audit,
+    )
+
+    loaded, config_path, candidate_paths = _build_full_overlap_promotion_path_fixture(
+        tmp_path,
+        stronger_candidate=True,
+        stronger_candidate_complete=False,
+    )
+    report = build_full_imagery_overlap_promotion_path_audit(
+        loaded,
+        config_path=config_path,
+        candidate_config_paths=candidate_paths,
+    )
+    assert report["selection"]["selected_main_promotion_lane"] == "full_imagery_overlap_shared_only"
+    assert report["selection"]["stronger_paired_support_available"] is True
+    assert report["selection"]["stronger_real_candidate_available"] is False
 
 
 def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
