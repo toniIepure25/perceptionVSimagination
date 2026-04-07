@@ -3111,6 +3111,7 @@ def _build_shared_private_downstream_contract_fixture(
             "missing_conditions": [],
             "paired_metrics_available": True,
             "paired_metrics_reason": None,
+            "pair_metrics_available_from_payload": True,
         },
         "pair_metrics": {
             "n_pairs": 1,
@@ -3191,6 +3192,104 @@ def _build_shared_private_downstream_contract_fixture(
     return load_workflow_config(str(config_path)), config_path
 
 
+def _build_shared_private_readiness_fixture(
+    tmp_path,
+    *,
+    eval_cosine=0.03,
+    transfer_cosine=0.03,
+    eval_mse=0.0025,
+    transfer_mse=0.0025,
+    eval_pair_count=1,
+    transfer_pair_count=1,
+):
+    from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
+        build_shared_private_smoke_downstream_contract_audit,
+    )
+    from fmri2img.workflows.common import load_workflow_config
+
+    loaded, config_path = _build_shared_private_downstream_contract_fixture(tmp_path)
+    train_dir = Path(loaded["training"]["output_dir"])
+    eval_dir = Path(loaded["evaluation"]["output_dir"])
+    transfer_dir = Path(loaded["evaluation"]["transfer_output_dir"])
+    export_dir = Path(loaded["export"]["output_dir"])
+
+    (train_dir / "config_snapshot.json").write_text(json.dumps({"experiment": {"name": "shared_private_smoke"}}))
+    (train_dir / "roi_summary.json").write_text(json.dumps({"roi_groups": {"early_visual": 3}}))
+    (train_dir / "target_summary.json").write_text(json.dumps({"target_space": "vit_l14_image_768"}))
+    (train_dir / "train_history.json").write_text(
+        json.dumps(
+            [
+                {"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.1},
+                {"epoch": 2, "train_loss": 0.9, "val_loss": 0.4, "val_content_cosine": 0.2},
+            ]
+        )
+    )
+
+    base_eval_metrics = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": 0.03, "mse": 0.0025},
+        "condition_availability": {
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+            "pair_metrics_available_from_payload": True,
+        },
+        "by_condition": [
+            {"condition": "imagery", "mean": 0.04, "std": None, "count": 1},
+            {"condition": "perception", "mean": 0.02, "std": None, "count": 1},
+        ],
+        "pair_metrics": {
+            "n_pairs": 1,
+            "mean_gap_imagery_minus_perception": 0.02,
+            "median_gap_imagery_minus_perception": 0.02,
+        },
+        "domain_accuracy": 0.5,
+        "vividness_mse": 0.03,
+        "confidence_mse": 0.004,
+        "uncertainty_mean": 0.6,
+    }
+    base_transfer_metrics = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": 0.03, "mse": 0.0025},
+        "condition_availability": {
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+        },
+        "by_condition": [
+            {"condition": "imagery", "mean": 0.04, "std": None, "count": 1},
+            {"condition": "perception", "mean": 0.02, "std": None, "count": 1},
+        ],
+        "pair_metrics": {
+            "n_pairs": 1,
+            "mean_gap_imagery_minus_perception": 0.02,
+            "median_gap_imagery_minus_perception": 0.02,
+        },
+        "domain_accuracy": 0.5,
+        "vividness_mse": 0.03,
+        "confidence_mse": 0.004,
+        "uncertainty_mean": 0.6,
+    }
+    (eval_dir / "metrics.json").write_text(json.dumps(base_eval_metrics))
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(base_transfer_metrics))
+
+    loaded = load_workflow_config(str(config_path))
+    downstream_report = build_shared_private_smoke_downstream_contract_audit(loaded, config_path=config_path)
+    (eval_dir / "downstream_contract_audit.json").write_text(json.dumps(downstream_report))
+
+    eval_metrics = dict(base_eval_metrics)
+    eval_metrics["overall"] = {"cosine": eval_cosine, "mse": eval_mse}
+    eval_metrics["pair_metrics"] = {**base_eval_metrics["pair_metrics"], "n_pairs": eval_pair_count}
+    transfer_metrics = dict(base_transfer_metrics)
+    transfer_metrics["overall"] = {"cosine": transfer_cosine, "mse": transfer_mse}
+    transfer_metrics["pair_metrics"] = {**base_transfer_metrics["pair_metrics"], "n_pairs": transfer_pair_count}
+    (eval_dir / "metrics.json").write_text(json.dumps(eval_metrics))
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(transfer_metrics))
+    return loaded, config_path
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -3221,6 +3320,38 @@ def test_shared_private_smoke_downstream_contract_audit_marks_target_dimension_m
     report = build_shared_private_smoke_downstream_contract_audit(loaded, config_path=config_path)
     assert report["state"]["downstream_contract_ready"] is False
     assert "normalized target metadata differs between export manifest and decoder card" in report["blocked_reasons"]
+
+
+def test_shared_private_smoke_readiness_audit_builds_candidate_report(tmp_path):
+    from fmri2img.workflows.audit_shared_private_smoke_readiness import build_shared_private_smoke_readiness_audit
+
+    loaded, config_path = _build_shared_private_readiness_fixture(tmp_path)
+    report = build_shared_private_smoke_readiness_audit(loaded, config_path=config_path)
+    assert report["bundle_identity"]["experiment_name"] == "shared_private_smoke"
+    assert report["state"] == {
+        "operational_ready": True,
+        "downstream_contract_ready": True,
+        "evidence_ready_candidate": True,
+        "training_ready": False,
+    }
+    assert report["target_spec"]["target_name_normalized"] == "vit_l14_image_768"
+    assert report["condition_semantics"]["paired_metrics_available"] is True
+    assert report["blocked_reasons"]["evidence_ready_candidate"] == []
+    assert "smoke-scoped" in " ".join(report["blocked_reasons"]["training_ready"])
+
+
+def test_shared_private_smoke_readiness_audit_marks_evidence_blocked_when_eval_metrics_fail(tmp_path):
+    from fmri2img.workflows.audit_shared_private_smoke_readiness import build_shared_private_smoke_readiness_audit
+
+    loaded, config_path = _build_shared_private_readiness_fixture(tmp_path, eval_cosine=None, eval_pair_count=0)
+    report = build_shared_private_smoke_readiness_audit(loaded, config_path=config_path)
+    assert report["state"]["operational_ready"] is True
+    assert report["state"]["downstream_contract_ready"] is True
+    assert report["state"]["evidence_ready_candidate"] is False
+    assert report["state"]["training_ready"] is False
+    assert "eval metrics are incomplete or non-finite for the candidate bundle" in report["blocked_reasons"][
+        "evidence_ready_candidate"
+    ]
 
 
 def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
