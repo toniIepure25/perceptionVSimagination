@@ -85,6 +85,16 @@ def _metric_summary(payload: dict[str, Any], *, expected_target_space: str) -> d
 
 
 def _train_provenance_snapshot(config_snapshot: dict[str, Any], config) -> dict[str, Any]:
+    def _normalize_path_like(value: Any) -> Any:
+        if value is None:
+            return None
+        candidate = Path(str(value))
+        if not candidate.is_absolute():
+            candidate = (_repo_root() / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+        return candidate.as_posix()
+
     expected_config = config.to_dict() if hasattr(config, "to_dict") else config
     snapshot_model = config_snapshot.get("model", {})
     expected_model = expected_config["model"]
@@ -95,14 +105,34 @@ def _train_provenance_snapshot(config_snapshot: dict[str, Any], config) -> dict[
     model_keys = ("disentanglement_mode", "use_domain_head", "use_vividness_head", "private_dim", "shared_dim")
     dataset_keys = ("subject", "mixed_index", "perception_conditions", "imagery_conditions")
     target_keys = ("name", "dimension", "cache_path", "id_column")
+    dataset_matches_expected = True
+    for key in dataset_keys:
+        snapshot_value = snapshot_dataset.get(key)
+        expected_value = expected_dataset.get(key)
+        if key == "mixed_index":
+            snapshot_value = _normalize_path_like(snapshot_value)
+            expected_value = _normalize_path_like(expected_value)
+        if snapshot_value != expected_value:
+            dataset_matches_expected = False
+            break
+    targets_match_expected = True
+    for key in target_keys:
+        snapshot_value = snapshot_targets.get(key)
+        expected_value = expected_targets.get(key)
+        if key == "cache_path":
+            snapshot_value = _normalize_path_like(snapshot_value)
+            expected_value = _normalize_path_like(expected_value)
+        if snapshot_value != expected_value:
+            targets_match_expected = False
+            break
     return {
         "config_snapshot_experiment_name": str(config_snapshot.get("experiment", {}).get("name", "")),
         "config_snapshot_matches_expected_experiment": (
             str(config_snapshot.get("experiment", {}).get("name", "")) == EXPECTED_EXPERIMENT_NAME
         ),
         "model_matches_expected": all(snapshot_model.get(key) == expected_model.get(key) for key in model_keys),
-        "dataset_matches_expected": all(snapshot_dataset.get(key) == expected_dataset.get(key) for key in dataset_keys),
-        "targets_match_expected": all(snapshot_targets.get(key) == expected_targets.get(key) for key in target_keys),
+        "dataset_matches_expected": dataset_matches_expected,
+        "targets_match_expected": targets_match_expected,
         "dataset_capabilities": dict(config_snapshot.get("dataset_capabilities", {})),
     }
 
