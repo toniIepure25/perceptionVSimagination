@@ -761,3 +761,13 @@ Risk:
   real ready verdicts through the generic path while unsupported bundle names
   remain truthfully blocked with unchanged top-level semantics. This remains
   operational hardening only, and `training_ready` remains `false`
+- 2026-04-07: the repo now also has a first explicit readiness-promotion audit
+  for the strongest currently proven paired bundle:
+  `fmri2img.workflows.audit_shared_private_smoke_readiness`. The live pod wrote
+  `outputs/canonical/eval/shared_private_smoke/readiness_audit.json`, which
+  marks `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false` for
+  `shared_private_smoke`. The report makes the current promotion boundary
+  explicit: the bundle is a real paired evidence candidate, but it is still
+  smoke-scoped and fixture-backed, so it is not yet eligible for evidence-grade
+  or production-facing promotion

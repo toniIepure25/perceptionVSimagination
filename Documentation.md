@@ -991,3 +991,39 @@ Paper handoff rule:
 - Follow-up: if the concrete bundle-specific blocked paths ever need to align
   with the same top-level shape, route them through the same shared helper
   rather than duplicating one more constructor
+
+## 2026-04-07 - Shared-private smoke now has an explicit readiness-promotion audit
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_shared_private_smoke_readiness.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  readiness-audit invocation against the existing
+  `outputs/canonical/hardening_smoke/` bundle, remote `git pull --rebase`,
+  real pod readiness-audit run on `configs/canonical/shared_private_smoke.yaml`,
+  and focused remote pytest
+- Decision: `shared_private_smoke` is the best current first promotion
+  candidate because it is the only already-proven paired canonical post-train
+  bundle with real train/eval/transfer/export/downstream-audit artifacts. The
+  new readiness audit separates four explicit states:
+  `operational_ready`, `downstream_contract_ready`,
+  `evidence_ready_candidate`, and `training_ready`
+- Claim boundary: operational promotion gating only; no benchmark progress, no
+  evidence-freeze change, and no production-ready claim
+- Detail: the live pod readiness report now marks
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`. The explicit
+  training blockers are that the candidate config is still smoke-scoped and
+  still fixture-backed. The report also records paired normalized condition
+  semantics, normalized target metadata, finite eval/transfer metrics, and the
+  existing downstream contract verdict
+- Readiness: this is the first repo-native surface that promotes a bundle past
+  smoke-contract readiness into an explicit evidence-candidate state without
+  pretending that a smoke fixture is evidence-ready or training-ready
+- Follow-up: the next honest promotion target is a non-smoke canonical bundle
+  with non-fixture inputs that can satisfy the same evidence checks and then
+  clear the explicit `training_ready` gate

@@ -410,3 +410,16 @@ Copy this block:
 - Result summary: the generic dispatcher no longer owns even the blocked-path `operational_boundary` strings. Those defaults now live next to the shared blocked-report helper in `fmri2img.workflows._downstream_contract_audit`, and the live pod proved that both supported families still return the same real ready verdicts while unsupported bundle names still produce the same truthful blocked semantics with `training_ready=false`
 - Interpretation summary: this is operational hardening only. It removes the last blocked-path shape duplication from the generic downstream dispatcher without widening supported families, changing verdict semantics, or altering any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-SHARED-PRIVATE-READINESS-AUDIT
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: explicit readiness-promotion gating for the best current canonical paired candidate bundle
+- Config: `configs/canonical/shared_private_smoke.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.audit_shared_private_smoke_readiness --config configs/canonical/shared_private_smoke.yaml`
+- Dataset / prepared artifacts: canonical shared-private smoke train/eval/transfer/export bundle under `outputs/canonical/{train,eval,transfer,export}/shared_private_smoke/`, plus downstream contract audit at `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Output / artifact path: readiness audit `outputs/canonical/eval/shared_private_smoke/readiness_audit.json`
+- Status: done
+- Result summary: the repo now has one explicit readiness-promotion surface on top of the existing canonical shared-private smoke bundle. The live pod report confirms `operational_ready=true`, `downstream_contract_ready=true`, `evidence_ready_candidate=true`, and `training_ready=false`, with paired normalized condition semantics (`present_conditions=["imagery","perception"]`), normalized `vit_l14_image_768` target metadata, finite eval/transfer metrics, and explicit training blockers stating that the bundle is still smoke-scoped and fixture-backed
+- Interpretation summary: this is operational promotion gating only. It does not claim benchmark success or evidence-grade validation, but it does leave behind one honest machine-readable verdict for the strongest currently proven paired bundle and defines the checked criteria that a future non-smoke bundle must satisfy before `training_ready` can become true
+- Promoted to evidence?: no
