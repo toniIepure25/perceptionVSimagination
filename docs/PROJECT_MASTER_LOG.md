@@ -802,3 +802,18 @@ Risk:
   `evidence_ready_candidate=true`, and `training_ready=false`, with only one
   remaining blocker: the held-out paired evaluation slice is still only
   `1/32` paired groups
+- 2026-04-07: blocker `#2` on the same shared-only non-smoke promotion lane is
+  now machine-readable as a real prepared-data ceiling rather than only as a
+  failed gate string. The live pod refreshed
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`
+  so it now includes a `heldout_support` section showing `94` prepared rows,
+  `5` paired groups total, split paired-group counts `{train: 3, val: 1,
+  test: 1}`, and
+  `current_dataset_can_meet_training_pair_threshold=false`. A temporary
+  exact-config rebuild under
+  `outputs/canonical/prepared/full_imagery_overlap_phase3_audit/` reproduced
+  the same `5` overlap ids and the same `3/1/1` split, confirming that the
+  current mounted benchmark cannot honestly satisfy the unchanged `32`-pair
+  `training_ready` gate for this lane. The readiness state remains
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`

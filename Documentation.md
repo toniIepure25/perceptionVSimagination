@@ -1103,3 +1103,42 @@ Paper handoff rule:
   evaluation support for this exact checked-in shared-only bundle so the same
   readiness gate can test whether `training_ready` can ever turn true without
   changing criteria
+
+## 2026-04-07 - Full-overlap shared-only now records the held-out support ceiling explicitly
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_full_imagery_overlap_shared_only_readiness.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile` and `.venv` pytest; remote
+  `git pull --rebase`; real pod temporary exact-config overlap rebuild via
+  `prepare_overlap_bootstrap` into
+  `outputs/canonical/prepared/full_imagery_overlap_phase3_audit/` with narrow
+  mounted-path overrides for the live perception index root and ROI masks;
+  real pod rerun of
+  `audit_full_imagery_overlap_shared_only_readiness`; focused remote pytest
+- Decision: blocker `#2` is now confirmed as a real prepared-data ceiling for
+  this lane, not merely the current held-out test split. The existing
+  `training_ready` gate stays unchanged
+- Claim boundary: no benchmark promotion, no evidence-grade confirmation, and
+  no production Animus claim; `training_ready` remains `false`
+- Detail: the refreshed readiness artifact now includes a machine-readable
+  `heldout_support` section. On the live canonical bundle it records `94`
+  prepared rows, `5` paired groups total, split paired-group counts
+  `{train: 3, val: 1, test: 1}`, and
+  `current_dataset_can_meet_training_pair_threshold=false`. The temporary
+  exact-config rebuild under
+  `outputs/canonical/prepared/full_imagery_overlap_phase3_audit/` reproduced
+  the same `5` overlap ids and the same `3/1/1` split, confirming that the
+  current mounted dataset cannot honestly satisfy the unchanged `32`-pair
+  training gate for this bundle
+- Readiness: the live report still marks
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`; the blocked
+  reason remains `1/32` held-out paired groups, and the new ceiling section
+  makes the underlying `5`-pair dataset limit explicit
+- Follow-up: the next honest step is to increase available paired overlap for
+  this exact checked-in lane, then rerun the unchanged readiness audit
