@@ -151,3 +151,32 @@ def build_downstream_contract_audit_report(
     if extra_sections:
         report.update(extra_sections)
     return report
+
+
+def build_blocked_downstream_contract_audit_report(
+    *,
+    config_path: str | Path,
+    message: str,
+    state_overrides: dict[str, Any] | None = None,
+    operational_boundary: list[str] | None = None,
+) -> dict[str, Any]:
+    state = {
+        "downstream_contract_ready": False,
+        "eval_smoke_ready": False,
+        "transfer_smoke_ready": False,
+        "export_smoke_ready": False,
+        "training_ready": False,
+    }
+    if state_overrides:
+        state.update(state_overrides)
+    return {
+        "config": str(Path(config_path).resolve()),
+        "artifact_paths": {},
+        "target_spec": {},
+        "condition_semantics": {},
+        "identity": {},
+        "consistency": {},
+        "state": state,
+        "blocked_reasons": [message],
+        "operational_boundary": operational_boundary or [],
+    }

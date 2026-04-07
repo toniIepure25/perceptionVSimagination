@@ -12,6 +12,9 @@ from fmri2img.workflows._downstream_contract_registry import (  # noqa: E402
     get_downstream_contract_audit_registration,
     list_registered_downstream_contract_audits,
 )
+from fmri2img.workflows._downstream_contract_audit import (  # noqa: E402
+    build_blocked_downstream_contract_audit_report,
+)
 from fmri2img.workflows.common import load_workflow_config  # noqa: E402
 from fmri2img.workflows.prep_common import json_safe, write_report  # noqa: E402
 
@@ -45,30 +48,6 @@ def build_downstream_contract_audit(config, *, config_path: str | Path) -> dict:
     return report
 
 
-def _blocked_report(config_path: str | Path, message: str) -> dict:
-    return {
-        "config": str(Path(config_path).resolve()),
-        "artifact_paths": {},
-        "target_spec": {},
-        "condition_semantics": {},
-        "identity": {},
-        "consistency": {},
-        "state": {
-            "downstream_contract_ready": False,
-            "eval_smoke_ready": False,
-            "transfer_smoke_ready": False,
-            "export_smoke_ready": False,
-            "training_ready": False,
-        },
-        "blocked_reasons": [message],
-        "operational_boundary": [
-            "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
-            "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
-            "training_ready remains false in blocked dispatcher reports",
-        ],
-    }
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Dispatch to the canonical downstream contract audit for a supported bundle.")
     parser.add_argument("--config", default=str(_default_path(DEFAULT_CONFIG)))
@@ -81,7 +60,15 @@ def main(argv: list[str] | None = None) -> int:
         config = load_workflow_config(args.config, args.override)
         report = build_downstream_contract_audit(config, config_path=args.config)
     except Exception as exc:
-        report = _blocked_report(args.config, str(exc))
+        report = build_blocked_downstream_contract_audit_report(
+            config_path=args.config,
+            message=str(exc),
+            operational_boundary=[
+                "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
+                "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
+                "training_ready remains false in blocked dispatcher reports",
+            ],
+        )
         output_path = args.output or "outputs/canonical/eval/downstream_contract_audit.json"
         write_report(output_path, report)
         print(json.dumps(json_safe(report), indent=2))

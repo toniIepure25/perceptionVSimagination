@@ -3258,7 +3258,8 @@ def test_generic_downstream_contract_dispatch_selects_shared_private_strategy(tm
 def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_for_unsupported_bundle(tmp_path):
     import yaml
 
-    from fmri2img.workflows.audit_downstream_contract import _blocked_report, resolve_downstream_contract_audit_strategy
+    from fmri2img.workflows.audit_downstream_contract import resolve_downstream_contract_audit_strategy
+    from fmri2img.workflows._downstream_contract_audit import build_blocked_downstream_contract_audit_report
     from fmri2img.workflows.common import load_workflow_config
 
     config_path = tmp_path / "unsupported.yaml"
@@ -3283,7 +3284,7 @@ def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_fo
     with pytest.raises(ValueError, match="No generic downstream contract audit strategy"):
         resolve_downstream_contract_audit_strategy(loaded)
 
-    report = _blocked_report(config_path, "unsupported")
+    report = build_blocked_downstream_contract_audit_report(config_path=config_path, message="unsupported")
     assert report["artifact_paths"] == {}
     assert report["target_spec"] == {}
     assert report["condition_semantics"] == {}
@@ -3291,6 +3292,81 @@ def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_fo
     assert report["consistency"] == {}
     assert report["state"]["downstream_contract_ready"] is False
     assert report["state"]["training_ready"] is False
+
+
+def test_build_blocked_downstream_contract_audit_report_returns_stable_shape(tmp_path):
+    from fmri2img.workflows._downstream_contract_audit import build_blocked_downstream_contract_audit_report
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("experiment: {name: unsupported}\n")
+    report = build_blocked_downstream_contract_audit_report(
+        config_path=config_path,
+        message="unsupported",
+        operational_boundary=["blocked"],
+    )
+    assert report == {
+        "config": str(config_path.resolve()),
+        "artifact_paths": {},
+        "target_spec": {},
+        "condition_semantics": {},
+        "identity": {},
+        "consistency": {},
+        "state": {
+            "downstream_contract_ready": False,
+            "eval_smoke_ready": False,
+            "transfer_smoke_ready": False,
+            "export_smoke_ready": False,
+            "training_ready": False,
+        },
+        "blocked_reasons": ["unsupported"],
+        "operational_boundary": ["blocked"],
+    }
+
+
+def test_generic_downstream_contract_main_uses_shared_blocked_report_helper(tmp_path):
+    import json as _json
+    import yaml
+
+    from fmri2img.workflows.audit_downstream_contract import main as audit_downstream_contract_main
+    from fmri2img.workflows._downstream_contract_audit import build_blocked_downstream_contract_audit_report
+
+    config_path = tmp_path / "unsupported.yaml"
+    output_path = tmp_path / "downstream_contract_audit.json"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {"name": "unsupported_bundle"},
+                "dataset": {"subject": "subj01", "mixed_index": str(tmp_path / "mixed.parquet")},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": []}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(tmp_path / "targets.parquet")},
+                "model": {"branch_embedding_dim": 32, "shared_dim": 32, "private_dim": 16, "dropout": 0.0},
+                "training": {"batch_size": 4, "epochs": 1, "device": "cpu", "output_dir": str(tmp_path / "train")},
+                "evaluation": {"batch_size": 4, "output_dir": str(tmp_path / "eval"), "transfer_output_dir": str(tmp_path / "transfer")},
+                "analysis": {"output_dir": str(tmp_path / "analysis")},
+                "export": {"output_dir": str(tmp_path / "export")},
+            }
+        )
+    )
+    (tmp_path / "mixed.parquet").write_bytes(b"")
+    (tmp_path / "targets.parquet").write_bytes(b"")
+
+    rc = audit_downstream_contract_main(["--config", str(config_path), "--output", str(output_path)])
+    assert rc == 0
+    report = _json.loads(output_path.read_text())
+    expected = build_blocked_downstream_contract_audit_report(
+        config_path=config_path,
+        message=(
+            "No generic downstream contract audit strategy is registered for "
+            "experiment.name='unsupported_bundle'. Supported experiments: "
+            "['public_nod_imagenet_run10_shared_only_smoke', 'shared_private_smoke']"
+        ),
+        operational_boundary=[
+            "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
+            "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
+            "training_ready remains false in blocked dispatcher reports",
+        ],
+    )
+    assert report == expected
 
 
 def test_downstream_contract_registry_contains_exact_supported_proven_families():
