@@ -397,3 +397,16 @@ Copy this block:
 - Result summary: blocked generic downstream-audit payloads now come from one shared helper in `fmri2img.workflows._downstream_contract_audit` instead of from a private constructor inside the top-level dispatcher. The live pod proved that both supported families still return the same real ready verdicts through the generic path, while unsupported bundle names still yield a truthful blocked report with `training_ready=false` and the same stable compact top-level shape
 - Interpretation summary: this is operational hardening only. It removes the last blocked-report duplication from the generic downstream audit path without changing supported families, benchmark semantics, or evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-DOWNSTREAM-AUDIT-BLOCKED-BOUNDARY-DEFAULTS
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: blocked-path boundary-default hardening for the generic downstream contract dispatcher
+- Config: top-level workflow `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config ...`
+- Dataset / prepared artifacts: fixed NOD smoke bundle under `outputs/public_nod/...`, canonical shared-private smoke bundle under `outputs/canonical/...`, and unsupported-family blocked verdicts through the same generic entrypoint
+- Output / artifact path: fixed NOD generic audit at `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`; shared-private generic audit at `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: the generic dispatcher no longer owns even the blocked-path `operational_boundary` strings. Those defaults now live next to the shared blocked-report helper in `fmri2img.workflows._downstream_contract_audit`, and the live pod proved that both supported families still return the same real ready verdicts while unsupported bundle names still produce the same truthful blocked semantics with `training_ready=false`
+- Interpretation summary: this is operational hardening only. It removes the last blocked-path shape duplication from the generic downstream dispatcher without widening supported families, changing verdict semantics, or altering any evidence-facing interpretation
+- Promoted to evidence?: no

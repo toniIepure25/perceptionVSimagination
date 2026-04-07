@@ -960,3 +960,34 @@ Paper handoff rule:
 - Follow-up: if concrete bundle-specific blocked paths need the same top-level
   payload later, route them through the shared helper instead of adding another
   local constructor
+
+## 2026-04-07 - Generic downstream blocked-path boundary defaults now live in the shared audit support layer
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/_downstream_contract_audit.py`,
+  `src/fmri2img/workflows/audit_downstream_contract.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  generic audit invocation against the existing
+  `outputs/canonical/hardening_smoke/` bundle, remote `git pull --rebase`,
+  real pod rerun of the generic audit on both supported families, and focused
+  remote pytest
+- Decision: the shared blocked-report helper now owns the generic blocked-path
+  `operational_boundary` defaults. The top-level dispatcher no longer embeds
+  those strings directly
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the shared support layer now exposes one explicit default generic
+  blocked boundary describing registered-family-only support, truthful blocked
+  reporting for unsupported configs, and preserved `training_ready=false`
+  semantics. The stable compact blocked-report top-level shape is unchanged
+- Readiness: both supported live bundle families still mark
+  `downstream_contract_ready=true` through the generic path, while unsupported
+  bundle names remain truthfully blocked with the same compact verdict shape
+- Follow-up: if the concrete bundle-specific blocked paths ever need to align
+  with the same top-level shape, route them through the same shared helper
+  rather than duplicating one more constructor

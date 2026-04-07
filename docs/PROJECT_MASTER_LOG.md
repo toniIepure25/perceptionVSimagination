@@ -754,3 +754,10 @@ Risk:
   while unsupported bundle names remain truthfully blocked with
   `training_ready=false` and the same stable compact top-level shape. This
   remains operational hardening only
+- 2026-04-07: the generic downstream dispatcher no longer owns even the
+  blocked-path `operational_boundary` strings. Those defaults now live in the
+  shared downstream-audit support layer alongside the blocked-report helper,
+  and the live pod proved that both supported families still produce the same
+  real ready verdicts through the generic path while unsupported bundle names
+  remain truthfully blocked with unchanged top-level semantics. This remains
+  operational hardening only, and `training_ready` remains `false`
