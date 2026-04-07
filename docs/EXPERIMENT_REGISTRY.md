@@ -462,3 +462,16 @@ Copy this block:
 - Result summary: the live pod readiness artifact now carries a machine-readable `heldout_support` section for `full_imagery_overlap_shared_only`. It records `94` prepared rows, `5` paired groups total, split paired-group counts `{train: 3, val: 1, test: 1}`, `heldout_pair_count_from_metrics=1`, and `current_dataset_can_meet_training_pair_threshold=false`. The temporary exact-config rebuild reproduced the same `5` overlap ids and the same `3/1/1` paired split, confirming that blocker `#2` is a real dataset-support ceiling for the current mounted benchmark, not just an avoidable test-split accident
 - Interpretation summary: this is promotion hardening only. It preserves the unchanged readiness gate and makes the remaining blocker explicit and machine-readable without inflating benchmark claims or production readiness
 - Promoted to evidence?: no
+
+## EXP-2026-04-08-FULL-OVERLAP-PROMOTION-PATH-AUDIT
+
+- Date: 2026-04-08
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: mounted-candidate comparison audit for the strongest current non-smoke canonical neural baseline
+- Config: `configs/canonical/full_imagery_overlap_shared_only.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.audit_full_imagery_overlap_promotion_path --config configs/canonical/full_imagery_overlap_shared_only.yaml`
+- Dataset / prepared artifacts: current main lane readiness artifact at `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`; candidate prepared indices and bundle roots for `animus_core_decoder`, `threshold_shared_private_p16`, `max_available_overlap`, and `multisubj_overlap_bootstrap`
+- Output / artifact path: promotion-path audit `outputs/canonical/eval/full_imagery_overlap_shared_only/promotion_path_audit.json`
+- Status: done
+- Result summary: the live pod now has a machine-readable audit proving that no checked-in canonical lane currently improves on `full_imagery_overlap_shared_only` under the unchanged readiness philosophy. The report keeps `full_imagery_overlap_shared_only` as the selected main promotion lane, confirms that the current bundle still has `5` total paired groups with `1` held-out pair, and shows that the nearby checked-in alternatives either expose the same or weaker paired support and/or lack a complete real post-train bundle on the pod
+- Interpretation summary: this is promotion-path hardening only. It does not change the evidence freeze, benchmark ranking, or production claims. It makes the next honest move explicit and machine-readable: paired-data expansion for the current main lane, not benchmark inflation or lane switching
+- Promoted to evidence?: no

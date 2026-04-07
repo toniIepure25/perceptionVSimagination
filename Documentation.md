@@ -1142,3 +1142,40 @@ Paper handoff rule:
   makes the underlying `5`-pair dataset limit explicit
 - Follow-up: the next honest step is to increase available paired overlap for
   this exact checked-in lane, then rerun the unchanged readiness audit
+
+## 2026-04-08 - Full-overlap shared-only remains the strongest honest mounted promotion lane
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_full_imagery_overlap_promotion_path.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile` and `.venv` pytest; remote
+  `git pull --rebase`; real pod
+  `audit_full_imagery_overlap_promotion_path`; focused remote pytest
+- Decision: there is no stronger mounted canonical promotion lane available
+  right now than `full_imagery_overlap_shared_only` under the unchanged
+  readiness philosophy
+- Claim boundary: no benchmark promotion, no evidence-grade confirmation, and
+  no production Animus claim; `training_ready` remains `false`
+- Detail: the new machine-readable audit artifact at
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/promotion_path_audit.json`
+  compares the current main lane against the nearest checked-in canonical
+  alternatives:
+  `animus_core_decoder`, `threshold_shared_private_p16`,
+  `max_available_overlap`, and `multisubj_overlap_bootstrap`. On the live pod,
+  none of them improves paired support beyond `5` total / `1` held-out pair,
+  and none of them exposes a stronger real post-train bundle that would justify
+  replacing the current shared-only lane. The report therefore keeps
+  `full_imagery_overlap_shared_only` as the selected main promotion lane and
+  marks the next honest move as paired-data expansion
+- Readiness: the current main lane remains
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`; the new audit
+  simply proves that the current blocker is a mounted paired-data ceiling, not
+  a missed stronger canonical alternative
+- Follow-up: the next honest step is to increase paired overlap for the exact
+  full-overlap shared-only lane; lane switching is not justified by the current
+  mounted evidence

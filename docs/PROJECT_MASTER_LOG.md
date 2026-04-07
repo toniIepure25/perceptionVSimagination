@@ -817,3 +817,17 @@ Risk:
   `training_ready` gate for this lane. The readiness state remains
   `operational_ready=true`, `downstream_contract_ready=true`,
   `evidence_ready_candidate=true`, and `training_ready=false`
+- 2026-04-08: the repo now also has a machine-readable promotion-path audit for
+  the current best non-smoke canonical lane:
+  `fmri2img.workflows.audit_full_imagery_overlap_promotion_path`. The live pod
+  wrote
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/promotion_path_audit.json`,
+  which compares `full_imagery_overlap_shared_only` against the nearest
+  checked-in canonical alternatives
+  (`animus_core_decoder`, `threshold_shared_private_p16`,
+  `max_available_overlap`, and `multisubj_overlap_bootstrap`). The report
+  proves that no mounted canonical lane currently improves paired support
+  beyond `5` total / `1` held-out pair while also exposing a stronger real
+  post-train bundle, so the current main promotion lane remains unchanged and
+  the next honest move is explicit: paired-data expansion, not lane switching,
+  gate weakening, or benchmark inflation
