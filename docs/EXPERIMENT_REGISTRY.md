@@ -384,3 +384,16 @@ Copy this block:
 - Result summary: the generic downstream audit dispatcher now reads from one checked-in registry near the audit core instead of carrying its own ad hoc family mapping. The live pod proved that both registered families still produce the same real verdicts through the generic path, while unsupported bundle names remain truthfully blocked. The registry currently contains exactly the two proven families: `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`
 - Interpretation summary: this is operational hardening only. It makes supported-family routing explicit and maintainable without widening bundle support, changing benchmark semantics, or altering evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-DOWNSTREAM-AUDIT-BLOCKED-HELPER
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: blocked-report construction hardening for generic downstream contract audits
+- Config: top-level workflow `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config ...`
+- Dataset / prepared artifacts: fixed NOD smoke bundle under `outputs/public_nod/...`, canonical shared-private smoke bundle under `outputs/canonical/...`, and unsupported-family blocked verdicts through the same generic entrypoint
+- Output / artifact path: fixed NOD generic audit at `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`; shared-private generic audit at `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: blocked generic downstream-audit payloads now come from one shared helper in `fmri2img.workflows._downstream_contract_audit` instead of from a private constructor inside the top-level dispatcher. The live pod proved that both supported families still return the same real ready verdicts through the generic path, while unsupported bundle names still yield a truthful blocked report with `training_ready=false` and the same stable compact top-level shape
+- Interpretation summary: this is operational hardening only. It removes the last blocked-report duplication from the generic downstream audit path without changing supported families, benchmark semantics, or evidence-facing interpretation
+- Promoted to evidence?: no

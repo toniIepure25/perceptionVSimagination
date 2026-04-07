@@ -746,3 +746,11 @@ Risk:
   Unsupported bundle families remain explicitly blocked rather than being
   implicitly treated as supported. This remains operational hardening only, and
   `training_ready` remains `false`
+- 2026-04-07: blocked generic downstream-audit verdicts now come from one
+  shared helper in `fmri2img.workflows._downstream_contract_audit` instead of
+  from a private constructor inside the top-level dispatcher. The live pod
+  proved that both supported families still produce the same real ready
+  contract verdicts through `fmri2img.workflows.audit_downstream_contract`,
+  while unsupported bundle names remain truthfully blocked with
+  `training_ready=false` and the same stable compact top-level shape. This
+  remains operational hardening only

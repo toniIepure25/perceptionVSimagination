@@ -926,3 +926,37 @@ Paper handoff rule:
   `paired_metrics_available=true`
 - Follow-up: if another family is proven later, add one explicit registry entry
   only after its concrete audit path and real artifact proof exist
+
+## 2026-04-07 - Generic downstream audit blocked reports now come from one shared helper
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/_downstream_contract_audit.py`,
+  `src/fmri2img/workflows/audit_downstream_contract.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  generic audit invocation against the existing
+  `outputs/canonical/hardening_smoke/` bundle, remote `git pull --rebase`,
+  real pod rerun of the generic audit on both supported families, and focused
+  remote pytest
+- Decision: the generic dispatcher no longer owns a private blocked-report
+  constructor. Unsupported-family and blocked generic-audit payloads now come
+  from one shared helper in the downstream audit support layer
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the shared helper preserves the stable compact blocked verdict shape:
+  empty `artifact_paths`, `target_spec`, `condition_semantics`, `identity`,
+  and `consistency` blocks; state defaults of
+  `downstream_contract_ready=false`, `eval_smoke_ready=false`,
+  `transfer_smoke_ready=false`, `export_smoke_ready=false`, and
+  `training_ready=false`; plus explicit `blocked_reasons` and
+  `operational_boundary`
+- Readiness: both supported live bundle families still mark
+  `downstream_contract_ready=true` through the generic path; unsupported
+  families remain truthfully blocked with the same top-level contract shape
+- Follow-up: if concrete bundle-specific blocked paths need the same top-level
+  payload later, route them through the shared helper instead of adding another
+  local constructor
