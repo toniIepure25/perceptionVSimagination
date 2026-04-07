@@ -371,3 +371,16 @@ Copy this block:
 - Result summary: the repo now has one top-level dispatcher that routes by `experiment.name` to the supported downstream audit strategies. The live pod proved the generic path on both supported families: fixed NOD still reports `present_conditions=["perception"]`, `missing_conditions=["imagery"]`, `paired_metrics_available=false`, and `downstream_contract_ready=true`; shared-private smoke still reports `present_conditions=["imagery","perception"]`, `paired_metrics_available=true`, and `downstream_contract_ready=true`. Unsupported bundle families are now reported as blocked instead of being implicitly treated as auditable
 - Interpretation summary: this is operational hardening only. It adds one stable canonical entrypoint for downstream contract audits without changing dataset scope, benchmark status, or any evidence-facing interpretation
 - Promoted to evidence?: no
+
+## EXP-2026-04-07-DOWNSTREAM-AUDIT-REGISTRY
+
+- Date: 2026-04-07
+- Lane: Animus subsystem engineering
+- Benchmark rung / role: registry-backed routing hardening for supported downstream contract audits
+- Config: top-level workflow `./.venv/bin/python -m fmri2img.workflows.audit_downstream_contract --config ...`
+- Dataset / prepared artifacts: fixed NOD smoke bundle under `outputs/public_nod/...` and canonical shared-private smoke bundle under `outputs/canonical/...`
+- Output / artifact path: fixed NOD generic audit at `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`; shared-private generic audit at `outputs/canonical/eval/shared_private_smoke/downstream_contract_audit.json`
+- Status: done
+- Result summary: the generic downstream audit dispatcher now reads from one checked-in registry near the audit core instead of carrying its own ad hoc family mapping. The live pod proved that both registered families still produce the same real verdicts through the generic path, while unsupported bundle names remain truthfully blocked. The registry currently contains exactly the two proven families: `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`
+- Interpretation summary: this is operational hardening only. It makes supported-family routing explicit and maintainable without widening bundle support, changing benchmark semantics, or altering evidence-facing interpretation
+- Promoted to evidence?: no

@@ -737,3 +737,12 @@ Risk:
   Unsupported bundle families now return an explicit blocked report instead of
   silently pretending to be generically supported. This remains operational
   hardening only, and `training_ready` remains `false`
+- 2026-04-07: the generic downstream audit dispatcher no longer owns its own
+  family mapping. Supported bundle-family registration now lives in
+  `fmri2img.workflows._downstream_contract_registry`, close to the shared audit
+  core, and the live pod proved that the registry-backed dispatcher still
+  produces the same real contract verdicts for both supported families:
+  `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`.
+  Unsupported bundle families remain explicitly blocked rather than being
+  implicitly treated as supported. This remains operational hardening only, and
+  `training_ready` remains `false`

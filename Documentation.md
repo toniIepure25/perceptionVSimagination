@@ -893,3 +893,36 @@ Paper handoff rule:
   `paired_metrics_available=true`
 - Follow-up: if another bundle family is added later, register it explicitly in
   the dispatcher only after a real concrete audit path exists
+
+## 2026-04-07 - Generic downstream audit dispatcher now reads from an explicit registry
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/_downstream_contract_registry.py`,
+  `src/fmri2img/workflows/audit_downstream_contract.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, local real
+  generic audit invocation against the existing
+  `outputs/canonical/hardening_smoke/` bundle, remote `git pull --rebase`,
+  real pod rerun of the generic audit on both supported families, and focused
+  remote pytest
+- Decision: the top-level dispatcher no longer owns an ad hoc family mapping.
+  Supported bundle-family registration now lives in one checked-in registry
+  module close to the audit core, and the dispatcher resolves strictly through
+  that registry
+- Claim boundary: operational contract hardening only; no benchmark progress,
+  no evidence-freeze change, and `training_ready` remains `false`
+- Detail: the registry currently contains exactly two proven families:
+  `public_nod_imagenet_run10_shared_only_smoke` and `shared_private_smoke`.
+  Unsupported bundle names still return a truthful blocked report with the same
+  stable top-level verdict shape
+- Readiness: both supported live bundle families remain
+  `downstream_contract_ready=true` through the registry-backed generic path;
+  fixed NOD remains perception-only with explicit unavailable paired metrics,
+  while `shared_private_smoke` remains paired with
+  `paired_metrics_available=true`
+- Follow-up: if another family is proven later, add one explicit registry entry
+  only after its concrete audit path and real artifact proof exist
