@@ -3290,6 +3290,218 @@ def _build_shared_private_readiness_fixture(
     return loaded, config_path
 
 
+def _build_full_imagery_overlap_shared_only_readiness_fixture(
+    tmp_path,
+    *,
+    config_snapshot_experiment_name="max_available_overlap",
+    eval_cosine=0.1359634399,
+    transfer_cosine=0.1359634399,
+    eval_mse=0.0022500951,
+    transfer_mse=0.0022500951,
+    eval_pair_count=1,
+    transfer_pair_count=1,
+):
+    from fmri2img.workflows.common import load_workflow_config
+    import yaml
+
+    repo_root = tmp_path
+    train_dir = repo_root / "train"
+    eval_dir = repo_root / "eval"
+    transfer_dir = repo_root / "transfer"
+    export_dir = repo_root / "export"
+    analysis_dir = repo_root / "analysis"
+    for root in (train_dir, eval_dir, transfer_dir, export_dir, analysis_dir):
+        root.mkdir(parents=True, exist_ok=True)
+
+    (repo_root / "mixed.parquet").write_bytes(b"")
+    (repo_root / "targets.parquet").write_bytes(b"")
+
+    (train_dir / "best_decoder.pt").write_text("pt")
+    (train_dir / "config_snapshot.json").write_text(
+        json.dumps(
+            {
+                "experiment": {"name": config_snapshot_experiment_name},
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(repo_root / "mixed.parquet"),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(repo_root / "targets.parquet"),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                    "private_dim": 64,
+                    "shared_dim": 128,
+                },
+                "dataset_capabilities": {
+                    "has_pairing": True,
+                    "paired_group_count": 3,
+                    "has_vividness": False,
+                    "has_confidence": False,
+                },
+            }
+        )
+    )
+    (train_dir / "roi_summary.json").write_text(json.dumps({"roi_groups": {"early_visual": 3}}))
+    (train_dir / "target_summary.json").write_text(json.dumps({"target_space": "vit_l14_image_768"}))
+    (train_dir / "train_history.json").write_text(
+        json.dumps(
+            [
+                {"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.1},
+                {"epoch": 2, "train_loss": 0.9, "val_loss": 0.4, "val_content_cosine": 0.2},
+            ]
+        )
+    )
+
+    eval_metrics = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": eval_cosine, "mse": eval_mse},
+        "condition_availability": {
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+            "pair_metrics_available_from_payload": True,
+        },
+        "by_condition": [
+            {"condition": "imagery", "mean": 0.13422, "std": None, "count": 1},
+            {"condition": "perception", "mean": 0.14527, "std": None, "count": 1},
+        ],
+        "pair_metrics": {
+            "n_pairs": eval_pair_count,
+            "mean_gap_imagery_minus_perception": -0.0110468417,
+            "median_gap_imagery_minus_perception": -0.0110468417,
+        },
+    }
+    transfer_metrics = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": transfer_cosine, "mse": transfer_mse},
+        "condition_availability": {
+            "present_conditions": ["imagery", "perception"],
+            "missing_conditions": [],
+            "paired_metrics_available": True,
+            "paired_metrics_reason": None,
+            "pair_metrics_available_from_payload": True,
+        },
+        "by_condition": [
+            {"condition": "imagery", "mean": 0.13422, "std": None, "count": 1},
+            {"condition": "perception", "mean": 0.14527, "std": None, "count": 1},
+        ],
+        "pair_metrics": {
+            "n_pairs": transfer_pair_count,
+            "mean_gap_imagery_minus_perception": -0.0110468417,
+            "median_gap_imagery_minus_perception": -0.0110468417,
+        },
+    }
+    (eval_dir / "metrics.json").write_text(json.dumps(eval_metrics))
+    (eval_dir / "roi_summary.json").write_text(json.dumps({"ready": True}))
+    (eval_dir / "resolved_roi_groups.json").write_text(json.dumps({"early_visual": {"input_dim": 3}}))
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(transfer_metrics))
+    (transfer_dir / "per_trial_pairs.csv").write_text("pair_id,condition,cosine\n1,perception,0.14527\n1,imagery,0.13422\n")
+
+    (export_dir / "best_decoder.pt").write_text("pt")
+    (export_dir / "config_snapshot.json").write_text(
+        json.dumps({"experiment": {"name": "full_imagery_overlap_shared_only"}})
+    )
+    manifest_target = {
+        "target_name_normalized": "vit_l14_image_768",
+        "target_dimension_normalized": 768,
+        "source_field_shape": "target_name",
+        "target_name_from_payload": "vit_l14_image_768",
+    }
+    condition_semantics = {
+        "present_conditions": ["imagery", "perception"],
+        "missing_conditions": [],
+        "paired_metrics_available": True,
+        "paired_metrics_reason": None,
+        "pair_metrics_available_from_payload": True,
+    }
+    (export_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "target_spec": {"target_name": "vit_l14_image_768", "dimension": 768},
+                "metadata": {
+                    "experiment": {
+                        "name": "full_imagery_overlap_shared_only",
+                        "benchmark_role": "canonical_neural_baseline",
+                        "evidence_tier": "validated",
+                    },
+                    "target_spec_normalized": manifest_target,
+                    "condition_semantics": condition_semantics,
+                },
+            }
+        )
+    )
+    (export_dir / "decoder_card.json").write_text(
+        json.dumps(
+            {
+                "experiment": {
+                    "name": "full_imagery_overlap_shared_only",
+                    "benchmark_role": "canonical_neural_baseline",
+                    "evidence_tier": "validated",
+                },
+                "target": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "source_field_shape": "target_name",
+                    "target_name_from_payload": "vit_l14_image_768",
+                },
+                "condition_semantics": condition_semantics,
+            }
+        )
+    )
+    (export_dir / "decoder_card.md").write_text("# Decoder Card\n")
+
+    config_path = repo_root / "full_imagery_overlap_shared_only.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": "full_imagery_overlap_shared_only",
+                    "description": "checked-in shared-only canonical neural baseline",
+                    "benchmark_role": "canonical_neural_baseline",
+                    "evidence_tier": "validated",
+                },
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(repo_root / "mixed.parquet"),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(repo_root / "targets.parquet"),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "branch_embedding_dim": 128,
+                    "shared_dim": 128,
+                    "private_dim": 64,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 8, "epochs": 5, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 16, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(analysis_dir)},
+                "export": {"output_dir": str(export_dir)},
+                "preparation": {"preflight": {"paper_pair_threshold": 32}},
+            }
+        )
+    )
+    return load_workflow_config(str(config_path)), config_path
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -3352,6 +3564,68 @@ def test_shared_private_smoke_readiness_audit_marks_evidence_blocked_when_eval_m
     assert "eval metrics are incomplete or non-finite for the candidate bundle" in report["blocked_reasons"][
         "evidence_ready_candidate"
     ]
+
+
+def test_full_imagery_overlap_shared_only_readiness_audit_builds_candidate_report(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_shared_only_readiness import (
+        build_full_imagery_overlap_shared_only_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_imagery_overlap_shared_only_readiness_fixture(tmp_path)
+    report = build_full_imagery_overlap_shared_only_readiness_audit(loaded, config_path=config_path)
+    assert report["bundle_identity"]["experiment_name"] == "full_imagery_overlap_shared_only"
+    assert report["state"] == {
+        "operational_ready": True,
+        "downstream_contract_ready": True,
+        "evidence_ready_candidate": True,
+        "training_ready": False,
+    }
+    assert report["target_spec"]["target_name_normalized"] == "vit_l14_image_768"
+    assert report["condition_semantics"]["paired_metrics_available"] is True
+    assert report["blocked_reasons"]["evidence_ready_candidate"] == []
+    joined = " ".join(report["blocked_reasons"]["training_ready"])
+    assert "max_available_overlap override run" in joined
+    assert "1/32" in joined
+
+
+def test_full_imagery_overlap_shared_only_readiness_audit_marks_evidence_blocked_when_eval_metrics_fail(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_shared_only_readiness import (
+        build_full_imagery_overlap_shared_only_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_imagery_overlap_shared_only_readiness_fixture(
+        tmp_path,
+        eval_cosine=None,
+    )
+    report = build_full_imagery_overlap_shared_only_readiness_audit(loaded, config_path=config_path)
+    assert report["state"]["operational_ready"] is True
+    assert report["state"]["downstream_contract_ready"] is True
+    assert report["state"]["evidence_ready_candidate"] is False
+    assert report["state"]["training_ready"] is False
+    assert "eval metrics are incomplete or non-finite for the candidate bundle" in report["blocked_reasons"][
+        "evidence_ready_candidate"
+    ]
+
+
+def test_full_imagery_overlap_shared_only_readiness_audit_can_mark_training_ready_when_gate_is_met(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_shared_only_readiness import (
+        build_full_imagery_overlap_shared_only_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_imagery_overlap_shared_only_readiness_fixture(
+        tmp_path,
+        config_snapshot_experiment_name="full_imagery_overlap_shared_only",
+        eval_pair_count=32,
+        transfer_pair_count=32,
+    )
+    report = build_full_imagery_overlap_shared_only_readiness_audit(loaded, config_path=config_path)
+    assert report["state"] == {
+        "operational_ready": True,
+        "downstream_contract_ready": True,
+        "evidence_ready_candidate": True,
+        "training_ready": True,
+    }
+    assert report["blocked_reasons"]["training_ready"] == []
 
 
 def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
