@@ -85,12 +85,13 @@ def _metric_summary(payload: dict[str, Any], *, expected_target_space: str) -> d
 
 
 def _train_provenance_snapshot(config_snapshot: dict[str, Any], config) -> dict[str, Any]:
+    expected_config = config.to_dict() if hasattr(config, "to_dict") else config
     snapshot_model = config_snapshot.get("model", {})
-    expected_model = config["model"]
+    expected_model = expected_config["model"]
     snapshot_dataset = config_snapshot.get("dataset", {})
-    expected_dataset = config["dataset"]
+    expected_dataset = expected_config["dataset"]
     snapshot_targets = config_snapshot.get("targets", {})
-    expected_targets = config["targets"]
+    expected_targets = expected_config["targets"]
     model_keys = ("disentanglement_mode", "use_domain_head", "use_vividness_head", "private_dim", "shared_dim")
     dataset_keys = ("subject", "mixed_index", "perception_conditions", "imagery_conditions")
     target_keys = ("name", "dimension", "cache_path", "id_column")
