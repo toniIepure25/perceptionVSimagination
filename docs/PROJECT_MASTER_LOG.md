@@ -771,3 +771,20 @@ Risk:
   explicit: the bundle is a real paired evidence candidate, but it is still
   smoke-scoped and fixture-backed, so it is not yet eligible for evidence-grade
   or production-facing promotion
+- 2026-04-07: the repo now also has a first non-smoke shared-only readiness
+  lane for the best current canonical neural baseline. The new checked-in config
+  `configs/canonical/full_imagery_overlap_shared_only.yaml` and workflow
+  `fmri2img.workflows.audit_full_imagery_overlap_shared_only_readiness` now
+  audit the real pod bundle under
+  `outputs/canonical/{train,eval,transfer,export}/full_imagery_overlap_shared_only/`.
+  After refreshing the export bundle onto the current normalized manifest/card
+  contract, the live readiness artifact
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`
+  marks `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`. The remaining
+  blockers are explicit and engineering-honest: the train artifact still has
+  `max_available_overlap` override provenance instead of a dedicated checked-in
+  shared-only training run, and the held-out paired evaluation slice is still
+  only `1/32` paired groups. This strengthens the project’s benchmark-adjacent
+  and Animus-adjacent promotion path without changing the evidence freeze or
+  claiming production readiness

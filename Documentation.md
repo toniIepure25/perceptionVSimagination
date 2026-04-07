@@ -1027,3 +1027,44 @@ Paper handoff rule:
 - Follow-up: the next honest promotion target is a non-smoke canonical bundle
   with non-fixture inputs that can satisfy the same evidence checks and then
   clear the explicit `training_ready` gate
+
+## 2026-04-07 - Full-overlap shared-only now has a checked-in non-smoke readiness lane
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `configs/canonical/full_imagery_overlap_shared_only.yaml`,
+  `src/fmri2img/workflows/audit_full_imagery_overlap_shared_only_readiness.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, remote
+  `git pull --rebase`, real pod reruns of `eval_decoder`, `eval_transfer`,
+  `export_for_animus`, and
+  `audit_full_imagery_overlap_shared_only_readiness` against the existing
+  `outputs/canonical/train/full_imagery_overlap_shared_only/best_decoder.pt`,
+  plus focused remote pytest
+- Decision: the best honest next promotion lane is the real
+  `full_imagery_overlap_shared_only` bundle, not `shared_private_smoke`,
+  because it is paired, non-smoke, non-fixture, already evidence-promoted as
+  the strongest current canonical neural baseline, and closer to practical
+  Animus reuse than the exploratory shared-private family
+- Claim boundary: stronger promotion gating only; no benchmark-freeze change,
+  no claim that ridge has been surpassed, and no production-ready Animus claim
+- Detail: the shared-only full-overlap export bundle was refreshed onto the
+  current normalized manifest/decoder-card contract, and the new readiness
+  audit now writes
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`
+  from real pod artifacts. The live report marks
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`
+- Readiness: the remaining `training_ready` blockers are now explicit and
+  machine-readable:
+  1. the train bundle still comes from a `max_available_overlap` override run
+     rather than a dedicated checked-in
+     `full_imagery_overlap_shared_only` training run
+  2. held-out paired evaluation support is still only `1/32` paired groups
+- Follow-up: the next honest promotion step is a dedicated checked-in
+  non-smoke rerun of `full_imagery_overlap_shared_only` that preserves the same
+  artifact contract while increasing held-out paired support beyond the current
+  tiny evaluation slice
