@@ -788,3 +788,17 @@ Risk:
   only `1/32` paired groups. This strengthens the project’s benchmark-adjacent
   and Animus-adjacent promotion path without changing the evidence freeze or
   claiming production readiness
+- 2026-04-07: blocker `#1` on the shared-only non-smoke promotion lane is now
+  gone. The live pod reran the canonical sequence for
+  `configs/canonical/full_imagery_overlap_shared_only.yaml`, refreshed the
+  train/eval/transfer/export bundle under
+  `outputs/canonical/{train,eval,transfer,export}/full_imagery_overlap_shared_only/`,
+  and rewrote
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`.
+  The refreshed train `config_snapshot.json` now records
+  `experiment.name="full_imagery_overlap_shared_only"` instead of the old
+  `max_available_overlap` override provenance. The readiness state remains
+  honest: `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`, with only one
+  remaining blocker: the held-out paired evaluation slice is still only
+  `1/32` paired groups

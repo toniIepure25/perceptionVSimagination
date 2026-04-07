@@ -1068,3 +1068,38 @@ Paper handoff rule:
   non-smoke rerun of `full_imagery_overlap_shared_only` that preserves the same
   artifact contract while increasing held-out paired support beyond the current
   tiny evaluation slice
+
+## 2026-04-07 - Dedicated checked-in training provenance now exists for full-overlap shared-only
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `.venv` pytest for the unchanged readiness gate,
+  remote `preflight_data`, real pod `train_decoder`, `eval_decoder`,
+  `eval_transfer`, `export_for_animus`, and
+  `audit_full_imagery_overlap_shared_only_readiness`, plus focused remote
+  pytest
+- Decision: this pass removed only blocker `#1` from the shared-only
+  non-smoke promotion lane by replacing the old `max_available_overlap`
+  override provenance with a dedicated checked-in
+  `full_imagery_overlap_shared_only` train artifact
+- Claim boundary: no benchmark promotion, no evidence-grade confirmation, and
+  no production Animus claim; `training_ready` remains `false`
+- Detail: the live pod train bundle at
+  `outputs/canonical/train/full_imagery_overlap_shared_only/` now has
+  `config_snapshot.json` with
+  `experiment.name="full_imagery_overlap_shared_only"` and a fresh 5-epoch
+  history from the checked-in config. The downstream eval / transfer / export
+  bundle was regenerated from that checkpoint, and the refreshed readiness
+  report now leaves only one blocker under `training_ready`:
+  held-out paired evaluation support remains `1/32`
+- Readiness: the live report still marks
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`, but the
+  provenance blocker is now gone
+- Follow-up: the next honest step is to enlarge or rebuild the held-out paired
+  evaluation support for this exact checked-in shared-only bundle so the same
+  readiness gate can test whether `training_ready` can ever turn true without
+  changing criteria
