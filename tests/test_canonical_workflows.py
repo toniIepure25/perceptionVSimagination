@@ -3228,9 +3228,12 @@ def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_pat
         build_downstream_contract_audit,
         resolve_downstream_contract_audit_strategy,
     )
+    from fmri2img.workflows._downstream_contract_registry import get_downstream_contract_audit_registration
 
     loaded, config_path = _build_public_nod_downstream_contract_fixture(tmp_path)
-    assert resolve_downstream_contract_audit_strategy(loaded) == "public_nod_imagenet_run10_shared_only_smoke"
+    registration = resolve_downstream_contract_audit_strategy(loaded)
+    assert registration is get_downstream_contract_audit_registration("public_nod_imagenet_run10_shared_only_smoke")
+    assert registration.bundle_family == "public_nod_imagenet_run10_shared_only_smoke"
     report = build_downstream_contract_audit(loaded, config_path=config_path)
     assert report["bundle_family"] == "public_nod_imagenet_run10_shared_only_smoke"
     assert report["state"]["downstream_contract_ready"] is True
@@ -3241,9 +3244,12 @@ def test_generic_downstream_contract_dispatch_selects_shared_private_strategy(tm
         build_downstream_contract_audit,
         resolve_downstream_contract_audit_strategy,
     )
+    from fmri2img.workflows._downstream_contract_registry import get_downstream_contract_audit_registration
 
     loaded, config_path = _build_shared_private_downstream_contract_fixture(tmp_path)
-    assert resolve_downstream_contract_audit_strategy(loaded) == "shared_private_smoke"
+    registration = resolve_downstream_contract_audit_strategy(loaded)
+    assert registration is get_downstream_contract_audit_registration("shared_private_smoke")
+    assert registration.bundle_family == "shared_private_smoke"
     report = build_downstream_contract_audit(loaded, config_path=config_path)
     assert report["bundle_family"] == "shared_private_smoke"
     assert report["state"]["downstream_contract_ready"] is True
@@ -3285,3 +3291,21 @@ def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_fo
     assert report["consistency"] == {}
     assert report["state"]["downstream_contract_ready"] is False
     assert report["state"]["training_ready"] is False
+
+
+def test_downstream_contract_registry_contains_exact_supported_proven_families():
+    from fmri2img.workflows._downstream_contract_registry import (
+        DOWNSTREAM_CONTRACT_AUDIT_REGISTRY,
+        list_registered_downstream_contract_audits,
+    )
+
+    assert list_registered_downstream_contract_audits() == [
+        "public_nod_imagenet_run10_shared_only_smoke",
+        "shared_private_smoke",
+    ]
+    assert sorted(DOWNSTREAM_CONTRACT_AUDIT_REGISTRY) == list_registered_downstream_contract_audits()
+    assert (
+        DOWNSTREAM_CONTRACT_AUDIT_REGISTRY["public_nod_imagenet_run10_shared_only_smoke"].bundle_family
+        == "public_nod_imagenet_run10_shared_only_smoke"
+    )
+    assert DOWNSTREAM_CONTRACT_AUDIT_REGISTRY["shared_private_smoke"].bundle_family == "shared_private_smoke"

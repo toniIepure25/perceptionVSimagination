@@ -3,28 +3,20 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Callable
 
 from fmri2img.workflows._venv_guard import ensure_project_venv
 
 ensure_project_venv("fmri2img.workflows.audit_downstream_contract")
 
-from fmri2img.workflows.audit_public_nod_shared_only_downstream_contract import (  # noqa: E402
-    build_public_nod_shared_only_downstream_contract_audit,
-)
-from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (  # noqa: E402
-    build_shared_private_smoke_downstream_contract_audit,
+from fmri2img.workflows._downstream_contract_registry import (  # noqa: E402
+    get_downstream_contract_audit_registration,
+    list_registered_downstream_contract_audits,
 )
 from fmri2img.workflows.common import load_workflow_config  # noqa: E402
 from fmri2img.workflows.prep_common import json_safe, write_report  # noqa: E402
 
 
 DEFAULT_CONFIG = "configs/canonical/shared_private_smoke.yaml"
-
-AUDIT_BUILDERS: dict[str, Callable] = {
-    "public_nod_imagenet_run10_shared_only_smoke": build_public_nod_shared_only_downstream_contract_audit,
-    "shared_private_smoke": build_shared_private_smoke_downstream_contract_audit,
-}
 
 
 def _repo_root() -> Path:
@@ -35,20 +27,21 @@ def _default_path(relative: str) -> Path:
     return _repo_root() / relative
 
 
-def resolve_downstream_contract_audit_strategy(config) -> str:
+def resolve_downstream_contract_audit_strategy(config):
     experiment_name = str(config.get("experiment.name", ""))
-    if experiment_name in AUDIT_BUILDERS:
-        return experiment_name
+    registration = get_downstream_contract_audit_registration(experiment_name)
+    if registration is not None:
+        return registration
     raise ValueError(
         "No generic downstream contract audit strategy is registered for "
-        f"experiment.name={experiment_name!r}. Supported experiments: {sorted(AUDIT_BUILDERS)}"
+        f"experiment.name={experiment_name!r}. Supported experiments: {list_registered_downstream_contract_audits()}"
     )
 
 
 def build_downstream_contract_audit(config, *, config_path: str | Path) -> dict:
-    strategy = resolve_downstream_contract_audit_strategy(config)
-    report = AUDIT_BUILDERS[strategy](config, config_path=config_path)
-    report.setdefault("bundle_family", strategy)
+    registration = resolve_downstream_contract_audit_strategy(config)
+    report = registration.builder(config, config_path=config_path)
+    report.setdefault("bundle_family", registration.bundle_family)
     return report
 
 
