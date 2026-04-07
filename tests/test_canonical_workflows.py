@@ -3300,8 +3300,10 @@ def _build_full_imagery_overlap_shared_only_readiness_fixture(
     transfer_mse=0.0022500951,
     eval_pair_count=1,
     transfer_pair_count=1,
+    split_pair_counts=None,
 ):
     from fmri2img.workflows.common import load_workflow_config
+    import pandas as pd
     import yaml
 
     repo_root = tmp_path
@@ -3313,7 +3315,24 @@ def _build_full_imagery_overlap_shared_only_readiness_fixture(
     for root in (train_dir, eval_dir, transfer_dir, export_dir, analysis_dir):
         root.mkdir(parents=True, exist_ok=True)
 
-    (repo_root / "mixed.parquet").write_bytes(b"")
+    split_pair_counts = split_pair_counts or {"train": 3, "val": 1, "test": 1}
+    mixed_rows = []
+    pair_id = 1000
+    for split, count in split_pair_counts.items():
+        for _ in range(count):
+            for condition in ("perception", "imagery"):
+                mixed_rows.append(
+                    {
+                        "subject": "subj02",
+                        "nsdId": pair_id,
+                        "nsd_id": pair_id,
+                        "pair_id": pair_id,
+                        "condition": condition,
+                        "split": split,
+                    }
+                )
+            pair_id += 1
+    pd.DataFrame(mixed_rows).to_parquet(repo_root / "mixed.parquet", index=False)
     (repo_root / "targets.parquet").write_bytes(b"")
 
     (train_dir / "best_decoder.pt").write_text("pt")
@@ -3342,7 +3361,7 @@ def _build_full_imagery_overlap_shared_only_readiness_fixture(
                 },
                 "dataset_capabilities": {
                     "has_pairing": True,
-                    "paired_group_count": 3,
+                    "paired_group_count": sum(split_pair_counts.values()),
                     "has_vividness": False,
                     "has_confidence": False,
                 },
@@ -3582,6 +3601,10 @@ def test_full_imagery_overlap_shared_only_readiness_audit_builds_candidate_repor
     }
     assert report["target_spec"]["target_name_normalized"] == "vit_l14_image_768"
     assert report["condition_semantics"]["paired_metrics_available"] is True
+    assert report["heldout_support"]["dataset_pair_group_count"] == 5
+    assert report["heldout_support"]["split_pair_group_counts"] == {"train": 3, "val": 1, "test": 1}
+    assert report["heldout_support"]["dataset_ceiling_blocks_training"] is True
+    assert report["heldout_support"]["current_dataset_can_meet_training_pair_threshold"] is False
     assert report["blocked_reasons"]["evidence_ready_candidate"] == []
     joined = " ".join(report["blocked_reasons"]["training_ready"])
     assert "max_available_overlap override run" in joined
@@ -3617,6 +3640,7 @@ def test_full_imagery_overlap_shared_only_readiness_audit_can_mark_training_read
         config_snapshot_experiment_name="full_imagery_overlap_shared_only",
         eval_pair_count=32,
         transfer_pair_count=32,
+        split_pair_counts={"train": 6, "val": 2, "test": 32},
     )
     report = build_full_imagery_overlap_shared_only_readiness_audit(loaded, config_path=config_path)
     assert report["state"] == {
@@ -3625,6 +3649,8 @@ def test_full_imagery_overlap_shared_only_readiness_audit_can_mark_training_read
         "evidence_ready_candidate": True,
         "training_ready": True,
     }
+    assert report["heldout_support"]["dataset_ceiling_blocks_training"] is False
+    assert report["heldout_support"]["current_dataset_can_meet_training_pair_threshold"] is True
     assert report["blocked_reasons"]["training_ready"] == []
 
 

@@ -6,10 +6,13 @@ import math
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from fmri2img.workflows._venv_guard import ensure_project_venv
 
 ensure_project_venv("fmri2img.workflows.audit_full_imagery_overlap_shared_only_readiness")
 
+from fmri2img.data.canonical import normalize_decoder_index  # noqa: E402
 from fmri2img.workflows._downstream_contract_audit import (  # noqa: E402
     build_downstream_contract_audit_report,
     load_json,
@@ -81,6 +84,54 @@ def _metric_summary(payload: dict[str, Any], *, expected_target_space: str) -> d
         "pair_count": pair_count,
         "pair_count_positive": pair_count > 0,
         "paired_metrics_available": bool(condition_semantics["paired_metrics_available"]),
+    }
+
+
+def _count_paired_groups(df: pd.DataFrame) -> int:
+    if df.empty or "pair_id" not in df.columns or "condition" not in df.columns:
+        return 0
+    grouped = df.groupby("pair_id")["condition"].agg(lambda values: {str(value) for value in values})
+    return int(sum({"perception", "imagery"}.issubset(values) for values in grouped))
+
+
+def _heldout_support_summary(
+    config,
+    *,
+    eval_pair_count: int,
+    transfer_pair_count: int,
+    training_pair_threshold: int,
+) -> dict[str, Any]:
+    allowed_conditions = list(config["dataset"].get("perception_conditions", ["perception"])) + list(
+        config["dataset"].get("imagery_conditions", ["imagery"])
+    )
+    mixed_index_path = Path(config["dataset"]["mixed_index"]).resolve()
+    mixed_df = normalize_decoder_index(pd.read_parquet(mixed_index_path), allowed_conditions=allowed_conditions)
+    split_pair_counts = {
+        split: _count_paired_groups(mixed_df[mixed_df["split"] == split].reset_index(drop=True))
+        for split in ("train", "val", "test")
+    }
+    total_pair_count = _count_paired_groups(mixed_df)
+    heldout_pair_count = min(eval_pair_count, transfer_pair_count)
+    dataset_ceiling_blocks_training = total_pair_count < training_pair_threshold
+    return {
+        "mixed_index": str(mixed_index_path),
+        "dataset_rows": int(len(mixed_df)),
+        "split_row_counts": {split: int((mixed_df["split"] == split).sum()) for split in ("train", "val", "test")},
+        "dataset_pair_group_count": total_pair_count,
+        "split_pair_group_counts": split_pair_counts,
+        "heldout_pair_count_from_metrics": heldout_pair_count,
+        "heldout_pair_count_matches_prepared_test_split": heldout_pair_count == split_pair_counts["test"],
+        "training_pair_threshold": training_pair_threshold,
+        "current_dataset_can_meet_training_pair_threshold": total_pair_count >= training_pair_threshold,
+        "dataset_ceiling_blocks_training": dataset_ceiling_blocks_training,
+        "threshold_gap_from_total_pairs": max(0, training_pair_threshold - total_pair_count),
+        "threshold_gap_from_heldout_pairs": max(0, training_pair_threshold - heldout_pair_count),
+        "ceiling_blocked_reason": (
+            f"current prepared dataset exposes only {total_pair_count} paired groups total, below the "
+            f"{training_pair_threshold}-group training gate"
+            if dataset_ceiling_blocks_training
+            else None
+        ),
     }
 
 
@@ -338,6 +389,12 @@ def build_full_imagery_overlap_shared_only_readiness_audit(config, *, config_pat
 
     training_pair_threshold = int(config.get("preparation.preflight.paper_pair_threshold", 32))
     heldout_pair_count = min(eval_summary["pair_count"], transfer_summary["pair_count"])
+    heldout_support = _heldout_support_summary(
+        config,
+        eval_pair_count=eval_summary["pair_count"],
+        transfer_pair_count=transfer_summary["pair_count"],
+        training_pair_threshold=training_pair_threshold,
+    )
     training_checks = {
         "evidence_ready_candidate": evidence_ready_candidate,
         "train_provenance_matches_checked_in_config": bool(
@@ -397,6 +454,7 @@ def build_full_imagery_overlap_shared_only_readiness_audit(config, *, config_pat
             "export_dir": str(export_output_dir),
             "train_history": str((train_output_dir / "train_history.json").resolve()),
             "config_snapshot": str((train_output_dir / "config_snapshot.json").resolve()),
+            "mixed_index": str(Path(config["dataset"]["mixed_index"]).resolve()),
             "eval_metrics": str((eval_output_dir / "metrics.json").resolve()),
             "transfer_metrics": str((transfer_output_dir / "transfer_metrics.json").resolve()),
             "export_manifest": str((export_output_dir / "manifest.json").resolve()),
@@ -410,6 +468,7 @@ def build_full_imagery_overlap_shared_only_readiness_audit(config, *, config_pat
             "eval": eval_summary,
             "transfer": transfer_summary,
         },
+        "heldout_support": heldout_support,
         "downstream_contract": {
             "state": dict(downstream_contract.get("state", {})),
             "consistency": dict(downstream_contract.get("consistency", {})),
@@ -445,6 +504,7 @@ def _blocked_report(config_path: str | Path, message: str) -> dict[str, Any]:
         "target_spec": {},
         "condition_semantics": {},
         "metrics": {},
+        "heldout_support": {},
         "downstream_contract": {},
         "evidence_checks": {},
         "training_checks": {},
