@@ -63,11 +63,6 @@ def main(argv: list[str] | None = None) -> int:
         report = build_blocked_downstream_contract_audit_report(
             config_path=args.config,
             message=str(exc),
-            operational_boundary=[
-                "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
-                "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
-                "training_ready remains false in blocked dispatcher reports",
-            ],
         )
         output_path = args.output or "outputs/canonical/eval/downstream_contract_audit.json"
         write_report(output_path, report)

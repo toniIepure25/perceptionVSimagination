@@ -3259,7 +3259,10 @@ def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_fo
     import yaml
 
     from fmri2img.workflows.audit_downstream_contract import resolve_downstream_contract_audit_strategy
-    from fmri2img.workflows._downstream_contract_audit import build_blocked_downstream_contract_audit_report
+    from fmri2img.workflows._downstream_contract_audit import (
+        DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY,
+        build_blocked_downstream_contract_audit_report,
+    )
     from fmri2img.workflows.common import load_workflow_config
 
     config_path = tmp_path / "unsupported.yaml"
@@ -3292,18 +3295,18 @@ def test_generic_downstream_contract_dispatch_returns_truthful_blocked_report_fo
     assert report["consistency"] == {}
     assert report["state"]["downstream_contract_ready"] is False
     assert report["state"]["training_ready"] is False
+    assert report["operational_boundary"] == list(DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY)
 
 
 def test_build_blocked_downstream_contract_audit_report_returns_stable_shape(tmp_path):
-    from fmri2img.workflows._downstream_contract_audit import build_blocked_downstream_contract_audit_report
+    from fmri2img.workflows._downstream_contract_audit import (
+        DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY,
+        build_blocked_downstream_contract_audit_report,
+    )
 
     config_path = tmp_path / "config.yaml"
     config_path.write_text("experiment: {name: unsupported}\n")
-    report = build_blocked_downstream_contract_audit_report(
-        config_path=config_path,
-        message="unsupported",
-        operational_boundary=["blocked"],
-    )
+    report = build_blocked_downstream_contract_audit_report(config_path=config_path, message="unsupported")
     assert report == {
         "config": str(config_path.resolve()),
         "artifact_paths": {},
@@ -3319,7 +3322,7 @@ def test_build_blocked_downstream_contract_audit_report_returns_stable_shape(tmp
             "training_ready": False,
         },
         "blocked_reasons": ["unsupported"],
-        "operational_boundary": ["blocked"],
+        "operational_boundary": list(DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY),
     }
 
 
@@ -3360,11 +3363,6 @@ def test_generic_downstream_contract_main_uses_shared_blocked_report_helper(tmp_
             "experiment.name='unsupported_bundle'. Supported experiments: "
             "['public_nod_imagenet_run10_shared_only_smoke', 'shared_private_smoke']"
         ),
-        operational_boundary=[
-            "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
-            "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
-            "training_ready remains false in blocked dispatcher reports",
-        ],
     )
     assert report == expected
 

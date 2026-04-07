@@ -8,6 +8,13 @@ from fmri2img.evaluation import normalize_condition_semantics_payload
 from fmri2img.export.animus import normalize_target_spec_payload
 
 
+DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY = (
+    "this generic dispatcher only supports bundle families with a registered downstream audit strategy",
+    "unsupported configs are reported as blocked instead of being treated as implicitly auditable",
+    "training_ready remains false in blocked dispatcher reports",
+)
+
+
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
@@ -178,5 +185,7 @@ def build_blocked_downstream_contract_audit_report(
         "consistency": {},
         "state": state,
         "blocked_reasons": [message],
-        "operational_boundary": operational_boundary or [],
+        "operational_boundary": operational_boundary
+        if operational_boundary is not None
+        else list(DEFAULT_GENERIC_BLOCKED_OPERATIONAL_BOUNDARY),
     }
