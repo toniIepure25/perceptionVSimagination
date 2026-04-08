@@ -831,3 +831,16 @@ Risk:
   post-train bundle, so the current main promotion lane remains unchanged and
   the next honest move is explicit: paired-data expansion, not lane switching,
   gate weakening, or benchmark inflation
+- 2026-04-08: the repo now also has a machine-readable mounted-source ceiling
+  audit for that same main lane:
+  `fmri2img.workflows.audit_full_imagery_overlap_data_expansion`. The live pod
+  wrote
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/data_expansion_audit.json`,
+  which confirms that the full canonical imagery indices already exist for
+  `subj01..subj08` and that only `subj02`, `subj03`, `subj05`, and `subj07`
+  overlap the mounted perception indices at all. The current lane therefore
+  already exhausts the environment’s honest paired support at `5` total / `1`
+  held-out pair group, and no prepared mixed index under
+  `outputs/canonical/prepared/` exceeds that ceiling. The next honest move is
+  now explicit and machine-readable: external paired-data expansion, not more
+  overlap hardening on the currently mounted public source

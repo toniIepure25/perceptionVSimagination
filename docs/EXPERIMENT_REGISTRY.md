@@ -475,3 +475,16 @@ Copy this block:
 - Result summary: the live pod now has a machine-readable audit proving that no checked-in canonical lane currently improves on `full_imagery_overlap_shared_only` under the unchanged readiness philosophy. The report keeps `full_imagery_overlap_shared_only` as the selected main promotion lane, confirms that the current bundle still has `5` total paired groups with `1` held-out pair, and shows that the nearby checked-in alternatives either expose the same or weaker paired support and/or lack a complete real post-train bundle on the pod
 - Interpretation summary: this is promotion-path hardening only. It does not change the evidence freeze, benchmark ranking, or production claims. It makes the next honest move explicit and machine-readable: paired-data expansion for the current main lane, not benchmark inflation or lane switching
 - Promoted to evidence?: no
+
+## EXP-2026-04-08-FULL-OVERLAP-DATA-EXPANSION-AUDIT
+
+- Date: 2026-04-08
+- Lane: Data acquisition / benchmark expansion
+- Benchmark rung / role: mounted-source ceiling audit for the current non-smoke shared-only canonical lane
+- Config: `configs/canonical/full_imagery_overlap_shared_only.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.audit_full_imagery_overlap_data_expansion --config configs/canonical/full_imagery_overlap_shared_only.yaml`
+- Dataset / prepared artifacts: current readiness artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`; current promotion-path artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/promotion_path_audit.json`; mounted perception indices from the repo and fallback sibling path; mounted canonical imagery indices under `cache/indices/imagery_full_all/{subject}.parquet`; prepared mixed-index scan under `outputs/canonical/prepared/`
+- Output / artifact path: data-expansion audit `outputs/canonical/eval/full_imagery_overlap_shared_only/data_expansion_audit.json`
+- Status: done
+- Result summary: the live pod now has a machine-readable proof that the current environment cannot produce more honest paired overlap for `full_imagery_overlap_shared_only` than the existing `5` total / `1` held-out pair groups. The audit confirms that the full canonical imagery indices already exist for `subj01..subj08`, but only `subj02`, `subj03`, `subj05`, and `subj07` overlap the mounted perception indices at all, exactly matching the current prepared dataset. It also confirms that no prepared mixed index under `outputs/canonical/prepared/` exceeds the current `5`-pair ceiling
+- Interpretation summary: this is data-ceiling auditing only. It does not change the evidence freeze or benchmark ordering. It makes the next honest move explicit: external paired-data expansion or a richer mounted paired source for the same lane
+- Promoted to evidence?: no

@@ -1179,3 +1179,38 @@ Paper handoff rule:
 - Follow-up: the next honest step is to increase paired overlap for the exact
   full-overlap shared-only lane; lane switching is not justified by the current
   mounted evidence
+
+## 2026-04-08 - Full-overlap shared-only now has a mounted data-expansion ceiling audit
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_full_imagery_overlap_data_expansion.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile` and `.venv` pytest; remote
+  `git pull --rebase`; real pod
+  `audit_full_imagery_overlap_data_expansion`; focused remote pytest
+- Decision: the current environment cannot produce more honest paired overlap
+  for `full_imagery_overlap_shared_only` than the existing `5` total / `1`
+  held-out pair groups. The blocker is now explicitly mounted-data availability,
+  not a missed prepared artifact, not a stronger canonical lane, and not an
+  avoidable overlap-prep choice
+- Claim boundary: no benchmark promotion, no evidence-grade confirmation, and
+  no production Animus claim; `training_ready` remains `false`
+- Detail: the live pod audit artifact at
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/data_expansion_audit.json`
+  confirms that the full all-subject canonical imagery indices already exist
+  for `subj01..subj08`, but only `subj02`, `subj03`, `subj05`, and `subj07`
+  overlap the mounted perception indices at all. The resulting subject-level
+  support is exactly the current lane: `2 + 1 + 1 + 1 = 5` paired groups total.
+  The same audit also scans `outputs/canonical/prepared/` and confirms that no
+  prepared mixed index exceeds the current `5`-pair full-overlap dataset
+- Readiness: the current main lane remains
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`; the new audit
+  adds `data_ceiling_confirmed=true` for the mounted environment
+- Follow-up: the next honest step is external paired-data expansion or a richer
+  mounted paired source for the same lane; there is no further honest growth to
+  extract from the currently mounted full public NSD-Imagery source
