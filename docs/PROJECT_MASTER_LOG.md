@@ -874,3 +874,16 @@ Risk:
   exact next move still `mount_richer_external_nsd_source`. This is
   operational handoff hardening only: it does not change the evidence freeze,
   benchmark ordering, or `training_ready` state
+- 2026-04-09: the repo now also has a separate paper-2 planning surface for
+  the fixed public NOD shared-only Animus lane:
+  `fmri2img.workflows.plan_public_nod_animus_paper_lane` plus
+  `docs/PAPER_2_PUBLIC_NOD_ANIMUS_LANE.md`. The live pod wrote
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/paper_lane_plan.json`,
+  which keeps the NOD lane in its correct current state
+  (`operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=false`, `training_ready=false`) while freezing a
+  separate public-data paper direction:
+  `reliability_aware_public_shared_only_decoder`. This is paper-lane planning
+  only: it does not modify the `full_imagery_overlap_shared_only` benchmark
+  lane, does not promote smoke artifacts to evidence, and does not claim
+  production Animus readiness

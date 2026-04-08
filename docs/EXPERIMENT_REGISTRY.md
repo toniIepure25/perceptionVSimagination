@@ -514,3 +514,16 @@ Copy this block:
 - Result summary: the live pod now has a machine-readable operator handoff for the first richer external NSD-style mount on the current main lane. The report keeps the current shared-only bundle state unchanged (`operational_ready=true`, `downstream_contract_ready=true`, `evidence_ready_candidate=true`, `training_ready=false`) and truthfully marks `mount_contract_satisfied=false`, `provenance_complete=false`, and `rebuild_should_proceed=false`, with `next_honest_move="mount_richer_external_nsd_source"`. It also leaves behind the exact canonical command list to run once the mount contract is satisfied
 - Interpretation summary: this is operational handoff hardening only. It does not claim new paired data, benchmark progress, evidence-grade validation, or production Animus readiness. It removes the remaining ad hoc operator ambiguity between “source mounted” and “full canonical rebuild can start”
 - Promoted to evidence?: no
+
+## EXP-2026-04-09-PUBLIC-NOD-PAPER2-LANE-PLAN
+
+- Date: 2026-04-09
+- Lane: Paper writing
+- Benchmark rung / role: separate paper-2 planning surface for the fixed public NOD shared-only Animus lane
+- Config: `configs/canonical/public_nod_imagenet_run10_shared_only.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.plan_public_nod_animus_paper_lane --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml`
+- Dataset / prepared artifacts: `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`; `cache/indices/public_nod/imagenet_run10_target_embedding_cache.parquet`; `cache/indices/public_nod/imagenet_run10_roi_materialized.parquet`; `outputs/public_nod/train/trainer_preflight.json`; `outputs/public_nod/train/imagenet_run10_shared_only_smoke/smoke_report.json`; `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/eval_export_smoke_report.json`; `outputs/public_nod/eval/imagenet_run10_shared_only_smoke/downstream_contract_audit.json`
+- Output / artifact path: `outputs/public_nod/paper2/imagenet_run10_shared_only/paper_lane_plan.json`
+- Status: done
+- Result summary: the live pod now has a separate machine-readable paper-2 planning artifact for the fixed public NOD shared-only lane. The report confirms the current public-data lane is already `operational_ready=true` and `downstream_contract_ready=true`, while still marking `evidence_ready_candidate=false` and `training_ready=false`. It also freezes the selected paper direction (`reliability_aware_public_shared_only_decoder`), the current publication gaps, and the minimal experiment ladder for a public-data Animus paper without modifying the full-overlap paper lane
+- Interpretation summary: this is planning and claim-boundary hardening only. It does not convert smoke outputs into evidence, does not change the paired benchmark ladder, and does not create a publishable result by itself
+- Promoted to evidence?: no

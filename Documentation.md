@@ -1281,3 +1281,28 @@ Paper handoff rule:
 - Follow-up: the next honest step is to mount or acquire a richer NSD-style
   paired source into `cache/nsd_imagery_external/` and rerun the unchanged
   canonical rebuild ladder
+
+## 2026-04-09 - Public NOD paper-2 lane now has a separate planning artifact
+
+- Scope: paper writing, validation
+- Status: completed
+- Surfaces touched:
+  `docs/PAPER_2_PUBLIC_NOD_ANIMUS_LANE.md`,
+  `src/fmri2img/workflows/plan_public_nod_animus_paper_lane.py`,
+  `tests/test_canonical_workflows.py`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile` and focused `.venv` pytest; remote
+  `git pull --rebase`, real pod
+  `plan_public_nod_animus_paper_lane`, and focused remote pytest
+- Decision: the repo now has one separate paper-2 planning surface for the
+  fixed public NOD shared-only lane. The new real artifact at
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/paper_lane_plan.json`
+  confirms that the lane is already operationally strong and
+  `downstream_contract_ready=true`, but it remains
+  `evidence_ready_candidate=false` and `training_ready=false`
+- Claim boundary: this planning artifact does not change the
+  `full_imagery_overlap_shared_only` benchmark lane, does not promote the NOD
+  smoke bundle to evidence, and does not claim production Animus readiness
+- Follow-up: the next exact rerunnable command for this lane is
+  `./.venv/bin/python -m fmri2img.workflows.plan_public_nod_animus_paper_lane --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml`
