@@ -3524,6 +3524,7 @@ def _build_full_imagery_overlap_shared_only_readiness_fixture(
 def _write_paired_mixed_index(path, split_pair_counts):
     import pandas as pd
 
+    path.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     pair_id = 1000
     for split, count in split_pair_counts.items():
@@ -3798,6 +3799,204 @@ def _build_full_overlap_promotion_path_fixture(
     return load_workflow_config(str(current_config_path)), current_config_path, candidate_paths
 
 
+def _write_simple_subject_index(path, *, subject, nsd_ids):
+    import pandas as pd
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for nsd_id in nsd_ids:
+        rows.append(
+            {
+                "subject": subject,
+                "nsdId": int(nsd_id),
+                "nsd_id": int(nsd_id),
+                "split": "train",
+            }
+        )
+    pd.DataFrame(rows).to_parquet(path, index=False)
+
+
+def _write_full_overlap_current_mixed(path):
+    import pandas as pd
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    subject_pairs = {
+        "subj02": [(1001, "train"), (1002, "test")],
+        "subj03": [(1003, "train")],
+        "subj05": [(1004, "val")],
+        "subj07": [(1005, "train")],
+    }
+    for subject, pairs in subject_pairs.items():
+        for nsd_id, split in pairs:
+            for condition in ("perception", "imagery"):
+                rows.append(
+                    {
+                        "subject": subject,
+                        "nsdId": nsd_id,
+                        "nsd_id": nsd_id,
+                        "pair_id": f"{subject}-{nsd_id}",
+                        "condition": condition,
+                        "split": split,
+                    }
+                )
+    pd.DataFrame(rows).to_parquet(path, index=False)
+
+
+def _build_full_overlap_data_expansion_fixture(tmp_path, *, extra_unused_subject_overlap=False):
+    from fmri2img.workflows.common import load_workflow_config
+    import yaml
+
+    repo_root = tmp_path
+    eval_dir = repo_root / "eval"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    train_dir = repo_root / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    transfer_dir = repo_root / "transfer"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+    export_dir = repo_root / "export"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    analysis_dir = repo_root / "analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    targets_path = repo_root / "targets.parquet"
+    targets_path.write_bytes(b"")
+
+    current_mixed = repo_root / "outputs" / "canonical" / "prepared" / "full_imagery_overlap" / "full_imagery_overlap_mixed_with_roi.parquet"
+    _write_full_overlap_current_mixed(current_mixed)
+    smaller_mixed = repo_root / "outputs" / "canonical" / "prepared" / "overlap_bootstrap" / "multisubj_overlap_mixed_with_roi.parquet"
+    _write_paired_mixed_index(smaller_mixed, {"train": 2, "val": 1, "test": 1})
+
+    (eval_dir / "readiness_audit.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "operational_ready": True,
+                    "downstream_contract_ready": True,
+                    "evidence_ready_candidate": True,
+                    "training_ready": False,
+                },
+                "heldout_support": {
+                    "mixed_index": str(current_mixed),
+                    "dataset_rows": 10,
+                    "split_row_counts": {"train": 6, "val": 2, "test": 2},
+                    "dataset_pair_group_count": 5,
+                    "split_pair_group_counts": {"train": 3, "val": 1, "test": 1},
+                    "heldout_pair_count_from_metrics": 1,
+                    "heldout_pair_count_matches_prepared_test_split": True,
+                    "training_pair_threshold": 32,
+                    "current_dataset_can_meet_training_pair_threshold": False,
+                    "dataset_ceiling_blocks_training": True,
+                    "threshold_gap_from_total_pairs": 27,
+                    "threshold_gap_from_heldout_pairs": 31,
+                    "ceiling_blocked_reason": "current prepared dataset exposes only 5 paired groups total, below the 32-group training gate",
+                },
+            }
+        )
+    )
+    (eval_dir / "promotion_path_audit.json").write_text(
+        json.dumps(
+            {
+                "selection": {
+                    "selected_main_promotion_lane": "full_imagery_overlap_shared_only",
+                    "stronger_paired_support_available": False,
+                    "stronger_real_candidate_available": False,
+                }
+            }
+        )
+    )
+
+    primary_subject_ids = {
+        "subj01": [],
+        "subj02": [1001, 1002],
+        "subj05": [1004],
+        "subj07": [1005],
+    }
+    fallback_subject_ids = {
+        "subj03": [1003],
+        "subj04": [1001] if extra_unused_subject_overlap else [],
+        "subj06": [],
+        "subj08": [],
+    }
+    imagery_ids = [1001, 1002, 1003, 1004, 1005]
+
+    for subject, ids in primary_subject_ids.items():
+        _write_simple_subject_index(
+            repo_root / "data" / "indices" / "nsd_index" / f"subject={subject}" / "index.parquet",
+            subject=subject,
+            nsd_ids=ids or [9000 + int(subject[-2:])],
+        )
+    fallback_root = repo_root / "fallback_repo"
+    for subject, ids in fallback_subject_ids.items():
+        _write_simple_subject_index(
+            fallback_root / "data" / "indices" / "nsd_index" / f"subject={subject}" / "index.parquet",
+            subject=subject,
+            nsd_ids=ids or [9100 + int(subject[-2:])],
+        )
+    for subject in [f"subj{i:02d}" for i in range(1, 9)]:
+        _write_simple_subject_index(
+            repo_root / "cache" / "indices" / "imagery_full_all" / f"{subject}.parquet",
+            subject=subject,
+            nsd_ids=imagery_ids,
+        )
+
+    config_path = repo_root / "full_imagery_overlap_shared_only.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": "full_imagery_overlap_shared_only",
+                    "description": "checked-in shared-only canonical neural baseline",
+                    "benchmark_role": "canonical_neural_baseline",
+                    "evidence_tier": "validated",
+                },
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(current_mixed),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(targets_path),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "branch_embedding_dim": 128,
+                    "shared_dim": 128,
+                    "private_dim": 64,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 8, "epochs": 5, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 16, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(analysis_dir)},
+                "export": {"output_dir": str(export_dir)},
+                "preparation": {
+                    "overlap": {
+                        "subjects": [f"subj{i:02d}" for i in range(1, 9)],
+                        "perception_index_template": str(
+                            repo_root / "data" / "indices" / "nsd_index" / "subject={subject}" / "index.parquet"
+                        ),
+                        "imagery_index_template": str(
+                            repo_root / "cache" / "indices" / "imagery_full_all" / "{subject}.parquet"
+                        ),
+                    },
+                    "preflight": {"paper_pair_threshold": 32},
+                },
+            }
+        )
+    )
+    return (
+        load_workflow_config(str(config_path)),
+        config_path,
+        (str(fallback_root / "data" / "indices" / "nsd_index" / "subject={subject}" / "index.parquet"),),
+    )
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -3988,6 +4187,58 @@ def test_full_overlap_promotion_path_audit_does_not_promote_incomplete_stronger_
     assert report["selection"]["selected_main_promotion_lane"] == "full_imagery_overlap_shared_only"
     assert report["selection"]["stronger_paired_support_available"] is True
     assert report["selection"]["stronger_real_candidate_available"] is False
+
+
+def test_full_overlap_data_expansion_audit_confirms_ceiling_when_no_unused_overlap_exists(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_data_expansion import (
+        build_full_imagery_overlap_data_expansion_audit,
+    )
+
+    loaded, config_path, fallback_templates = _build_full_overlap_data_expansion_fixture(tmp_path)
+    report = build_full_imagery_overlap_data_expansion_audit(
+        loaded,
+        config_path=config_path,
+        fallback_perception_templates=fallback_templates,
+        legacy_imagery_template=None,
+        prepared_root=tmp_path / "outputs" / "canonical" / "prepared",
+    )
+    assert report["conclusion"]["can_materially_increase_paired_support_for_current_lane"] is False
+    assert report["conclusion"]["selected_main_promotion_lane"] == "full_imagery_overlap_shared_only"
+    assert report["state"]["mounted_source_can_increase_support"] is False
+    assert report["state"]["data_ceiling_confirmed"] is True
+    assert report["state"]["current_lane_uses_max_mounted_pair_support"] is True
+    assert report["current_main_lane"]["current_mixed_support"]["dataset_pair_group_count"] == 5
+    assert report["prepared_inventory"]["largest_pair_groups_found"] == 5
+    assert report["promotion_path_summary"]["stronger_real_candidate_available"] is False
+    assert "mounted subject-level perception and imagery indices do not expose any additional paired groups" in " ".join(
+        report["blocked_reasons"]
+    )
+
+
+def test_full_overlap_data_expansion_audit_detects_additional_mounted_overlap(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_data_expansion import (
+        build_full_imagery_overlap_data_expansion_audit,
+    )
+
+    loaded, config_path, fallback_templates = _build_full_overlap_data_expansion_fixture(
+        tmp_path,
+        extra_unused_subject_overlap=True,
+    )
+    report = build_full_imagery_overlap_data_expansion_audit(
+        loaded,
+        config_path=config_path,
+        fallback_perception_templates=fallback_templates,
+        legacy_imagery_template=None,
+        prepared_root=tmp_path / "outputs" / "canonical" / "prepared",
+    )
+    assert report["conclusion"]["can_materially_increase_paired_support_for_current_lane"] is True
+    assert report["state"]["mounted_source_can_increase_support"] is True
+    assert report["state"]["data_ceiling_confirmed"] is False
+    assert report["conclusion"]["next_honest_move"] == "rebuild_full_overlap_with_stronger_mounted_sources"
+    expanded_subject = next(item for item in report["mounted_source_inventory"]["subjects"] if item["subject"] == "subj04")
+    assert expanded_subject["mounted_pair_group_count"] == 1
+    assert expanded_subject["current_lane_included"] is False
+    assert expanded_subject["unused_pair_groups_vs_current_lane"] == 1
 
 
 def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
