@@ -859,3 +859,18 @@ Risk:
   `current_public_source_exhausted=true`. This is integration-readiness
   hardening only: it does not change the evidence freeze, benchmark ordering,
   or `training_ready` state
+- 2026-04-08: the repo now also has a canonical operator handoff and rebuild
+  plan for that same main lane:
+  `fmri2img.workflows.plan_full_imagery_overlap_external_rebuild`. The live
+  pod wrote
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json`,
+  and the repo now includes the checked-in handoff contract files
+  `configs/acquisition/full_overlap_external_mount_request.json` and
+  `configs/external_sources/nsd_imagery_external_manifest.template.json`. The
+  new report combines the current readiness, data-expansion, and
+  external-source readiness artifacts into one explicit verdict:
+  `mount_contract_satisfied=false`, `provenance_complete=false`, and
+  `rebuild_should_proceed=false` in the current live environment, with the
+  exact next move still `mount_richer_external_nsd_source`. This is
+  operational handoff hardening only: it does not change the evidence freeze,
+  benchmark ordering, or `training_ready` state

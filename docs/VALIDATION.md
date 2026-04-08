@@ -243,3 +243,33 @@ This validation is intentionally conservative. It proves the repo can now
 detect a richer external source cleanly, require explicit provenance, audit
 subject coverage against the existing perception indices, and measure overlap
 gain before any canonical rebuild is attempted.
+
+## External rebuild handoff validation
+
+The repo now also has a canonical operator-handoff plan for that same lane:
+
+```bash
+python -m fmri2img.workflows.plan_full_imagery_overlap_external_rebuild \
+  --config configs/canonical/full_imagery_overlap_shared_only.yaml
+```
+
+Current live artifact:
+
+- `outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json`
+
+Checked-in handoff surfaces consumed by that plan:
+
+- `configs/acquisition/full_overlap_external_mount_request.json`
+- `configs/external_sources/nsd_imagery_external_manifest.template.json`
+
+Current live result:
+
+- `mount_contract_satisfied=false`
+- `provenance_complete=false`
+- `rebuild_should_proceed=false`
+- `next_honest_move="mount_richer_external_nsd_source"`
+
+This is handoff hardening only. It leaves behind one exact operator request,
+one exact provenance template, and one exact canonical command list to run once
+the richer external NSD-style source is actually mounted. It does not claim
+any benchmark improvement or evidence-grade promotion on its own.

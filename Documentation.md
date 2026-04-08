@@ -95,6 +95,36 @@ Paper handoff rule:
 
 ## Latest entry
 
+## 2026-04-08 - full-overlap external mount handoff is now explicit
+
+- Scope: engineering, reproducibility, data acquisition
+- Status: completed
+- Surfaces touched: `configs/acquisition/full_overlap_external_mount_request.json`,
+  `configs/external_sources/nsd_imagery_external_manifest.template.json`,
+  `src/fmri2img/workflows/plan_full_imagery_overlap_external_rebuild.py`,
+  `tests/test_canonical_workflows.py`, `docs/REPRODUCIBILITY.md`,
+  `docs/VALIDATION.md`, `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused checks via
+  `python3 -m py_compile src/fmri2img/workflows/plan_full_imagery_overlap_external_rebuild.py src/fmri2img/workflows/audit_full_imagery_overlap_external_source_readiness.py`
+  and
+  `./.venv/bin/pytest tests/test_canonical_workflows.py -q -k 'full_overlap_external_rebuild_plan_blocks_until_mount_contract_is_satisfied or full_overlap_external_rebuild_plan_marks_rebuild_ready_when_external_source_is_ready or full_overlap_external_rebuild_plan_blocks_missing_provenance or full_overlap_external_source_readiness_audit_marks_not_mounted or full_overlap_external_source_readiness_audit_marks_ready_for_rebuild_when_stronger_mounted_source_exists or full_overlap_external_source_readiness_audit_blocks_missing_provenance'`;
+  remote proof via
+  `./.venv/bin/python -m fmri2img.workflows.plan_full_imagery_overlap_external_rebuild --config configs/canonical/full_imagery_overlap_shared_only.yaml`
+  and the matching focused pod pytest slice
+- Decision: added the smallest durable handoff bundle for the first richer
+  external NSD-style mount on the current main lane: one mount-request JSON,
+  one provenance template JSON, and one rebuild-plan workflow that reads the
+  existing readiness/data-expansion/external-readiness artifacts and answers
+  whether rebuild should proceed
+- Claim boundary: no benchmark, evidence, or production claim changed; the
+  real pod artifact still says the richer external source is absent and rebuild
+  should not proceed yet
+- Follow-up: hand the mount request JSON plus provenance template to the data
+  provider or ops owner, mount the richer source into
+  `cache/nsd_imagery_external/`, then rerun the unchanged external readiness
+  audit followed by the new rebuild plan
+
 ## 2026-04-05 - NOD target-selection contract built for the fixed adapter slice
 
 - Scope: engineering, data acquisition, reproducibility

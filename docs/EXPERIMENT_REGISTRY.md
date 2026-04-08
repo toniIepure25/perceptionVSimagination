@@ -501,3 +501,16 @@ Copy this block:
 - Result summary: the live pod now has a machine-readable pre-rebuild audit for richer external NSD-style mounts. The report confirms that the current full-overlap lane remains `operational_ready=true`, `downstream_contract_ready=true`, `evidence_ready_candidate=true`, and `training_ready=false`, while the external integration surface truthfully reports `external_source_not_mounted=true`, `external_source_ready_for_rebuild=false`, and `current_public_source_exhausted=true`. It also records the exact canonical external contract paths, missing provenance fields, subject-by-subject perception coverage, and the current zero-gain overlap estimate from the absent external root
 - Interpretation summary: this is integration-readiness hardening only. It does not create benchmark progress or evidence-grade validation. It removes the need for ad hoc mount inspection and leaves behind one canonical audit surface that can immediately verify a richer external NSD-style source when it appears
 - Promoted to evidence?: no
+
+## EXP-2026-04-08-FULL-OVERLAP-EXTERNAL-REBUILD-HANDOFF
+
+- Date: 2026-04-08
+- Lane: Data acquisition / benchmark expansion
+- Benchmark rung / role: mount-contract and rebuild-handoff hardening for the current main full-overlap shared-only lane
+- Config: `configs/canonical/full_imagery_overlap_shared_only.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.plan_full_imagery_overlap_external_rebuild --config configs/canonical/full_imagery_overlap_shared_only.yaml`
+- Dataset / prepared artifacts: current readiness artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`; current data-expansion artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/data_expansion_audit.json`; current external-source readiness artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`; checked-in handoff contract files `configs/acquisition/full_overlap_external_mount_request.json` and `configs/external_sources/nsd_imagery_external_manifest.template.json`
+- Output / artifact path: external rebuild plan `outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json`
+- Status: done
+- Result summary: the live pod now has a machine-readable operator handoff for the first richer external NSD-style mount on the current main lane. The report keeps the current shared-only bundle state unchanged (`operational_ready=true`, `downstream_contract_ready=true`, `evidence_ready_candidate=true`, `training_ready=false`) and truthfully marks `mount_contract_satisfied=false`, `provenance_complete=false`, and `rebuild_should_proceed=false`, with `next_honest_move="mount_richer_external_nsd_source"`. It also leaves behind the exact canonical command list to run once the mount contract is satisfied
+- Interpretation summary: this is operational handoff hardening only. It does not claim new paired data, benchmark progress, evidence-grade validation, or production Animus readiness. It removes the remaining ad hoc operator ambiguity between “source mounted” and “full canonical rebuild can start”
+- Promoted to evidence?: no

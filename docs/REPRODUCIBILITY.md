@@ -65,6 +65,28 @@ or the configured imagery env roots, whether provenance is explicit, which
 subjects are actually covered, and whether the mounted source would exceed the
 current `5` total / `1` held-out paired ceiling.
 
+The operator handoff layer for that same lane is now also checked in:
+
+- mount request: `configs/acquisition/full_overlap_external_mount_request.json`
+- provenance template:
+  `configs/external_sources/nsd_imagery_external_manifest.template.json`
+
+And the canonical rebuild-plan surface is now:
+
+```bash
+python -m fmri2img.workflows.plan_full_imagery_overlap_external_rebuild \
+  --config configs/canonical/full_imagery_overlap_shared_only.yaml
+```
+
+This writes:
+
+- `outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json`
+
+The plan does not rerun training. It only combines the current readiness,
+data-expansion, and external-source readiness artifacts with the checked-in
+mount request and provenance template, then answers whether the external mount
+contract is satisfied and whether canonical rebuild should proceed.
+
 ## Smoke Fixture
 
 The checked-in smoke fixture remains the fastest sanity check:
