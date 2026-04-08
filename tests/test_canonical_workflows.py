@@ -4181,6 +4181,102 @@ def _build_full_overlap_external_source_readiness_fixture(
     return load_workflow_config(str(config_path)), config_path
 
 
+def _write_full_overlap_external_handoff_contracts(tmp_path):
+    mount_request_path = tmp_path / "configs" / "acquisition" / "full_overlap_external_mount_request.json"
+    mount_request_path.parent.mkdir(parents=True, exist_ok=True)
+    mount_request_path.write_text(
+        json.dumps(
+            {
+                "request_id": "full_overlap_external_nsd_mount_v1",
+                "lane": {
+                    "experiment_name": "full_imagery_overlap_shared_only",
+                    "config_path": "configs/canonical/full_imagery_overlap_shared_only.yaml",
+                    "benchmark_role": "canonical_neural_baseline",
+                },
+                "current_ceiling": {
+                    "dataset_pair_group_count": 5,
+                    "heldout_pair_group_count": 1,
+                    "training_pair_threshold": 32,
+                },
+                "external_source_contract": {
+                    "source_class": "richer_nsd_style_paired_imagery_perception",
+                    "accepted_layouts": ["subject_rooted", "split_metadata_beta"],
+                    "expected_paths": {
+                        "data_root": "cache/nsd_imagery_external",
+                        "metadata_root": "cache/nsd_imagery_external/metadata",
+                        "beta_root": "cache/nsd_imagery_external/betas",
+                    },
+                    "required_env_vars": [
+                        "NSD_IMAGERY_ROOT",
+                        "NSD_IMAGERY_METADATA_ROOT",
+                        "NSD_IMAGERY_BETA_ROOT",
+                        "NSD_ROI_MASK_ROOT",
+                        "NSD_HDF5",
+                    ],
+                    "required_provenance_manifest": {
+                        "relative_path": "acquisition_provenance.json",
+                        "template_path": "configs/external_sources/nsd_imagery_external_manifest.template.json",
+                        "required_fields": [
+                            "source_dataset_name",
+                            "source_kind",
+                            "acquisition_date",
+                            "subjects",
+                            "total_size_bytes",
+                        ],
+                    },
+                },
+                "subjects_requested": ["subj01", "subj02", "subj03", "subj04", "subj05", "subj06", "subj07", "subj08"],
+                "rebuild_entrypoint": {
+                    "workflow": "fmri2img.workflows.plan_full_imagery_overlap_external_rebuild",
+                    "artifact_path": "outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json",
+                },
+                "success_rule": {
+                    "must_exceed_current_pair_group_count": 5,
+                    "must_exceed_current_heldout_pair_group_count": 1,
+                    "training_pair_threshold_remains": 32,
+                },
+            },
+            indent=2,
+        )
+    )
+
+    manifest_template_path = (
+        tmp_path / "configs" / "external_sources" / "nsd_imagery_external_manifest.template.json"
+    )
+    manifest_template_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_template_path.write_text(
+        json.dumps(
+            {
+                "source_dataset_name": "REQUIRED_DATASET_NAME",
+                "source_kind": "mounted_internal_storage",
+                "snapshot": "OPTIONAL_SNAPSHOT_OR_VERSION",
+                "version_or_doi": "OPTIONAL_VERSION_OR_DOI",
+                "acquisition_date": "YYYY-MM-DD",
+                "subjects": ["subj01", "subj02", "subj03", "subj04", "subj05", "subj06", "subj07", "subj08"],
+                "total_size_bytes": 0,
+                "layout_kind": "split_metadata_beta",
+                "metadata_root": "cache/nsd_imagery_external/metadata",
+                "beta_root": "cache/nsd_imagery_external/betas",
+                "data_root": "cache/nsd_imagery_external",
+                "notes": "Populate this manifest at cache/nsd_imagery_external/acquisition_provenance.json before canonical rebuild.",
+            },
+            indent=2,
+        )
+    )
+    return mount_request_path, manifest_template_path
+
+
+def _materialize_full_overlap_external_source_readiness_audit(loaded, config_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness import (
+        build_full_imagery_overlap_external_source_readiness_audit,
+    )
+
+    report = build_full_imagery_overlap_external_source_readiness_audit(loaded, config_path=config_path)
+    eval_dir = Path(loaded["evaluation"]["output_dir"])
+    (eval_dir / "external_source_readiness_audit.json").write_text(json.dumps(report, indent=2))
+    return report
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -4481,6 +4577,96 @@ def test_full_overlap_external_source_readiness_audit_blocks_missing_provenance(
     assert report["state"]["provenance_recorded"] is False
     assert report["conclusion"]["external_source_not_mounted"] is False
     assert report["conclusion"]["next_honest_move"] == "record_external_source_provenance"
+    assert "missing explicit acquisition provenance" in " ".join(report["blocked_reasons"])
+
+
+def test_full_overlap_external_rebuild_plan_blocks_until_mount_contract_is_satisfied(tmp_path):
+    from fmri2img.workflows.plan_full_imagery_overlap_external_rebuild import (
+        build_full_imagery_overlap_external_rebuild_plan,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(tmp_path)
+    mount_request_path, manifest_template_path = _write_full_overlap_external_handoff_contracts(tmp_path)
+    _materialize_full_overlap_external_source_readiness_audit(loaded, config_path)
+    report = build_full_imagery_overlap_external_rebuild_plan(
+        loaded,
+        config_path=config_path,
+        mount_request_path=mount_request_path,
+        manifest_template_path=manifest_template_path,
+    )
+    assert report["mount_validation"]["mount_contract_satisfied"] is False
+    assert report["mount_validation"]["provenance_complete"] is False
+    assert report["mount_validation"]["external_source_not_mounted"] is True
+    assert report["rebuild_plan"]["rebuild_should_proceed"] is False
+    assert report["rebuild_plan"]["next_honest_move"] == "mount_richer_external_nsd_source"
+    assert report["handoff_contract"]["requested_subjects"] == [
+        "subj01",
+        "subj02",
+        "subj03",
+        "subj04",
+        "subj05",
+        "subj06",
+        "subj07",
+        "subj08",
+    ]
+    assert "audit_full_imagery_overlap_external_source_readiness" in report["rebuild_plan"]["commands_before_retry"][0]
+
+
+def test_full_overlap_external_rebuild_plan_marks_rebuild_ready_when_external_source_is_ready(tmp_path):
+    from fmri2img.workflows.plan_full_imagery_overlap_external_rebuild import (
+        build_full_imagery_overlap_external_rebuild_plan,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(
+        tmp_path,
+        mount_external_source=True,
+        complete_provenance=True,
+        stronger_support=True,
+    )
+    mount_request_path, manifest_template_path = _write_full_overlap_external_handoff_contracts(tmp_path)
+    _materialize_full_overlap_external_source_readiness_audit(loaded, config_path)
+    report = build_full_imagery_overlap_external_rebuild_plan(
+        loaded,
+        config_path=config_path,
+        mount_request_path=mount_request_path,
+        manifest_template_path=manifest_template_path,
+    )
+    assert report["mount_validation"]["mount_contract_satisfied"] is True
+    assert report["mount_validation"]["provenance_complete"] is True
+    assert report["mount_validation"]["overlap_gain_measured"] is True
+    assert report["rebuild_plan"]["rebuild_should_proceed"] is True
+    assert report["rebuild_plan"]["next_honest_move"] == "rebuild_full_overlap_with_external_source"
+    assert any("prepare_imagery_index" in command for command in report["rebuild_plan"]["commands_when_ready"])
+    assert any("train_decoder" in command for command in report["rebuild_plan"]["commands_when_ready"])
+    assert any(
+        "audit_full_imagery_overlap_shared_only_readiness" in command
+        for command in report["rebuild_plan"]["commands_when_ready"]
+    )
+
+
+def test_full_overlap_external_rebuild_plan_blocks_missing_provenance(tmp_path):
+    from fmri2img.workflows.plan_full_imagery_overlap_external_rebuild import (
+        build_full_imagery_overlap_external_rebuild_plan,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(
+        tmp_path,
+        mount_external_source=True,
+        complete_provenance=False,
+        stronger_support=True,
+    )
+    mount_request_path, manifest_template_path = _write_full_overlap_external_handoff_contracts(tmp_path)
+    _materialize_full_overlap_external_source_readiness_audit(loaded, config_path)
+    report = build_full_imagery_overlap_external_rebuild_plan(
+        loaded,
+        config_path=config_path,
+        mount_request_path=mount_request_path,
+        manifest_template_path=manifest_template_path,
+    )
+    assert report["mount_validation"]["mount_contract_satisfied"] is True
+    assert report["mount_validation"]["provenance_complete"] is False
+    assert report["rebuild_plan"]["rebuild_should_proceed"] is False
+    assert report["rebuild_plan"]["next_honest_move"] == "record_external_source_provenance"
     assert "missing explicit acquisition provenance" in " ".join(report["blocked_reasons"])
 
 

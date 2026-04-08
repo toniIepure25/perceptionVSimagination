@@ -1,0 +1,62 @@
+{
+  "request_id": "full_overlap_external_nsd_mount_v1",
+  "lane": {
+    "experiment_name": "full_imagery_overlap_shared_only",
+    "config_path": "configs/canonical/full_imagery_overlap_shared_only.yaml",
+    "benchmark_role": "canonical_neural_baseline"
+  },
+  "current_ceiling": {
+    "dataset_pair_group_count": 5,
+    "heldout_pair_group_count": 1,
+    "training_pair_threshold": 32
+  },
+  "external_source_contract": {
+    "source_class": "richer_nsd_style_paired_imagery_perception",
+    "accepted_layouts": [
+      "subject_rooted",
+      "split_metadata_beta"
+    ],
+    "expected_paths": {
+      "data_root": "cache/nsd_imagery_external",
+      "metadata_root": "cache/nsd_imagery_external/metadata",
+      "beta_root": "cache/nsd_imagery_external/betas"
+    },
+    "required_env_vars": [
+      "NSD_IMAGERY_ROOT",
+      "NSD_IMAGERY_METADATA_ROOT",
+      "NSD_IMAGERY_BETA_ROOT",
+      "NSD_ROI_MASK_ROOT",
+      "NSD_HDF5"
+    ],
+    "required_provenance_manifest": {
+      "relative_path": "acquisition_provenance.json",
+      "template_path": "configs/external_sources/nsd_imagery_external_manifest.template.json",
+      "required_fields": [
+        "source_dataset_name",
+        "source_kind",
+        "acquisition_date",
+        "subjects",
+        "total_size_bytes"
+      ]
+    }
+  },
+  "subjects_requested": [
+    "subj01",
+    "subj02",
+    "subj03",
+    "subj04",
+    "subj05",
+    "subj06",
+    "subj07",
+    "subj08"
+  ],
+  "rebuild_entrypoint": {
+    "workflow": "fmri2img.workflows.plan_full_imagery_overlap_external_rebuild",
+    "artifact_path": "outputs/canonical/eval/full_imagery_overlap_shared_only/external_rebuild_plan.json"
+  },
+  "success_rule": {
+    "must_exceed_current_pair_group_count": 5,
+    "must_exceed_current_heldout_pair_group_count": 1,
+    "training_pair_threshold_remains": 32
+  }
+}

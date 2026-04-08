@@ -1,0 +1,23 @@
+{
+  "source_dataset_name": "REQUIRED_DATASET_NAME",
+  "source_kind": "mounted_internal_storage",
+  "snapshot": "OPTIONAL_SNAPSHOT_OR_VERSION",
+  "version_or_doi": "OPTIONAL_VERSION_OR_DOI",
+  "acquisition_date": "YYYY-MM-DD",
+  "subjects": [
+    "subj01",
+    "subj02",
+    "subj03",
+    "subj04",
+    "subj05",
+    "subj06",
+    "subj07",
+    "subj08"
+  ],
+  "total_size_bytes": 0,
+  "layout_kind": "split_metadata_beta",
+  "metadata_root": "cache/nsd_imagery_external/metadata",
+  "beta_root": "cache/nsd_imagery_external/betas",
+  "data_root": "cache/nsd_imagery_external",
+  "notes": "Populate this manifest at cache/nsd_imagery_external/acquisition_provenance.json before canonical rebuild."
+}
