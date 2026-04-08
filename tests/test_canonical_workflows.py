@@ -244,6 +244,15 @@ def test_external_data_docs_exist_and_reference_canonical_acquisition_plan():
     assert "threshold_shared_private_p16.yaml" in integration
 
 
+def test_public_nod_paper2_doc_references_lane_and_plan_workflow():
+    text = open("docs/PAPER_2_PUBLIC_NOD_ANIMUS_LANE.md").read()
+    assert "paper2_public_nod_imagenet_run10_shared_only_animus" in text
+    assert "configs/canonical/public_nod_imagenet_run10_shared_only.yaml" in text
+    assert "plan_public_nod_animus_paper_lane" in text
+    assert "Reliability-aware shared-only decoder for public natural-image fMRI" in text
+    assert "Animus-facing confidence export" in text
+
+
 def test_acquire_public_nsd_imagery_wrapper_invokes_official_script(monkeypatch):
     import fmri2img.workflows.acquire_public_nsd_imagery as workflow
 
@@ -2992,6 +3001,328 @@ def test_public_nod_downstream_contract_audit_accepts_legacy_name_shape(tmp_path
     report = build_public_nod_shared_only_downstream_contract_audit(loaded, config_path=config_path)
     assert report["state"]["downstream_contract_ready"] is True
     assert report["target_spec"]["shared"]["source_field_shape"] == "name"
+
+
+def _build_public_nod_paper_lane_fixture(tmp_path, *, missing_smoke_report=False):
+    from fmri2img.workflows.common import load_workflow_config
+    import pandas as pd
+    import yaml
+
+    repo_root = tmp_path
+    cache_root = repo_root / "cache" / "indices" / "public_nod"
+    cache_root.mkdir(parents=True, exist_ok=True)
+
+    prepared_path = cache_root / "imagenet_run10_shared_only_prepared_dataset.parquet"
+    target_cache_path = cache_root / "imagenet_run10_target_embedding_cache.parquet"
+    roi_artifact_path = cache_root / "imagenet_run10_roi_materialized.parquet"
+
+    prepared_df = pd.DataFrame(
+        [
+            {
+                "pair_id": index + 1,
+                "split": split,
+                "subject": "sub-01" if index < 2 else "sub-02",
+                "session": "ses-imagenet01" if index % 2 == 0 else "ses-imagenet02",
+                "run": 10,
+                "task": "imagenet",
+            }
+            for index, split in enumerate(["train", "train", "val", "test"])
+        ]
+    )
+    prepared_df.to_parquet(prepared_path, index=False)
+    pd.DataFrame(
+        [{"pair_id": index + 1, "clip_embedding": [0.0, 1.0]} for index in range(4)]
+    ).to_parquet(target_cache_path, index=False)
+    pd.DataFrame(
+        [
+            {
+                "pair_id": index + 1,
+                "early_visual_V1": 0.1,
+                "early_visual_V2": 0.2,
+                "metacognitive_precuneus": 0.3,
+            }
+            for index in range(4)
+        ]
+    ).to_parquet(roi_artifact_path, index=False)
+
+    (cache_root / "imagenet_run10_shared_only_prepared_dataset.report.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "join_ready": True,
+                    "roi_ready": True,
+                    "downstream_prep_ready": True,
+                    "training_ready": False,
+                }
+            }
+        )
+    )
+    (cache_root / "imagenet_run10_target_embedding_cache.report.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "target_embedding_ready": True,
+                    "downstream_prep_ready": True,
+                    "training_ready": False,
+                },
+                "embedding_dimension": 768,
+                "embedding_model_id": "openai/clip-vit-large-patch14",
+            }
+        )
+    )
+    (cache_root / "imagenet_run10_roi_materialized.report.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "join_ready": True,
+                    "roi_ready": True,
+                    "downstream_prep_ready": False,
+                    "training_ready": False,
+                },
+                "roi_feature_dimensions": {
+                    "early_visual": 2,
+                    "ventral_visual": 0,
+                    "metacognitive": 1,
+                },
+            }
+        )
+    )
+
+    train_root = repo_root / "outputs" / "public_nod" / "train"
+    eval_root = repo_root / "outputs" / "public_nod" / "eval"
+    smoke_train_dir = train_root / "imagenet_run10_shared_only_smoke"
+    smoke_eval_dir = eval_root / "imagenet_run10_shared_only_smoke"
+    smoke_train_dir.mkdir(parents=True, exist_ok=True)
+    smoke_eval_dir.mkdir(parents=True, exist_ok=True)
+    (train_root / "trainer_preflight.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "join_ready": True,
+                    "roi_ready": True,
+                    "downstream_prep_ready": True,
+                    "trainer_config_ready": True,
+                    "preflight_ready": True,
+                    "training_ready": False,
+                },
+                "trainer_packet": {
+                    "runtime_device": "cpu",
+                    "train_rows": 2,
+                    "val_rows": 1,
+                    "test_rows": 1,
+                    "train_batch_size": 2,
+                    "paired_group_count": 0,
+                },
+                "prepared_dataset": {
+                    "dataset_rows": 4,
+                    "split_counts": {"train": 2, "val": 1, "test": 1},
+                },
+            }
+        )
+    )
+    preflight_dir = train_root / "imagenet_run10_shared_only_preflight"
+    preflight_dir.mkdir(parents=True, exist_ok=True)
+    (preflight_dir / "preflight_data.json").write_text(
+        json.dumps({"status": "bootstrap_ready", "readiness": {"status": "bootstrap_ready"}})
+    )
+    if not missing_smoke_report:
+        (smoke_train_dir / "smoke_report.json").write_text(
+            json.dumps(
+                {
+                    "state": {
+                        "join_ready": True,
+                        "roi_ready": True,
+                        "downstream_prep_ready": True,
+                        "trainer_config_ready": True,
+                        "preflight_ready": True,
+                        "smoke_ready": True,
+                        "training_ready": False,
+                    },
+                    "smoke_run": {
+                        "epochs_completed": 1,
+                        "last_epoch": {
+                            "epoch": 1,
+                            "train_loss": 1.2,
+                            "val_loss": 1.0,
+                            "val_content_cosine": 0.02,
+                        },
+                    },
+                }
+            )
+        )
+    (smoke_eval_dir / "eval_export_smoke_report.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "join_ready": True,
+                    "roi_ready": True,
+                    "downstream_prep_ready": True,
+                    "trainer_config_ready": True,
+                    "preflight_ready": True,
+                    "smoke_ready": True,
+                    "eval_smoke_ready": True,
+                    "transfer_smoke_ready": True,
+                    "export_smoke_ready": True,
+                    "training_ready": False,
+                },
+                "condition_semantics": {
+                    "shared": {
+                        "present_conditions": ["perception"],
+                        "missing_conditions": ["imagery"],
+                        "paired_metrics_available": False,
+                        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                        "pair_metrics_available_from_payload": False,
+                    }
+                },
+                "target_spec": {
+                    "target_name_normalized": "vit_l14_image_768",
+                    "target_dimension_normalized": 768,
+                    "source_field_shape": "target_name",
+                    "target_name_from_payload": "vit_l14_image_768",
+                },
+                "eval_smoke": {"artifacts_present": True},
+                "transfer_smoke": {"artifacts_present": True},
+                "export_smoke": {"artifacts_present": True},
+            }
+        )
+    )
+    (smoke_eval_dir / "downstream_contract_audit.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "downstream_contract_ready": True,
+                    "eval_smoke_ready": True,
+                    "transfer_smoke_ready": True,
+                    "export_smoke_ready": True,
+                    "training_ready": False,
+                },
+                "condition_semantics": {
+                    "shared": {
+                        "present_conditions": ["perception"],
+                        "missing_conditions": ["imagery"],
+                        "paired_metrics_available": False,
+                        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                        "pair_metrics_available_from_payload": False,
+                    }
+                },
+                "target_spec": {
+                    "shared": {
+                        "target_name_normalized": "vit_l14_image_768",
+                        "target_dimension_normalized": 768,
+                        "source_field_shape": "target_name",
+                        "target_name_from_payload": "vit_l14_image_768",
+                    }
+                },
+                "consistency": {
+                    "target_manifest_vs_decoder_card": True,
+                    "target_manifest_vs_combined_report": True,
+                    "condition_manifest_vs_decoder_card": True,
+                    "condition_manifest_vs_combined_report": True,
+                    "target_dimension_consistent": True,
+                    "source_field_shape_explicit": True,
+                    "experiment_name_consistent": True,
+                    "benchmark_role_consistent": True,
+                    "readiness_operational_only": True,
+                },
+            }
+        )
+    )
+
+    config_path = repo_root / "public_nod_paper_lane.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": "public_nod_imagenet_run10_shared_only",
+                    "description": "public nod paper-2 lane fixture",
+                    "benchmark_role": "practical_animus_preflight_only",
+                    "evidence_tier": "operational",
+                },
+                "dataset": {
+                    "subject": "nod_imagenet_run10_fixed_slice",
+                    "mixed_index": str(prepared_path),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(target_cache_path),
+                    "id_column": "pair_id",
+                },
+                "model": {
+                    "branch_embedding_dim": 64,
+                    "shared_dim": 64,
+                    "private_dim": 32,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 16, "epochs": 1, "device": "cpu", "output_dir": str(preflight_dir)},
+                "evaluation": {
+                    "batch_size": 16,
+                    "output_dir": str(repo_root / "outputs" / "public_nod" / "eval" / "imagenet_run10_shared_only_preflight"),
+                    "transfer_output_dir": str(repo_root / "outputs" / "public_nod" / "transfer" / "imagenet_run10_shared_only_preflight"),
+                },
+                "analysis": {"output_dir": str(repo_root / "outputs" / "public_nod" / "analysis" / "imagenet_run10_shared_only_preflight")},
+                "export": {"output_dir": str(repo_root / "outputs" / "public_nod" / "export" / "imagenet_run10_shared_only_preflight")},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "lane": "practical_animus",
+                    "task": "imagenet",
+                    "run": 10,
+                    "subjects": ["sub-01", "sub-02"],
+                    "sessions": ["ses-imagenet01", "ses-imagenet02"],
+                    "adapter_rows": 2,
+                    "pair_rows": 4,
+                    "roi_artifact": "cache/indices/public_nod/imagenet_run10_roi_materialized.parquet",
+                    "roi_report": "cache/indices/public_nod/imagenet_run10_roi_materialized.report.json",
+                    "prepared_report": "cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.report.json",
+                    "target_cache_report": "cache/indices/public_nod/imagenet_run10_target_embedding_cache.report.json",
+                },
+            }
+        )
+    )
+    return load_workflow_config(str(config_path)), config_path, repo_root
+
+
+def test_public_nod_animus_paper_lane_plan_builds_report(tmp_path, monkeypatch):
+    import fmri2img.workflows.plan_public_nod_animus_paper_lane as workflow
+
+    loaded, config_path, repo_root = _build_public_nod_paper_lane_fixture(tmp_path)
+    monkeypatch.setattr(workflow, "_repo_root", lambda: repo_root)
+    report = workflow.build_public_nod_animus_paper_lane_plan(loaded, config_path=config_path)
+    assert report["lane_identity"]["paper_lane_name"] == "paper2_public_nod_imagenet_run10_shared_only_animus"
+    assert report["repo_grounded_current_state"]["prepared_dataset"]["rows"] == 4
+    assert report["repo_grounded_current_state"]["target_cache"]["embedding_dimension"] == 768
+    assert report["state"] == {
+        "operational_ready": True,
+        "downstream_contract_ready": True,
+        "evidence_ready_candidate": False,
+        "training_ready": False,
+        "paper_lane_plan_ready": True,
+    }
+    assert report["paper_direction"]["direction_id"] == "reliability_aware_public_shared_only_decoder"
+    assert report["immediate_next_step"]["command"].startswith(
+        "./.venv/bin/python -m fmri2img.workflows.plan_public_nod_animus_paper_lane"
+    )
+    assert "smoke-only" in " ".join(report["publication_assessment"]["operational_only"])
+
+
+def test_public_nod_animus_paper_lane_main_blocks_missing_smoke_artifacts(tmp_path, monkeypatch):
+    import fmri2img.workflows.plan_public_nod_animus_paper_lane as workflow
+
+    _, config_path, repo_root = _build_public_nod_paper_lane_fixture(tmp_path, missing_smoke_report=True)
+    monkeypatch.setattr(workflow, "_repo_root", lambda: repo_root)
+    output_path = repo_root / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "paper_lane_plan.json"
+    rc = workflow.main(["--config", str(config_path), "--output", str(output_path)])
+    assert rc == 0
+    payload = json.loads(output_path.read_text())
+    assert payload["state"]["paper_lane_plan_ready"] is False
+    assert payload["state"]["training_ready"] is False
+    assert "Required public-NOD smoke artifact is missing" in " ".join(payload["blocked_reasons"])
 
 
 def test_build_downstream_contract_audit_report_marks_condition_mismatch():
