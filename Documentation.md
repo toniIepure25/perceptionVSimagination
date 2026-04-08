@@ -1214,3 +1214,40 @@ Paper handoff rule:
 - Follow-up: the next honest step is external paired-data expansion or a richer
   mounted paired source for the same lane; there is no further honest growth to
   extract from the currently mounted full public NSD-Imagery source
+
+## 2026-04-08 - Full-overlap shared-only now has an external-source readiness audit
+
+- Scope: engineering, validation
+- Status: completed
+- Surfaces touched:
+  `src/fmri2img/workflows/audit_full_imagery_overlap_external_source_readiness.py`,
+  `tests/test_canonical_workflows.py`,
+  `docs/REPRODUCIBILITY.md`, `docs/VALIDATION.md`,
+  `Documentation.md`, `docs/EXPERIMENT_REGISTRY.md`,
+  `docs/PROJECT_MASTER_LOG.md`
+- Validation: local focused `py_compile`, focused `.venv` pytest, and a local
+  real invocation blocked only because this workspace does not contain the real
+  full-overlap readiness artifact; remote `git pull --rebase`, real pod
+  `audit_full_imagery_overlap_external_source_readiness`, and focused remote
+  pytest
+- Decision: the repo now has one canonical pre-rebuild surface for richer
+  external NSD-style mounts. On the live pod it truthfully reports
+  `external_source_not_mounted=true`, `external_source_ready_for_rebuild=false`,
+  and `current_public_source_exhausted=true`
+- Claim boundary: no benchmark promotion, no evidence-grade confirmation, and
+  no production Animus claim; `training_ready` remains `false`
+- Detail: the new real artifact at
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`
+  audits the expected canonical external layout under
+  `cache/nsd_imagery_external/`, checks for explicit provenance, inventories
+  subject coverage against the mounted perception indices, and measures
+  potential paired-support gain against the existing `5` total / `1` held-out
+  ceiling. In the live environment there is no richer external root mounted
+  yet, but the repo no longer needs ad hoc inspection to verify that fact
+- Readiness: the current main lane remains
+  `operational_ready=true`, `downstream_contract_ready=true`,
+  `evidence_ready_candidate=true`, and `training_ready=false`; the new audit
+  only adds mount-contract readiness for the next honest external-data move
+- Follow-up: the next honest step is to mount or acquire a richer NSD-style
+  paired source into `cache/nsd_imagery_external/` and rerun the unchanged
+  canonical rebuild ladder

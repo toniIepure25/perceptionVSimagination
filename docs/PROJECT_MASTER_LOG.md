@@ -844,3 +844,18 @@ Risk:
   `outputs/canonical/prepared/` exceeds that ceiling. The next honest move is
   now explicit and machine-readable: external paired-data expansion, not more
   overlap hardening on the currently mounted public source
+- 2026-04-08: the repo now also has a canonical external-source readiness
+  audit for that same main lane:
+  `fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness`.
+  The live pod wrote
+  `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`,
+  which checks the expected richer external layout under
+  `cache/nsd_imagery_external/`, requires explicit provenance fields, audits
+  subject coverage against the mounted perception indices, and measures
+  whether a mounted source would exceed the current `5` total / `1` held-out
+  ceiling before any rebuild is attempted. In the current live environment the
+  report truthfully marks `external_source_not_mounted=true`,
+  `external_source_ready_for_rebuild=false`, and
+  `current_public_source_exhausted=true`. This is integration-readiness
+  hardening only: it does not change the evidence freeze, benchmark ordering,
+  or `training_ready` state

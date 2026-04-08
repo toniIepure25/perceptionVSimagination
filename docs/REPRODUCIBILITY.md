@@ -48,6 +48,23 @@ public-data ceiling:
 - `docs/DATA_ACQUISITION_PROGRAM.md`
 - `docs/EXTERNAL_DATA_INTEGRATION_PLAN.md`
 
+The canonical pre-rebuild audit for a richer external NSD-style source is now:
+
+```bash
+python -m fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness \
+  --config configs/canonical/full_imagery_overlap_shared_only.yaml
+```
+
+This writes:
+
+- `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`
+
+The audit does not fabricate data or rerun the ladder. It only checks whether
+the canonical external layout is present under `cache/nsd_imagery_external/`
+or the configured imagery env roots, whether provenance is explicit, which
+subjects are actually covered, and whether the mounted source would exceed the
+current `5` total / `1` held-out paired ceiling.
+
 ## Smoke Fixture
 
 The checked-in smoke fixture remains the fastest sanity check:

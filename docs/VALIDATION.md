@@ -218,3 +218,28 @@ That fix has now been exercised on the live expanded-overlap rerun as well:
 - the dedicated Animus Core Decoder lane is now represented by its own checked-in config and wrapper commands
 - the next material benchmark improvement now depends on external paired-data
   acquisition, not more workflow hardening on the current public source
+
+## External-source readiness validation
+
+The repo now has a canonical pre-rebuild audit for richer external NSD-style
+paired mounts:
+
+```bash
+python -m fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness \
+  --config configs/canonical/full_imagery_overlap_shared_only.yaml
+```
+
+Current live artifact:
+
+- `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`
+
+Current live result:
+
+- `external_source_not_mounted=true`
+- `external_source_ready_for_rebuild=false`
+- `current_public_source_exhausted=true`
+
+This validation is intentionally conservative. It proves the repo can now
+detect a richer external source cleanly, require explicit provenance, audit
+subject coverage against the existing perception indices, and measure overlap
+gain before any canonical rebuild is attempted.

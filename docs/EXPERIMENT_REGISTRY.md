@@ -488,3 +488,16 @@ Copy this block:
 - Result summary: the live pod now has a machine-readable proof that the current environment cannot produce more honest paired overlap for `full_imagery_overlap_shared_only` than the existing `5` total / `1` held-out pair groups. The audit confirms that the full canonical imagery indices already exist for `subj01..subj08`, but only `subj02`, `subj03`, `subj05`, and `subj07` overlap the mounted perception indices at all, exactly matching the current prepared dataset. It also confirms that no prepared mixed index under `outputs/canonical/prepared/` exceeds the current `5`-pair ceiling
 - Interpretation summary: this is data-ceiling auditing only. It does not change the evidence freeze or benchmark ordering. It makes the next honest move explicit: external paired-data expansion or a richer mounted paired source for the same lane
 - Promoted to evidence?: no
+
+## EXP-2026-04-08-FULL-OVERLAP-EXTERNAL-SOURCE-READINESS
+
+- Date: 2026-04-08
+- Lane: Data acquisition / benchmark expansion
+- Benchmark rung / role: external mount-contract readiness audit for the current main full-overlap shared-only lane
+- Config: `configs/canonical/full_imagery_overlap_shared_only.yaml`; canonical workflow `./.venv/bin/python -m fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness --config configs/canonical/full_imagery_overlap_shared_only.yaml`
+- Dataset / prepared artifacts: current readiness artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/readiness_audit.json`; current data-expansion artifact `outputs/canonical/eval/full_imagery_overlap_shared_only/data_expansion_audit.json`; current public imagery root `cache/nsd_imagery_full_all`; expected richer external contract root `cache/nsd_imagery_external`
+- Output / artifact path: external-source readiness audit `outputs/canonical/eval/full_imagery_overlap_shared_only/external_source_readiness_audit.json`
+- Status: done
+- Result summary: the live pod now has a machine-readable pre-rebuild audit for richer external NSD-style mounts. The report confirms that the current full-overlap lane remains `operational_ready=true`, `downstream_contract_ready=true`, `evidence_ready_candidate=true`, and `training_ready=false`, while the external integration surface truthfully reports `external_source_not_mounted=true`, `external_source_ready_for_rebuild=false`, and `current_public_source_exhausted=true`. It also records the exact canonical external contract paths, missing provenance fields, subject-by-subject perception coverage, and the current zero-gain overlap estimate from the absent external root
+- Interpretation summary: this is integration-readiness hardening only. It does not create benchmark progress or evidence-grade validation. It removes the need for ad hoc mount inspection and leaves behind one canonical audit surface that can immediately verify a richer external NSD-style source when it appears
+- Promoted to evidence?: no
