@@ -3997,6 +3997,190 @@ def _build_full_overlap_data_expansion_fixture(tmp_path, *, extra_unused_subject
     )
 
 
+def _write_external_subject_rooted_imagery(root, *, subject, nsd_ids):
+    run_dir = root / subject / "imagery" / "run01"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    trials = []
+    for index, nsd_id in enumerate(nsd_ids):
+        trial_id = f"{subject}_trial_{index:03d}"
+        (run_dir / f"{trial_id}_beta.npy").write_bytes(b"0")
+        trials.append(
+            {
+                "trial_id": trial_id,
+                "stimulus_type": "complex",
+                "stimulus_set": "B",
+                "nsdId": int(nsd_id),
+                "pair_id": int(nsd_id),
+                "text_prompt": f"Stimulus {nsd_id}",
+            }
+        )
+    (run_dir / "metadata.json").write_text(json.dumps({"trials": trials}, indent=2))
+
+
+def _build_full_overlap_external_source_readiness_fixture(
+    tmp_path,
+    *,
+    mount_external_source=False,
+    complete_provenance=False,
+    stronger_support=True,
+):
+    from fmri2img.workflows.common import load_workflow_config
+    import yaml
+
+    repo_root = tmp_path
+    eval_dir = repo_root / "eval"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    train_dir = repo_root / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    transfer_dir = repo_root / "transfer"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+    export_dir = repo_root / "export"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    analysis_dir = repo_root / "analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    targets_path = repo_root / "targets.parquet"
+    targets_path.write_bytes(b"")
+
+    current_mixed = repo_root / "outputs" / "canonical" / "prepared" / "full_imagery_overlap" / "full_imagery_overlap_mixed_with_roi.parquet"
+    _write_full_overlap_current_mixed(current_mixed)
+
+    readiness_payload = {
+        "state": {
+            "operational_ready": True,
+            "downstream_contract_ready": True,
+            "evidence_ready_candidate": True,
+            "training_ready": False,
+        },
+        "heldout_support": {
+            "mixed_index": str(current_mixed),
+            "dataset_rows": 10,
+            "split_row_counts": {"train": 6, "val": 2, "test": 2},
+            "dataset_pair_group_count": 5,
+            "split_pair_group_counts": {"train": 3, "val": 1, "test": 1},
+            "heldout_pair_count_from_metrics": 1,
+            "heldout_pair_count_matches_prepared_test_split": True,
+            "training_pair_threshold": 32,
+            "current_dataset_can_meet_training_pair_threshold": False,
+            "dataset_ceiling_blocks_training": True,
+            "threshold_gap_from_total_pairs": 27,
+            "threshold_gap_from_heldout_pairs": 31,
+            "ceiling_blocked_reason": "current prepared dataset exposes only 5 paired groups total, below the 32-group training gate",
+        },
+    }
+    (eval_dir / "readiness_audit.json").write_text(json.dumps(readiness_payload, indent=2))
+    (eval_dir / "data_expansion_audit.json").write_text(
+        json.dumps(
+            {
+                "state": {
+                    "data_ceiling_confirmed": True,
+                    "mounted_source_can_increase_support": False,
+                    "larger_prepared_mixed_index_available": False,
+                },
+                "conclusion": {
+                    "can_materially_increase_paired_support_for_current_lane": False,
+                    "selected_main_promotion_lane": "full_imagery_overlap_shared_only",
+                },
+            },
+            indent=2,
+        )
+    )
+
+    perception_root = repo_root / "data" / "indices" / "nsd_index"
+    if stronger_support:
+        subject_to_ids = {
+            "subj02": list(range(2001, 2011)),
+            "subj03": list(range(3001, 3011)),
+        }
+    else:
+        subject_to_ids = {
+            "subj02": [1001, 1002],
+            "subj03": [1003],
+        }
+    for subject, nsd_ids in subject_to_ids.items():
+        _write_simple_subject_index(
+            perception_root / f"subject={subject}" / "index.parquet",
+            subject=subject,
+            nsd_ids=nsd_ids,
+        )
+
+    external_root = repo_root / "cache" / "nsd_imagery_external"
+    if mount_external_source:
+        for subject, nsd_ids in subject_to_ids.items():
+            _write_external_subject_rooted_imagery(external_root, subject=subject, nsd_ids=nsd_ids)
+        if complete_provenance:
+            (external_root / "acquisition_provenance.json").write_text(
+                json.dumps(
+                    {
+                        "source_dataset_name": "mounted_internal_nsd_imagery",
+                        "source_kind": "mounted_internal_storage",
+                        "acquisition_date": "2026-04-08",
+                        "subjects": sorted(subject_to_ids),
+                        "total_size_bytes": 123456,
+                        "snapshot": "2026-04-08",
+                    },
+                    indent=2,
+                )
+            )
+
+    config_path = repo_root / "full_imagery_overlap_shared_only.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": "full_imagery_overlap_shared_only",
+                    "description": "checked-in shared-only canonical neural baseline",
+                    "benchmark_role": "canonical_neural_baseline",
+                    "evidence_tier": "validated",
+                },
+                "dataset": {
+                    "subject": "subj02",
+                    "mixed_index": str(current_mixed),
+                    "perception_conditions": ["perception"],
+                    "imagery_conditions": ["imagery"],
+                },
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "cache_path": str(targets_path),
+                    "id_column": "nsdId",
+                },
+                "model": {
+                    "branch_embedding_dim": 128,
+                    "shared_dim": 128,
+                    "private_dim": 64,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 8, "epochs": 5, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 16, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(analysis_dir)},
+                "export": {"output_dir": str(export_dir)},
+                "preparation": {
+                    "imagery": {
+                        "data_root": str(external_root),
+                        "metadata_root": str(external_root / "metadata"),
+                        "beta_root": str(external_root / "betas"),
+                        "conditions": ["imagery"],
+                        "stimulus_sets": ["B"],
+                        "require_nsd_id": True,
+                    },
+                    "overlap": {
+                        "subjects": sorted(subject_to_ids),
+                        "perception_index_template": str(
+                            perception_root / "subject={subject}" / "index.parquet"
+                        ),
+                    },
+                    "preflight": {"paper_pair_threshold": 32},
+                },
+            }
+        )
+    )
+    return load_workflow_config(str(config_path)), config_path
+
+
 def test_shared_private_smoke_downstream_contract_audit_builds_ready_report(tmp_path):
     from fmri2img.workflows.audit_shared_private_smoke_downstream_contract import (
         build_shared_private_smoke_downstream_contract_audit,
@@ -4239,6 +4423,65 @@ def test_full_overlap_data_expansion_audit_detects_additional_mounted_overlap(tm
     assert expanded_subject["mounted_pair_group_count"] == 1
     assert expanded_subject["current_lane_included"] is False
     assert expanded_subject["unused_pair_groups_vs_current_lane"] == 1
+
+
+def test_full_overlap_external_source_readiness_audit_marks_not_mounted(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness import (
+        build_full_imagery_overlap_external_source_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(tmp_path)
+    report = build_full_imagery_overlap_external_source_readiness_audit(loaded, config_path=config_path)
+    assert report["state"]["external_source_not_mounted"] is True
+    assert report["state"]["external_source_ready_for_rebuild"] is False
+    assert report["state"]["provenance_recorded"] is False
+    assert report["conclusion"]["external_source_not_mounted"] is True
+    assert report["conclusion"]["next_honest_move"] == "mount_richer_external_nsd_source"
+    assert "no richer external NSD-style source is mounted" in " ".join(report["blocked_reasons"])
+
+
+def test_full_overlap_external_source_readiness_audit_marks_ready_for_rebuild_when_stronger_mounted_source_exists(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness import (
+        build_full_imagery_overlap_external_source_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(
+        tmp_path,
+        mount_external_source=True,
+        complete_provenance=True,
+        stronger_support=True,
+    )
+    report = build_full_imagery_overlap_external_source_readiness_audit(loaded, config_path=config_path)
+    assert report["state"]["external_source_mounted"] is True
+    assert report["state"]["provenance_recorded"] is True
+    assert report["state"]["external_source_preserves_contract"] is True
+    assert report["state"]["potential_support_exceeds_current_ceiling"] is True
+    assert report["state"]["external_source_ready_for_rebuild"] is True
+    assert report["overlap_potential"]["external_pair_group_count_estimate"] == 20
+    assert report["overlap_potential"]["external_split_pair_group_counts_estimate"]["test"] == 2
+    assert report["overlap_potential"]["additional_pair_groups_vs_current_ceiling"] == 15
+    assert report["overlap_potential"]["additional_heldout_pair_groups_vs_current_ceiling"] == 1
+    assert report["blocked_reasons"] == []
+
+
+def test_full_overlap_external_source_readiness_audit_blocks_missing_provenance(tmp_path):
+    from fmri2img.workflows.audit_full_imagery_overlap_external_source_readiness import (
+        build_full_imagery_overlap_external_source_readiness_audit,
+    )
+
+    loaded, config_path = _build_full_overlap_external_source_readiness_fixture(
+        tmp_path,
+        mount_external_source=True,
+        complete_provenance=False,
+        stronger_support=True,
+    )
+    report = build_full_imagery_overlap_external_source_readiness_audit(loaded, config_path=config_path)
+    assert report["state"]["external_source_mounted"] is True
+    assert report["state"]["external_source_ready_for_rebuild"] is False
+    assert report["state"]["provenance_recorded"] is False
+    assert report["conclusion"]["external_source_not_mounted"] is False
+    assert report["conclusion"]["next_honest_move"] == "record_external_source_provenance"
+    assert "missing explicit acquisition provenance" in " ".join(report["blocked_reasons"])
 
 
 def test_generic_downstream_contract_dispatch_selects_fixed_nod_strategy(tmp_path):
