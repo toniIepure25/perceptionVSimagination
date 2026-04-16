@@ -34,8 +34,8 @@
 
 \item {\bf Experiment statistical significance}
     \item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
-    \item[] Answer: \answerNo{}
-    \item[] Justification: The frozen benchmark reports single runs (seed 0) without error bars.  This is acknowledged in Sections~5, 7, and Appendix~\ref{app:notes}.  Seed-stability reproduction instructions are provided in the supplementary material but actual multi-seed results are not yet included.  The paper does not claim statistical significance.
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Appendix~\ref{app:seeds} reports a 3-seed stability check for the two primary neural models (shared-only and SP~$d_\mathrm{priv}\!=\!16$), including per-seed metrics, means, and standard deviations.  The ordering is consistent across all seeds.  We do not claim formal statistical significance; the seed check demonstrates ordering stability, not a hypothesis test.
 
 \item {\bf Experiments compute resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?

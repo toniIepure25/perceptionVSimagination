@@ -1,0 +1,120 @@
+{
+  "seed_stability_check": {
+    "seeds": [
+      0,
+      42,
+      123
+    ],
+    "n_seeds": 3,
+    "config_base": {
+      "shared_only": "configs/canonical/full_imagery_overlap_shared_only.yaml",
+      "sp_p16": "configs/canonical/threshold_shared_private_p16.yaml"
+    },
+    "dataset": "full_imagery_overlap_mixed_with_roi.parquet",
+    "target_space": "vit_l14_image_768",
+    "epochs": 5,
+    "device": "cuda (NVIDIA H100 80GB)"
+  },
+  "per_seed_results": {
+    "shared_only": {
+      "0": {
+        "overall_cosine": 0.07890667021274567,
+        "overall_mse": 0.0023986808955669403,
+        "best_val_cosine": 0.02722105383872986,
+        "final_train_loss": 0.8709060549736023,
+        "final_val_loss": 1.1466832160949707,
+        "imagery_cosine": 0.07507670670747757,
+        "perception_cosine": 0.09933318942785263
+      },
+      "42": {
+        "overall_cosine": 0.07348686456680298,
+        "overall_mse": 0.0024127948563545942,
+        "best_val_cosine": 0.040522247552871704,
+        "final_train_loss": 0.9165205955505371,
+        "final_val_loss": 1.1561255753040314,
+        "imagery_cosine": 0.07185354828834534,
+        "perception_cosine": 0.08219790458679199
+      },
+      "123": {
+        "overall_cosine": 0.15040187537670135,
+        "overall_mse": 0.0022124953102320433,
+        "best_val_cosine": 0.04282021522521973,
+        "final_train_loss": 0.8125766515731812,
+        "final_val_loss": 1.1011021435260773,
+        "imagery_cosine": 0.1517936885356903,
+        "perception_cosine": 0.1429789513349533
+      }
+    },
+    "sp_p16": {
+      "0": {
+        "overall_cosine": 0.00185384601354599,
+        "overall_mse": 0.002599339233711362,
+        "best_val_cosine": -0.0036031007766723633,
+        "final_train_loss": 13.772294998168945,
+        "final_val_loss": 25.259742736816406,
+        "imagery_cosine": -0.00844188965857029,
+        "perception_cosine": 0.05676444247364998
+      },
+      "42": {
+        "overall_cosine": 0.047927215695381165,
+        "overall_mse": 0.002479356713593006,
+        "best_val_cosine": 0.06005299091339111,
+        "final_train_loss": 13.777536392211914,
+        "final_val_loss": 25.22946262359619,
+        "imagery_cosine": 0.0471784844994545,
+        "perception_cosine": 0.05192044377326965
+      },
+      "123": {
+        "overall_cosine": 0.01007840782403946,
+        "overall_mse": 0.0025779211428016424,
+        "best_val_cosine": 0.007296264171600342,
+        "final_train_loss": 11.936556816101074,
+        "final_val_loss": 25.94682216644287,
+        "imagery_cosine": 0.003983232658356428,
+        "perception_cosine": 0.04258600249886513
+      }
+    }
+  },
+  "aggregate": {
+    "shared_only": {
+      "cosine_mean": 0.10093180338541667,
+      "cosine_std": 0.03505053105091862,
+      "cosine_seeds": [
+        0.07890667021274567,
+        0.07348686456680298,
+        0.15040187537670135
+      ],
+      "mse_mean": 0.002341323687384526,
+      "mse_std": 9.127746725264162e-05,
+      "mse_seeds": [
+        0.0023986808955669403,
+        0.0024127948563545942,
+        0.0022124953102320433
+      ],
+      "imagery_cosine_mean": 0.09957464784383774,
+      "imagery_cosine_std": 0.03694787630912609,
+      "perception_cosine_mean": 0.10817001511653264,
+      "perception_cosine_std": 0.025588422214478553
+    },
+    "sp_p16": {
+      "cosine_mean": 0.019953156510988872,
+      "cosine_std": 0.020063596299144528,
+      "cosine_seeds": [
+        0.00185384601354599,
+        0.047927215695381165,
+        0.01007840782403946
+      ],
+      "mse_mean": 0.0025522056967020035,
+      "mse_std": 5.224885586986881e-05,
+      "mse_seeds": [
+        0.002599339233711362,
+        0.002479356713593006,
+        0.0025779211428016424
+      ],
+      "imagery_cosine_mean": 0.01423994249974688,
+      "imagery_cosine_std": 0.023837038098269463,
+      "perception_cosine_mean": 0.05042362958192825,
+      "perception_cosine_std": 0.005884294325983081
+    }
+  }
+}

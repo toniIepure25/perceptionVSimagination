@@ -567,11 +567,14 @@ With only 1 held-out paired evaluation group, transfer diagnostics and domain
 accuracy are too fragile to support headline conclusions.  We report them as
 secondary diagnostics only and avoid basing claims on them.
 
-\paragraph{Lack of statistical breadth.}
-The frozen results come from a single run per model configuration without
-repeated trials or error bars.  This limits our ability to assess variability
-and means the benchmark ordering should be interpreted as a frozen snapshot
-rather than a statistically confirmed ranking.
+\paragraph{Limited statistical breadth.}
+The frozen results in Table~\ref{tab:results} come from a single run per model
+configuration.  A supplementary seed-stability check
+(Appendix~\ref{app:seeds}) re-runs the two primary neural models with three
+global random seeds and confirms the ordering, but three seeds do not
+constitute a significance test.  The benchmark ordering should be interpreted
+as a reproducible snapshot consistent across seeds, not as a statistically
+confirmed ranking.
 
 \paragraph{Dependence on recoverable artifacts.}
 The benchmark relies on the particular subjects, splits, and public-data
@@ -764,13 +767,12 @@ shared paired ID counts by subject are 2, 1, 1, and 1 respectively.
 
 \paragraph{Seed stability.}
 The frozen results reported in Table~\ref{tab:results} are from single runs
-with \texttt{seed=0}.  The supplementary material includes exact instructions
-for reproducing the benchmark with alternative seeds.  The ordering gap between
-shared-only (cosine 0.136) and the best shared-private variant (0.108) is large
-relative to typical seed variation on datasets of this scale, but we do not
-claim statistical confirmation of the ordering.  Seed-stability verification
-remains an open item that reviewers can execute from the provided configs and
-commands.
+with \texttt{seed=0}.  Appendix~\ref{app:seeds} reports a supplementary
+seed-stability check for the two primary neural models across three global
+random seeds.  The ordering (shared-only $>$ SP, $d_\mathrm{priv}\!=\!16$)
+is consistent across all seeds, but three seeds do not constitute a formal
+significance test.  The supplementary material includes exact configs and
+commands for further reproduction.
 
 \paragraph{Broader impacts.}
 The positive value of this work is methodological: it encourages reproducible,
@@ -787,6 +789,70 @@ CPU when a requested GPU is unavailable.  Per-run wall-clock time on the 94-row
 benchmark is under 5 minutes for neural models on a single consumer GPU and
 under 30 seconds for Ridge on CPU.  Memory requirements are modest
 ($<$4\,GB GPU, $<$8\,GB system RAM).
+
+\section{Seed-Stability Check}
+\label{app:seeds}
+
+To assess whether the benchmark ordering is sensitive to random initialization,
+we re-ran the two primary neural models---shared-only and
+SP~$d_\mathrm{priv}\!=\!16$---with three global random seeds (0, 42, 123).
+These re-runs use an updated training pipeline that calls
+\texttt{torch\_seed\_all} before model construction, so weight initialization,
+data shuffling, and batch sampling are all deterministic per seed.  Hardware:
+NVIDIA H100 80GB; all other hyperparameters are identical to the frozen
+benchmark.
+
+\begin{table}[h]
+  \centering
+  \footnotesize
+  \caption{Seed-stability check for the two primary neural models on the
+  frozen overlap benchmark (94 rows, 4 subjects, 5 epochs per run).
+  The ordering shared-only $>$ SP~$d_\mathrm{priv}\!=\!16$ is consistent
+  across all seeds.  Even the worst shared-only seed (0.073) exceeds the
+  best SP~$d_\mathrm{priv}\!=\!16$ seed (0.048).}
+  \label{tab:seeds}
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    Model & Seed & Cosine\,$\uparrow$ & MSE\,$\downarrow$ &
+      Val loss \\
+    \midrule
+    Shared-only & 0   & 0.079 & 0.00240 & 1.147 \\
+    Shared-only & 42  & 0.073 & 0.00241 & 1.156 \\
+    Shared-only & 123 & 0.150 & 0.00221 & 1.101 \\
+    \addlinespace[2pt]
+    \textit{Mean $\pm$ std} & & \textit{0.101 $\pm$ 0.035}
+      & \textit{0.00234 $\pm$ 0.00009} & \\
+    \midrule
+    SP, $d_\mathrm{priv}\!=\!16$ & 0   & 0.002 & 0.00260 & 25.260 \\
+    SP, $d_\mathrm{priv}\!=\!16$ & 42  & 0.048 & 0.00248 & 25.229 \\
+    SP, $d_\mathrm{priv}\!=\!16$ & 123 & 0.010 & 0.00258 & 25.947 \\
+    \addlinespace[2pt]
+    \textit{Mean $\pm$ std} & & \textit{0.020 $\pm$ 0.020}
+      & \textit{0.00255 $\pm$ 0.00005} & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Interpretation.}
+The ordering is stable: shared-only outperforms
+SP~$d_\mathrm{priv}\!=\!16$ under every seed.  The absolute performance
+varies---shared-only cosine ranges from 0.073 to 0.150---which is expected on
+a 94-row benchmark and illustrates why this regime requires cautious
+interpretation rather than headline claims.  The gap between model families
+(shared-only mean~0.101 versus SP~$d_\mathrm{priv}\!=\!16$ mean~0.020) is
+larger than the within-family standard deviation for both models, providing
+evidence that the ordering is not a single-seed artifact.  Three seeds are not
+a significance test, but they move the benchmark from a frozen single-run
+snapshot toward a reproducibly stable ordering.
+
+\paragraph{Note on absolute values.}
+The seed-stability runs use explicit global seeding (affecting model weight
+initialization), which was not present in the original frozen runs reported in
+Table~\ref{tab:results}.  Consequently, absolute metrics differ between the
+frozen benchmark and this appendix.  The relevant finding is the stability of
+the \emph{ordering}, not the exact values.  The supplementary material includes
+the machine-readable summary (\texttt{seed\_stability\_summary.json}) and all
+per-seed training histories.
 
 \input{checklist}
 
