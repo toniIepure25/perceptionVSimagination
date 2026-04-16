@@ -1,0 +1,149 @@
+\begin{thebibliography}{16}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Allen et~al.(2022)Allen, St-Yves, Wu, Breedlove, Prince, Dowdle, Nau,
+  Caron, Pestilli, Charest, Hutchinson, Naselaris, and Kay]{allen2022nsd}
+Emily~J. Allen, Ghislain St-Yves, Yihan Wu, Jesse~L. Breedlove, Jacob~S.
+  Prince, Logan~T. Dowdle, Matthias Nau, Brad Caron, Franco Pestilli, Ian
+  Charest, J.~Benjamin Hutchinson, Thomas Naselaris, and Kendrick Kay.
+\newblock A massive 7t fmri dataset to bridge cognitive neuroscience and
+  artificial intelligence.
+\newblock \emph{Nature Neuroscience}, 25\penalty0 (1):\penalty0 116--126, 2022.
+\newblock \doi{10.1038/s41593-021-00962-x}.
+\newblock URL \url{https://doi.org/10.1038/s41593-021-00962-x}.
+
+\bibitem[Chang et~al.(2019)Chang, Pyles, Marcus, Gupta, Tarr, and
+  Aminoff]{chang2019bold5000}
+Nadine Chang, John~A. Pyles, Austin Marcus, Abhinav Gupta, Michael~J. Tarr, and
+  Elissa~M. Aminoff.
+\newblock Bold5000, a public fmri dataset while viewing 5000 visual images.
+\newblock \emph{Scientific Data}, 6\penalty0 (1):\penalty0 49, 2019.
+\newblock \doi{10.1038/s41597-019-0052-3}.
+\newblock URL \url{https://doi.org/10.1038/s41597-019-0052-3}.
+
+\bibitem[Dehghani et~al.(2021)Dehghani, Tay, Gritsenko, Zhao, Houlsby, Diaz,
+  Metzler, and Vinyals]{dehghani2021benchmark}
+Mostafa Dehghani, Yi~Tay, Alexey~A. Gritsenko, Zhe Zhao, Neil Houlsby, Fernando
+  Diaz, Donald Metzler, and Oriol Vinyals.
+\newblock The benchmark lottery.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~34, 2021.
+
+\bibitem[Dijkstra et~al.(2018)Dijkstra, Mostert, de~Lange, Bosch, and van
+  Gerven]{dijkstra2018temporal}
+Nadine Dijkstra, Pim Mostert, Floris~P. de~Lange, Sander Bosch, and Marcel
+  A.~J. van Gerven.
+\newblock Differential temporal dynamics during visual imagery and perception.
+\newblock \emph{eLife}, 7:\penalty0 e33904, 2018.
+\newblock \doi{10.7554/eLife.33904}.
+\newblock URL \url{https://doi.org/10.7554/eLife.33904}.
+
+\bibitem[Haxby et~al.(2011)Haxby, Guntupalli, Connolly, Halchenko, Conroy,
+  Gobbini, Hanke, and Ramadge]{haxby2011hyperalignment}
+James~V. Haxby, J.~Swaroop Guntupalli, Andrew~C. Connolly, Yaroslav~O.
+  Halchenko, Bryan~R. Conroy, M.~Ida Gobbini, Michael Hanke, and Peter~J.
+  Ramadge.
+\newblock A common, high-dimensional model of the representational space in
+  human ventral temporal cortex.
+\newblock \emph{Neuron}, 72\penalty0 (2):\penalty0 404--416, 2011.
+\newblock \doi{10.1016/j.neuron.2011.08.026}.
+\newblock URL \url{https://doi.org/10.1016/j.neuron.2011.08.026}.
+
+\bibitem[Hebart et~al.(2023)Hebart, Contier, Teichmann, Rockter, Zheng, Kidder,
+  Corriveau, Vaziri-Pashkam, and Baker]{hebart2023things}
+Martin~N. Hebart, Oliver Contier, Lina Teichmann, Adam~H. Rockter, Charles~Y.
+  Zheng, Alexis Kidder, Anna Corriveau, Maryam Vaziri-Pashkam, and Chris~I.
+  Baker.
+\newblock Things-data, a multimodal collection of large-scale datasets for
+  investigating object representations in human brain and behavior.
+\newblock \emph{eLife}, 12:\penalty0 e82580, 2023.
+\newblock \doi{10.7554/eLife.82580}.
+\newblock URL \url{https://doi.org/10.7554/eLife.82580}.
+
+\bibitem[Horikawa and Kamitani(2017)]{horikawa2017generic}
+Tomoyasu Horikawa and Yukiyasu Kamitani.
+\newblock Generic decoding of seen and imagined objects using hierarchical
+  visual features.
+\newblock \emph{Nature Communications}, 8:\penalty0 15037, 2017.
+\newblock \doi{10.1038/ncomms15037}.
+\newblock URL \url{https://doi.org/10.1038/ncomms15037}.
+
+\bibitem[Liang et~al.(2023)Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga,
+  Zhang, Narang, et~al.]{liang2023helm}
+Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu,
+  Michihiro Yasunaga, Yian Zhang, Deepak Narang, et~al.
+\newblock Holistic evaluation of language models.
+\newblock \emph{Transactions on Machine Learning Research}, 2023.
+
+\bibitem[Naselaris et~al.(2011)Naselaris, Kay, Nishimoto, and
+  Gallant]{naselaris2011encoding}
+Thomas Naselaris, Kendrick~N. Kay, Shinji Nishimoto, and Jack~L. Gallant.
+\newblock Encoding and decoding in fmri.
+\newblock \emph{NeuroImage}, 56\penalty0 (2):\penalty0 400--410, 2011.
+\newblock \doi{10.1016/j.neuroimage.2010.07.073}.
+\newblock URL \url{https://doi.org/10.1016/j.neuroimage.2010.07.073}.
+
+\bibitem[Ozcelik and VanRullen(2023)]{ozcelik2023brain}
+Furkan Ozcelik and Rufin VanRullen.
+\newblock Natural scene reconstruction from fmri signals using generative
+  latent diffusion.
+\newblock \emph{Scientific Reports}, 13:\penalty0 15666, 2023.
+\newblock \doi{10.1038/s41598-023-42891-8}.
+
+\bibitem[Pearson(2019)]{pearson2019imagery}
+Joel Pearson.
+\newblock The human imagination: the cognitive neuroscience of visual mental
+  imagery.
+\newblock \emph{Nature Reviews Neuroscience}, 20:\penalty0 624--634, 2019.
+\newblock \doi{10.1038/s41583-019-0202-9}.
+\newblock URL \url{https://doi.org/10.1038/s41583-019-0202-9}.
+
+\bibitem[Radford et~al.(2021)Radford, Kim, Hallacy, Ramesh, Goh, Agarwal,
+  Sastry, Askell, Mishkin, Clark, Krueger, and Sutskever]{radford2021clip}
+Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh,
+  Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark,
+  Gretchen Krueger, and Ilya Sutskever.
+\newblock Learning transferable visual models from natural language
+  supervision.
+\newblock In \emph{Proceedings of the 38th International Conference on Machine
+  Learning}, volume 139 of \emph{Proceedings of Machine Learning Research},
+  pages 8748--8763. PMLR, 2021.
+\newblock URL \url{https://proceedings.mlr.press/v139/radford21a.html}.
+
+\bibitem[Scotti et~al.(2024)Scotti, Tripathy, Torrico, Kneeland, Chen, Narang,
+  Santhirasegaran, Xu, Naselaris, Norman, and Abraham]{scotti2024mindeye2}
+Paul~S. Scotti, Mihir Tripathy, Cesar Torrico, Reese Kneeland, Tong Chen,
+  Ashutosh Narang, Charan Santhirasegaran, Jonathan Xu, Thomas Naselaris,
+  Kenneth~A. Norman, and Tanishq~Mathew Abraham.
+\newblock Mindeye2: Shared-subject models enable fmri-to-image with 1 hour of
+  data.
+\newblock In \emph{Proceedings of the 41st International Conference on Machine
+  Learning}, volume 235 of \emph{Proceedings of Machine Learning Research},
+  pages 44038--44059. PMLR, 2024.
+
+\bibitem[Shen et~al.(2019)Shen, Horikawa, Majima, and Kamitani]{shen2019deep}
+Guohua Shen, Tomoyasu Horikawa, Kei Majima, and Yukiyasu Kamitani.
+\newblock Deep image reconstruction from human brain activity.
+\newblock \emph{PLoS Computational Biology}, 15\penalty0 (1):\penalty0
+  e1006633, 2019.
+\newblock \doi{10.1371/journal.pcbi.1006633}.
+
+\bibitem[Takagi and Nishimoto(2023)]{takagi2023high}
+Yu~Takagi and Shinji Nishimoto.
+\newblock High-resolution image reconstruction with latent diffusion models
+  from human brain activity.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition}, pages 14453--14463, 2023.
+
+\bibitem[Tang et~al.(2023)Tang, LeBel, Jain, and Huth]{tang2023semantic}
+Jerry Tang, Amanda LeBel, Shailee Jain, and Alexander~G. Huth.
+\newblock Semantic reconstruction of continuous language from non-invasive
+  brain recordings.
+\newblock \emph{Nature Neuroscience}, 26:\penalty0 858--866, 2023.
+\newblock \doi{10.1038/s41593-023-01304-9}.
+
+\end{thebibliography}

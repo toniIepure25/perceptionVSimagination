@@ -3325,6 +3325,745 @@ def test_public_nod_animus_paper_lane_main_blocks_missing_smoke_artifacts(tmp_pa
     assert "Required public-NOD smoke artifact is missing" in " ".join(payload["blocked_reasons"])
 
 
+def _build_public_nod_paper2_baseline_fixture(
+    tmp_path,
+    *,
+    experiment_name="public_nod_imagenet_run10_shared_only_paper2_baseline",
+    benchmark_role="paper2_public_nod_baseline_non_smoke",
+    evidence_tier="operational_baseline",
+    root_name="baseline",
+    eval_cosine=0.02,
+    eval_mse=0.0024,
+    transfer_cosine=0.02,
+    transfer_mse=0.0024,
+):
+    import pandas as pd
+    import yaml
+
+    from fmri2img.workflows.common import load_workflow_config
+
+    repo_root = tmp_path
+    base = repo_root / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name
+    train_dir = base / "train"
+    eval_dir = base / "eval"
+    transfer_dir = base / "transfer"
+    export_dir = base / "export"
+    for path in (train_dir, eval_dir, transfer_dir, export_dir):
+        path.mkdir(parents=True, exist_ok=True)
+
+    prepared_dataset_path = repo_root / "cache" / "indices" / "public_nod" / "imagenet_run10_shared_only_prepared_dataset.parquet"
+    prepared_dataset_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {"pair_id": 1, "subject": "sub-01", "session": "ses-imagenet01", "split": "test"},
+            {"pair_id": 2, "subject": "sub-01", "session": "ses-imagenet02", "split": "test"},
+            {"pair_id": 3, "subject": "sub-02", "session": "ses-imagenet01", "split": "test"},
+            {"pair_id": 4, "subject": "sub-02", "session": "ses-imagenet02", "split": "test"},
+        ]
+    ).to_parquet(prepared_dataset_path, index=False)
+
+    for name in ("best_decoder.pt", "roi_summary.json", "target_summary.json"):
+        path = train_dir / name
+        if name.endswith(".pt"):
+            path.write_bytes(b"pt")
+        else:
+            path.write_text("{}")
+    (train_dir / "config_snapshot.json").write_text(
+        json.dumps(
+            {
+                "experiment": {
+                    "name": experiment_name,
+                    "benchmark_role": benchmark_role,
+                }
+            }
+        )
+    )
+    (train_dir / "train_history.json").write_text(
+        json.dumps(
+            [
+                {"epoch": 1, "train_loss": 1.0, "val_loss": 0.5, "val_content_cosine": 0.01},
+                {"epoch": 2, "train_loss": 0.9, "val_loss": 0.4, "val_content_cosine": 0.02},
+            ]
+        )
+    )
+
+    metrics_payload = {
+        "target_space": "vit_l14_image_768",
+        "overall": {"cosine": eval_cosine, "cosine_std": 0.03, "mse": eval_mse},
+        "by_condition": [{"condition": "perception", "mean": 0.02, "std": 0.03, "count": 4}],
+        "condition_availability": {
+            "present_conditions": ["perception"],
+            "missing_conditions": ["imagery"],
+            "paired_metrics_available": False,
+            "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+        },
+        "pair_metrics": {
+            "n_pairs": 0,
+            "available": False,
+            "present_conditions": ["perception"],
+            "missing_conditions": ["imagery"],
+            "reason": "pair_metrics_require_both_perception_and_imagery",
+        },
+    }
+    (eval_dir / "metrics.json").write_text(json.dumps(metrics_payload))
+    (eval_dir / "roi_summary.json").write_text(json.dumps({"roi_groups": {"early_visual": 3}}))
+    (eval_dir / "resolved_roi_groups.json").write_text(json.dumps({"early_visual": {"input_dim": 3}}))
+
+    transfer_payload = dict(metrics_payload)
+    transfer_payload["overall"] = {"cosine": transfer_cosine, "cosine_std": 0.03, "mse": transfer_mse}
+    (transfer_dir / "transfer_metrics.json").write_text(json.dumps(transfer_payload))
+    (transfer_dir / "per_trial_pairs.csv").write_text(
+        "nsd_id,pair_id,condition,cosine\n101,1,perception,-0.10\n102,2,perception,-0.02\n103,3,perception,0.01\n104,4,perception,0.05\n"
+    )
+
+    for name in ("best_decoder.pt", "config_snapshot.json", "decoder_card.md"):
+        path = export_dir / name
+        if name.endswith(".pt"):
+            path.write_bytes(b"pt")
+        elif name.endswith(".md"):
+            path.write_text("# Decoder Card\n")
+        else:
+            path.write_text(
+                json.dumps(
+                    {
+                        "experiment": {
+                            "name": experiment_name,
+                            "benchmark_role": benchmark_role,
+                        }
+                    }
+                )
+            )
+    (export_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "target_spec": {"target_name": "vit_l14_image_768", "dimension": 768},
+                "metadata": {
+                    "experiment": {
+                        "name": experiment_name,
+                        "benchmark_role": benchmark_role,
+                    },
+                    "condition_semantics": {
+                        "present_conditions": ["perception"],
+                        "missing_conditions": ["imagery"],
+                        "paired_metrics_available": False,
+                        "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                        "pair_metrics_available_from_payload": False,
+                    },
+                    "target_spec_normalized": {
+                        "target_name_normalized": "vit_l14_image_768",
+                        "target_dimension_normalized": 768,
+                        "source_field_shape": "target_name",
+                        "target_name_from_payload": "vit_l14_image_768",
+                    },
+                },
+            }
+        )
+    )
+    (export_dir / "decoder_card.json").write_text(
+        json.dumps(
+            {
+                "experiment": {
+                    "name": experiment_name,
+                    "benchmark_role": benchmark_role,
+                },
+                "target": {
+                    "name": "vit_l14_image_768",
+                    "dimension": 768,
+                    "source_field_shape": "target_name",
+                    "target_name_from_payload": "vit_l14_image_768",
+                },
+                "condition_semantics": {
+                    "present_conditions": ["perception"],
+                    "missing_conditions": ["imagery"],
+                    "paired_metrics_available": False,
+                    "paired_metrics_reason": "pair_metrics_require_both_perception_and_imagery",
+                    "pair_metrics_available_from_payload": False,
+                },
+            }
+        )
+    )
+
+    config_path = repo_root / "public_nod_paper2_baseline.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment": {
+                    "name": experiment_name,
+                    "description": "paper-2 baseline",
+                    "benchmark_role": benchmark_role,
+                    "evidence_tier": evidence_tier,
+                },
+                "dataset": {"mixed_index": str(prepared_dataset_path)},
+                "roi": {"groups": {"early_visual": ["V1"], "ventral_visual": [], "metacognitive": ["precuneus"]}},
+                "targets": {"name": "vit_l14_image_768", "dimension": 768, "cache_path": str(repo_root / "dummy_targets.parquet")},
+                "model": {
+                    "branch_embedding_dim": 64,
+                    "shared_dim": 64,
+                    "private_dim": 32,
+                    "dropout": 0.1,
+                    "disentanglement_mode": "shared_only",
+                    "use_domain_head": False,
+                    "use_vividness_head": False,
+                },
+                "training": {"batch_size": 16, "epochs": 5, "device": "cpu", "output_dir": str(train_dir)},
+                "evaluation": {"batch_size": 16, "output_dir": str(eval_dir), "transfer_output_dir": str(transfer_dir)},
+                "analysis": {"output_dir": str(base / "analysis")},
+                "export": {"output_dir": str(export_dir)},
+                "public_nod": {
+                    "dataset_id": "ds004496",
+                    "task": "imagenet",
+                    "run": 10,
+                    "subjects": ["sub-01", "sub-02"],
+                    "sessions": ["ses-imagenet01", "ses-imagenet02"],
+                    "pair_rows": 4,
+                },
+            }
+        )
+    )
+    (repo_root / "dummy_targets.parquet").write_bytes(b"")
+    return load_workflow_config(str(config_path)), config_path
+
+
+def test_public_nod_paper2_baseline_report_builds_operational_summary(tmp_path):
+    import fmri2img.workflows.report_public_nod_paper2_baseline as workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(tmp_path)
+    output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "paper2_baseline_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "reliability_seed_report.json"
+    report, reliability = workflow.build_public_nod_paper2_baseline_report(
+        loaded,
+        config_path=config_path,
+        output_path=output_path,
+        reliability_output_path=reliability_path,
+    )
+    assert report["state"] == {
+        "baseline_bundle_exists": True,
+        "train_bundle_complete": True,
+        "eval_bundle_complete": True,
+        "transfer_bundle_complete": True,
+        "export_bundle_complete": True,
+        "operational_ready": True,
+        "evidence_ready_candidate": False,
+        "training_ready": False,
+        "reliability_seed_written": True,
+    }
+    assert report["eval_summary"]["condition_semantics"]["present_conditions"] == ["perception"]
+    assert report["export_summary"]["target_metadata_consistent"] is True
+    assert reliability is not None
+    assert reliability["state"]["reliability_seed_ready"] is True
+    assert reliability["sample_counts"]["per_subject_counts"]["sub-01"] == 2
+    assert reliability["low_trust_candidates"]["available"] is True
+    assert reliability["low_trust_candidates"]["lowest_examples"][0]["pair_id"] == 1
+
+
+def test_public_nod_paper2_baseline_report_accepts_ablation_identity(tmp_path):
+    import fmri2img.workflows.report_public_nod_paper2_baseline as workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+        tmp_path,
+        experiment_name="public_nod_imagenet_run10_shared_only_paper2_shareddim32",
+        benchmark_role="paper2_public_nod_shared_dim_ablation",
+        evidence_tier="operational_ablation",
+        root_name="shared_dim32",
+        eval_cosine=0.03,
+        transfer_cosine=0.031,
+    )
+    output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "shared_dim32" / "paper2_ablation_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "shared_dim32" / "reliability_seed_report.json"
+    report, reliability = workflow.build_public_nod_paper2_baseline_report(
+        loaded,
+        config_path=config_path,
+        output_path=output_path,
+        reliability_output_path=reliability_path,
+    )
+    assert report["experiment"]["name"] == "public_nod_imagenet_run10_shared_only_paper2_shareddim32"
+    assert report["publication_assessment"]["classification"] == "paper2_operational_ablation"
+    assert report["state"]["operational_ready"] is True
+    assert reliability is not None
+
+
+def test_compare_public_nod_paper2_runs_builds_rankings(tmp_path):
+    import fmri2img.workflows.compare_public_nod_paper2_runs as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    run_specs = [
+        ("baseline", "public_nod_imagenet_run10_shared_only_paper2_baseline", "paper2_public_nod_baseline_non_smoke", "operational_baseline", 0.67, 0.67),
+        ("shared_dim32", "public_nod_imagenet_run10_shared_only_paper2_shareddim32", "paper2_public_nod_shared_dim_ablation", "operational_ablation", 0.64, 0.64),
+        ("shared_dim128", "public_nod_imagenet_run10_shared_only_paper2_shareddim128", "paper2_public_nod_shared_dim_ablation", "operational_ablation", 0.69, 0.69),
+    ]
+    for root_name, experiment_name, benchmark_role, evidence_tier, eval_cosine, transfer_cosine in run_specs:
+        loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+            tmp_path,
+            experiment_name=experiment_name,
+            benchmark_role=benchmark_role,
+            evidence_tier=evidence_tier,
+            root_name=root_name,
+            eval_cosine=eval_cosine,
+            transfer_cosine=transfer_cosine,
+        )
+        output_name = "paper2_baseline_report.json" if root_name == "baseline" else "paper2_ablation_report.json"
+        output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / output_name
+        reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "reliability_seed_report.json"
+        report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+            loaded,
+            config_path=config_path,
+            output_path=output_path,
+            reliability_output_path=reliability_path,
+        )
+        write_text = json.dumps(report)
+        output_path.write_text(write_text)
+        reliability_path.write_text(json.dumps(reliability))
+
+    comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "shared_capacity_comparison.json"
+    reliability_comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "reliability_comparison.json"
+    comparison, reliability_comparison = workflow.build_public_nod_paper2_run_comparison(
+        root_dir=tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only",
+        run_ids=["baseline", "shared_dim32", "shared_dim128"],
+        comparison_output_path=comparison_path,
+        reliability_output_path=reliability_comparison_path,
+    )
+    assert comparison["rankings"]["eval_cosine_desc"][0]["run_id"] == "shared_dim128"
+    assert comparison["rankings"]["transfer_cosine_desc"][0]["run_id"] == "shared_dim128"
+    assert comparison["interpretation"]["enough_for_publication_evidence"] is False
+    assert reliability_comparison["interpretation"]["cleanest_tail_run"]["run_id"] in {
+        "baseline",
+        "shared_dim32",
+        "shared_dim128",
+    }
+
+
+def test_diagnose_public_nod_paper2_condition_semantics_identifies_missing_export_semantics(tmp_path):
+    import fmri2img.workflows.diagnose_public_nod_paper2_condition_semantics as workflow
+
+    loaded, _ = _build_public_nod_paper2_baseline_fixture(
+        tmp_path,
+        experiment_name="public_nod_imagenet_run10_shared_only_paper2_shareddim128",
+        benchmark_role="paper2_public_nod_shared_dim_ablation",
+        evidence_tier="operational_ablation",
+        root_name="shared_dim128",
+    )
+    run_root = Path(loaded["training"]["output_dir"]).parent
+    manifest_path = run_root / "export" / "manifest.json"
+    decoder_card_path = run_root / "export" / "decoder_card.json"
+    config_snapshot_path = run_root / "export" / "config_snapshot.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["metadata"].pop("condition_semantics", None)
+    manifest_path.write_text(json.dumps(manifest))
+    decoder_card = json.loads(decoder_card_path.read_text())
+    decoder_card["condition_semantics"] = {
+        "present_conditions": [],
+        "missing_conditions": [],
+        "paired_metrics_available": None,
+        "paired_metrics_reason": None,
+        "pair_metrics_available_from_payload": None,
+    }
+    decoder_card_path.write_text(json.dumps(decoder_card))
+    config_snapshot = json.loads(config_snapshot_path.read_text())
+    config_snapshot["evaluation"] = {
+        "output_dir": str((run_root / "eval").resolve()),
+        "transfer_output_dir": str((run_root / "transfer").resolve()),
+    }
+    config_snapshot["export"] = {"output_dir": str((run_root / "export").resolve())}
+    config_snapshot_path.write_text(json.dumps(config_snapshot))
+
+    output_path = run_root / "condition_semantics_diagnosis.json"
+    diagnosis = workflow.diagnose_public_nod_paper2_condition_semantics(
+        run_root=run_root,
+        output_path=output_path,
+    )
+    assert diagnosis["root_cause_classification"] == "malformed_export_bundle_missing_condition_semantics"
+    assert diagnosis["rerun_needed"] is True
+    assert diagnosis["code_fix_needed"] is False
+    assert diagnosis["raw_field_presence"]["manifest_metadata_condition_semantics_present"] is False
+
+
+def test_compare_public_nod_paper2_roi_runs_builds_rankings(tmp_path):
+    import fmri2img.workflows.compare_public_nod_paper2_roi_runs as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    run_specs = [
+        ("baseline", "public_nod_imagenet_run10_shared_only_paper2_baseline", "paper2_public_nod_baseline_non_smoke", "operational_baseline", [], 0.67, 0.67),
+        ("early_visual_only", "public_nod_imagenet_run10_shared_only_paper2_earlyvisualonly", "paper2_public_nod_roi_ablation", "operational_ablation", ["ventral_visual", "metacognitive"], 0.65, 0.64),
+        ("metacognitive_only", "public_nod_imagenet_run10_shared_only_paper2_metacognitiveonly", "paper2_public_nod_roi_ablation", "operational_ablation", ["early_visual", "ventral_visual"], 0.61, 0.60),
+    ]
+    for root_name, experiment_name, benchmark_role, evidence_tier, zero_out_groups, eval_cosine, transfer_cosine in run_specs:
+        loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+            tmp_path,
+            experiment_name=experiment_name,
+            benchmark_role=benchmark_role,
+            evidence_tier=evidence_tier,
+            root_name=root_name,
+            eval_cosine=eval_cosine,
+            transfer_cosine=transfer_cosine,
+        )
+        loaded["roi"]["zero_out_groups"] = zero_out_groups
+        manifest_path = Path(loaded["export"]["output_dir"]) / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest.setdefault("roi_spec", {})["zero_out_groups"] = zero_out_groups
+        manifest_path.write_text(json.dumps(manifest))
+        output_name = "paper2_baseline_report.json" if root_name == "baseline" else "paper2_ablation_report.json"
+        output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / output_name
+        reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "reliability_seed_report.json"
+        report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+            loaded,
+            config_path=config_path,
+            output_path=output_path,
+            reliability_output_path=reliability_path,
+        )
+        output_path.write_text(json.dumps(report))
+        reliability_path.write_text(json.dumps(reliability))
+
+    comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "roi_ablation_comparison.json"
+    reliability_comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "roi_reliability_comparison.json"
+    comparison, reliability_comparison = workflow.build_public_nod_paper2_roi_run_comparison(
+        root_dir=tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only",
+        run_ids=["baseline", "early_visual_only", "metacognitive_only"],
+        comparison_output_path=comparison_path,
+        reliability_output_path=reliability_comparison_path,
+    )
+    assert comparison["rankings"]["eval_cosine_desc"][0]["run_id"] == "baseline"
+    assert comparison["rankings"]["transfer_cosine_desc"][0]["run_id"] == "baseline"
+    assert comparison["runs"][1]["zero_out_groups"] == ["ventral_visual", "metacognitive"]
+    assert comparison["interpretation"]["enough_for_publication_evidence"] is False
+    assert reliability_comparison["interpretation"]["cleanest_tail_run"]["run_id"] in {
+        "baseline",
+        "early_visual_only",
+        "metacognitive_only",
+    }
+
+
+def test_analyze_public_nod_paper2_robustness_builds_subject_and_session_summary(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(tmp_path)
+    report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "paper2_baseline_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "reliability_seed_report.json"
+    report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+        loaded,
+        config_path=config_path,
+        output_path=report_path,
+        reliability_output_path=reliability_path,
+    )
+    report_path.write_text(json.dumps(report))
+    reliability_path.write_text(json.dumps(reliability))
+
+    output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "robustness_report.json"
+    robustness = workflow.analyze_public_nod_paper2_robustness(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=output_path,
+    )
+    assert robustness["state"]["robustness_report_ready"] is True
+    assert robustness["prepared_dataset_join"]["join_succeeded"] is True
+    assert robustness["sample_counts"]["per_subject_counts"]["sub-01"] == 2
+    assert robustness["sample_counts"]["per_session_counts"]["ses-imagenet01"] == 2
+    assert robustness["per_subject_cosine"]["worst_subject"]["subject"] in {"sub-01", "sub-02"}
+    assert robustness["per_session_cosine"]["worst_session"]["session"] in {"ses-imagenet01", "ses-imagenet02"}
+
+
+def test_compare_public_nod_paper2_robustness_builds_stability_rankings(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as robustness_workflow
+    import fmri2img.workflows.compare_public_nod_paper2_robustness as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    run_specs = [
+        ("baseline", "public_nod_imagenet_run10_shared_only_paper2_baseline", "paper2_public_nod_baseline_non_smoke", "operational_baseline", [0.20, 0.80, 0.50, 0.70]),
+        ("early_visual_only", "public_nod_imagenet_run10_shared_only_paper2_earlyvisualonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.40, 0.60, 0.50, 0.70]),
+        ("metacognitive_only", "public_nod_imagenet_run10_shared_only_paper2_metacognitiveonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.55, 0.55, 0.55, 0.55]),
+    ]
+    for root_name, experiment_name, benchmark_role, evidence_tier, cosine_values in run_specs:
+        loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+            tmp_path,
+            experiment_name=experiment_name,
+            benchmark_role=benchmark_role,
+            evidence_tier=evidence_tier,
+            root_name=root_name,
+            eval_cosine=float(sum(cosine_values) / len(cosine_values)),
+            transfer_cosine=float(sum(cosine_values) / len(cosine_values)),
+        )
+        transfer_pairs_path = Path(loaded["evaluation"]["transfer_output_dir"]) / "per_trial_pairs.csv"
+        transfer_pairs_path.write_text("nsd_id,pair_id,condition,cosine\n1,1,perception,{:.2f}\n2,2,perception,{:.2f}\n3,3,perception,{:.2f}\n4,4,perception,{:.2f}\n".format(*cosine_values))
+        output_name = "paper2_baseline_report.json" if root_name == "baseline" else "paper2_ablation_report.json"
+        report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / output_name
+        reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "reliability_seed_report.json"
+        report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+            loaded,
+            config_path=config_path,
+            output_path=report_path,
+            reliability_output_path=reliability_path,
+        )
+        report_path.write_text(json.dumps(report))
+        reliability_path.write_text(json.dumps(reliability))
+        robustness_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "robustness_report.json"
+        robustness = robustness_workflow.analyze_public_nod_paper2_robustness(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=robustness_path,
+        )
+        robustness_path.write_text(json.dumps(robustness))
+
+    comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "robustness_comparison.json"
+    tail_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "robustness_tail_comparison.json"
+    comparison, tail = workflow.build_public_nod_paper2_robustness_comparison(
+        root_dir=tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only",
+        run_ids=["baseline", "early_visual_only", "metacognitive_only"],
+        comparison_output_path=comparison_path,
+        tail_output_path=tail_path,
+    )
+    assert comparison["rankings"]["subject_dispersion_asc"][0]["run_id"] == "metacognitive_only"
+    assert comparison["rankings"]["session_dispersion_asc"][0]["run_id"] == "metacognitive_only"
+    assert comparison["interpretation"]["enough_for_publication_evidence"] is False
+    assert tail["state"]["evidence_ready_candidate"] is False
+
+
+def test_analyze_public_nod_paper2_trust_signals_builds_enrichment_summary(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as robustness_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_trust_signals as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(tmp_path)
+    transfer_pairs_path = Path(loaded["evaluation"]["transfer_output_dir"]) / "per_trial_pairs.csv"
+    transfer_pairs_path.write_text("nsd_id,pair_id,condition,cosine\n1,1,perception,0.20\n2,2,perception,0.80\n3,3,perception,0.50\n4,4,perception,0.70\n")
+    report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "paper2_baseline_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "reliability_seed_report.json"
+    report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+        loaded,
+        config_path=config_path,
+        output_path=report_path,
+        reliability_output_path=reliability_path,
+    )
+    report_path.write_text(json.dumps(report))
+    reliability_path.write_text(json.dumps(reliability))
+
+    robustness_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "robustness_report.json"
+    robustness = robustness_workflow.analyze_public_nod_paper2_robustness(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=robustness_path,
+    )
+    robustness_path.write_text(json.dumps(robustness))
+
+    trust_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "trust_signal_report.json"
+    trust = workflow.analyze_public_nod_paper2_trust_signals(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=trust_path,
+    )
+    assert trust["state"]["trust_signal_report_ready"] is True
+    assert trust["descriptive_trust_scores"]["tail_instability_enrichment"] is not None
+    assert trust["threshold_analyses"]["bottom_10_pct"]["worst_subject_enrichment"] > 1.0
+    assert trust["instability_reference"]["low_performing_subjects"]["selected_groups"]
+
+
+def test_compare_public_nod_paper2_trust_signals_builds_rankings(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as robustness_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_trust_signals as trust_workflow
+    import fmri2img.workflows.compare_public_nod_paper2_trust_signals as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    run_specs = [
+        ("baseline", "public_nod_imagenet_run10_shared_only_paper2_baseline", "paper2_public_nod_baseline_non_smoke", "operational_baseline", [0.20, 0.80, 0.50, 0.70]),
+        ("early_visual_only", "public_nod_imagenet_run10_shared_only_paper2_earlyvisualonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.40, 0.60, 0.50, 0.70]),
+        ("metacognitive_only", "public_nod_imagenet_run10_shared_only_paper2_metacognitiveonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.45, 0.75, 0.55, 0.80]),
+    ]
+    for root_name, experiment_name, benchmark_role, evidence_tier, cosine_values in run_specs:
+        loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+            tmp_path,
+            experiment_name=experiment_name,
+            benchmark_role=benchmark_role,
+            evidence_tier=evidence_tier,
+            root_name=root_name,
+            eval_cosine=float(sum(cosine_values) / len(cosine_values)),
+            transfer_cosine=float(sum(cosine_values) / len(cosine_values)),
+        )
+        transfer_pairs_path = Path(loaded["evaluation"]["transfer_output_dir"]) / "per_trial_pairs.csv"
+        transfer_pairs_path.write_text(
+            "nsd_id,pair_id,condition,cosine\n1,1,perception,{:.2f}\n2,2,perception,{:.2f}\n3,3,perception,{:.2f}\n4,4,perception,{:.2f}\n".format(
+                *cosine_values
+            )
+        )
+        output_name = "paper2_baseline_report.json" if root_name == "baseline" else "paper2_ablation_report.json"
+        report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / output_name
+        reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "reliability_seed_report.json"
+        report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+            loaded,
+            config_path=config_path,
+            output_path=report_path,
+            reliability_output_path=reliability_path,
+        )
+        report_path.write_text(json.dumps(report))
+        reliability_path.write_text(json.dumps(reliability))
+        robustness_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "robustness_report.json"
+        robustness = robustness_workflow.analyze_public_nod_paper2_robustness(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=robustness_path,
+        )
+        robustness_path.write_text(json.dumps(robustness))
+        trust_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "trust_signal_report.json"
+        trust = trust_workflow.analyze_public_nod_paper2_trust_signals(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=trust_path,
+        )
+        trust_path.write_text(json.dumps(trust))
+
+    comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "trust_signal_comparison.json"
+    instability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "trust_instability_comparison.json"
+    comparison, instability = workflow.build_public_nod_paper2_trust_signal_comparison(
+        root_dir=tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only",
+        run_ids=["baseline", "early_visual_only", "metacognitive_only"],
+        comparison_output_path=comparison_path,
+        instability_output_path=instability_path,
+    )
+    assert comparison["interpretation"]["most_accurate_run"]["run_id"] == "metacognitive_only"
+    assert comparison["interpretation"]["cleanest_trust_tail_run"]["run_id"] == "metacognitive_only"
+    assert comparison["interpretation"]["heuristic_support_for_tail_signal_beyond_mean_cosine"] is True
+    assert instability["state"]["exploratory_only"] is True
+
+
+def test_analyze_public_nod_paper2_risk_buckets_builds_bucket_summary(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as robustness_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_trust_signals as trust_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_risk_buckets as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(tmp_path)
+    transfer_pairs_path = Path(loaded["evaluation"]["transfer_output_dir"]) / "per_trial_pairs.csv"
+    transfer_pairs_path.write_text("nsd_id,pair_id,condition,cosine\n1,1,perception,0.10\n2,2,perception,0.20\n3,3,perception,0.80\n4,4,perception,0.90\n")
+    report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "paper2_baseline_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "reliability_seed_report.json"
+    report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+        loaded,
+        config_path=config_path,
+        output_path=report_path,
+        reliability_output_path=reliability_path,
+    )
+    report_path.write_text(json.dumps(report))
+    reliability_path.write_text(json.dumps(reliability))
+    robustness_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "robustness_report.json"
+    robustness = robustness_workflow.analyze_public_nod_paper2_robustness(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=robustness_path,
+    )
+    robustness_path.write_text(json.dumps(robustness))
+    trust_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "trust_signal_report.json"
+    trust = trust_workflow.analyze_public_nod_paper2_trust_signals(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=trust_path,
+    )
+    trust_path.write_text(json.dumps(trust))
+
+    risk_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "risk_bucket_report.json"
+    risk = workflow.analyze_public_nod_paper2_risk_buckets(
+        run_root=Path(loaded["training"]["output_dir"]).parent,
+        output_path=risk_path,
+    )
+    assert risk["state"]["risk_bucket_report_ready"] is True
+    assert risk["prepared_dataset_join"]["join_succeeded"] is True
+    assert risk["bucket_definition"]["actual_bucket_count"] == 4
+    assert risk["risk_tables"]["tertiles"]["bucket_definition"]["actual_bucket_count"] == 3
+    assert risk["risk_tables"]["quintiles"]["bucket_definition"]["actual_bucket_count"] == 4
+    assert risk["low_performing_group_conditioning"]["inside_low_performing_groups"]["tertiles"]["bucket_definition"]["actual_bucket_count"] >= 1
+    assert risk["monotonicity_diagnostics"]["lowest_bucket_unstable_share"] >= risk["monotonicity_diagnostics"]["highest_bucket_unstable_share"]
+
+
+def test_compare_public_nod_paper2_risk_buckets_builds_rankings(tmp_path):
+    import fmri2img.workflows.analyze_public_nod_paper2_robustness as robustness_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_trust_signals as trust_workflow
+    import fmri2img.workflows.analyze_public_nod_paper2_risk_buckets as risk_workflow
+    import fmri2img.workflows.compare_public_nod_paper2_risk_buckets as workflow
+    import fmri2img.workflows.report_public_nod_paper2_baseline as report_workflow
+
+    run_specs = [
+        ("baseline", "public_nod_imagenet_run10_shared_only_paper2_baseline", "paper2_public_nod_baseline_non_smoke", "operational_baseline", [0.10, 0.20, 0.80, 0.90]),
+        ("early_visual_only", "public_nod_imagenet_run10_shared_only_paper2_earlyvisualonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.10, 0.70, 0.20, 0.90]),
+        ("metacognitive_only", "public_nod_imagenet_run10_shared_only_paper2_metacognitiveonly", "paper2_public_nod_roi_ablation", "operational_ablation", [0.05, 0.15, 0.90, 0.98]),
+    ]
+    for root_name, experiment_name, benchmark_role, evidence_tier, cosine_values in run_specs:
+        loaded, config_path = _build_public_nod_paper2_baseline_fixture(
+            tmp_path,
+            experiment_name=experiment_name,
+            benchmark_role=benchmark_role,
+            evidence_tier=evidence_tier,
+            root_name=root_name,
+            eval_cosine=float(sum(cosine_values) / len(cosine_values)),
+            transfer_cosine=float(sum(cosine_values) / len(cosine_values)),
+        )
+        transfer_pairs_path = Path(loaded["evaluation"]["transfer_output_dir"]) / "per_trial_pairs.csv"
+        transfer_pairs_path.write_text(
+            "nsd_id,pair_id,condition,cosine\n1,1,perception,{:.2f}\n2,2,perception,{:.2f}\n3,3,perception,{:.2f}\n4,4,perception,{:.2f}\n".format(
+                *cosine_values
+            )
+        )
+        output_name = "paper2_baseline_report.json" if root_name == "baseline" else "paper2_ablation_report.json"
+        report_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / output_name
+        reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "reliability_seed_report.json"
+        report, reliability = report_workflow.build_public_nod_paper2_baseline_report(
+            loaded,
+            config_path=config_path,
+            output_path=report_path,
+            reliability_output_path=reliability_path,
+        )
+        report_path.write_text(json.dumps(report))
+        reliability_path.write_text(json.dumps(reliability))
+        robustness_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "robustness_report.json"
+        robustness = robustness_workflow.analyze_public_nod_paper2_robustness(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=robustness_path,
+        )
+        robustness_path.write_text(json.dumps(robustness))
+        trust_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "trust_signal_report.json"
+        trust = trust_workflow.analyze_public_nod_paper2_trust_signals(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=trust_path,
+        )
+        trust_path.write_text(json.dumps(trust))
+        risk_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / root_name / "risk_bucket_report.json"
+        risk = risk_workflow.analyze_public_nod_paper2_risk_buckets(
+            run_root=Path(loaded["training"]["output_dir"]).parent,
+            output_path=risk_path,
+        )
+        risk_path.write_text(json.dumps(risk))
+
+    comparison_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "coarse_risk_comparison.json"
+    monotonicity_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "comparison" / "coarse_risk_monotonicity_comparison.json"
+    comparison, monotonicity = workflow.build_public_nod_paper2_risk_bucket_comparison(
+        root_dir=tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only",
+        run_ids=["baseline", "early_visual_only", "metacognitive_only"],
+        comparison_output_path=comparison_path,
+        monotonicity_output_path=monotonicity_path,
+    )
+    assert comparison["interpretation"]["most_accurate_run"]["run_id"] == "metacognitive_only"
+    assert comparison["runs"][2]["bottom_10_threshold_cosine_lte"] == 0.05
+    assert "tertiles_improve_monotonicity_over_deciles" in comparison["interpretation"]
+    assert "quintiles_improve_monotonicity_over_deciles" in comparison["interpretation"]
+    assert comparison["runs"][0]["tertiles_risk_gap_lowest_vs_highest"] is not None
+    assert comparison["runs"][0]["quintiles_risk_gap_lowest_vs_highest"] is not None
+    assert monotonicity["state"]["exploratory_only"] is True
+
+
+def test_public_nod_paper2_baseline_main_writes_blocked_report_for_incomplete_bundle(tmp_path):
+    import fmri2img.workflows.report_public_nod_paper2_baseline as workflow
+
+    loaded, config_path = _build_public_nod_paper2_baseline_fixture(tmp_path)
+    transfer_dir = Path(loaded["evaluation"]["transfer_output_dir"])
+    (transfer_dir / "per_trial_pairs.csv").unlink()
+    output_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "paper2_baseline_report.json"
+    reliability_path = tmp_path / "outputs" / "public_nod" / "paper2" / "imagenet_run10_shared_only" / "baseline" / "reliability_seed_report.json"
+    rc = workflow.main(
+        [
+            "--config",
+            str(config_path),
+            "--output",
+            str(output_path),
+            "--reliability-output",
+            str(reliability_path),
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(output_path.read_text())
+    assert payload["state"]["transfer_bundle_complete"] is False
+    assert payload["state"]["reliability_seed_written"] is False
+    assert "paper-2 baseline bundle is incomplete" in " ".join(payload["blocked_reasons"])
+    assert not reliability_path.exists()
+
+
 def test_build_downstream_contract_audit_report_marks_condition_mismatch():
     from fmri2img.workflows._downstream_contract_audit import build_downstream_contract_audit_report
 

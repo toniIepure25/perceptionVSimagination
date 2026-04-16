@@ -1,0 +1,95 @@
+experiment:
+  name: max_available_overlap
+  description: >
+    Canonical fixed-comparison scaling audit over the maximum overlapable
+    subject set currently mounted in the live environment.
+  benchmark_role: fixed_threshold_benchmark
+  evidence_tier: validated_dataset
+
+dataset:
+  subject: subj02
+  mixed_index: outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet
+  perception_conditions: ["perception"]
+  imagery_conditions: ["imagery"]
+
+preprocessing:
+  enabled: false
+
+roi:
+  groups:
+    early_visual: ["lh.prf-visualrois", "rh.prf-visualrois"]
+    ventral_visual: ["lh.floc-faces", "rh.floc-faces", "lh.floc-places", "rh.floc-places"]
+    metacognitive: ["lh.Kastner2015", "rh.Kastner2015", "lh.HCP_MMP1", "rh.HCP_MMP1", "lh.streams", "rh.streams"]
+  missing_policy: error
+  fallback_policy: error
+  min_voxels: 1
+  mask_root: ${NSD_ROI_MASK_ROOT}
+  layout_config: configs/data.yaml
+
+targets:
+  name: vit_l14_image_768
+  dimension: 768
+  cache_path: outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet
+  id_column: nsdId
+
+model:
+  branch_embedding_dim: 128
+  shared_dim: 128
+  private_dim: 64
+  dropout: 0.1
+  use_domain_head: true
+  use_vividness_head: false
+  vividness_mode: evidential
+
+training:
+  batch_size: 8
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  domain_weight: 0.1
+  vividness_weight: 0.1
+  confidence_weight: 0.05
+  reconstruction_weight: 0.1
+  device: cuda
+  output_dir: outputs/canonical/train/full_imagery_overlap
+  seed: 0
+
+evaluation:
+  batch_size: 16
+  output_dir: outputs/canonical/eval/full_imagery_overlap
+  transfer_output_dir: outputs/canonical/transfer/full_imagery_overlap
+
+analysis:
+  output_dir: outputs/canonical/analysis/full_imagery_overlap
+
+export:
+  output_dir: outputs/canonical/export/full_imagery_overlap
+
+preparation:
+  imagery:
+    data_root: ${NSD_IMAGERY_ROOT}
+    metadata_root: ${NSD_IMAGERY_METADATA_ROOT}
+    beta_root: ${NSD_IMAGERY_BETA_ROOT}
+    beta_path_template: ${NSD_IMAGERY_BETA_ROOT}/{subject}/betas_nsdimagery.nii.gz
+    cache_root: cache
+    conditions: ["imagery"]
+    stimulus_sets: ["B"]
+    require_nsd_id: true
+    source_report_template: outputs/canonical/prepared/imagery/{subject}.source_report.json
+    report_template: outputs/canonical/prepared/imagery/{subject}.report.json
+  overlap:
+    subjects: ["subj01", "subj02", "subj03", "subj04", "subj05", "subj06", "subj07", "subj08"]
+    output_root: outputs/canonical/prepared/full_imagery_overlap
+    report_path: outputs/canonical/prepared/full_imagery_overlap/report.json
+    overlap_ids_path: outputs/canonical/prepared/full_imagery_overlap/overlap_nsd_ids.json
+    perception_index_template: data/indices/nsd_index/subject={subject}/index.parquet
+    imagery_index_template: cache/indices/imagery_full_all/{subject}.parquet
+    mask_root_template: ${NSD_ROI_MASK_ROOT}/{subject}
+    materialize_roi: true
+    cache_root: cache
+  targets:
+    model_id: openai/clip-vit-large-patch14
+    batch_size: 128
+    inference_batch_size: 32
+  preflight:
+    paper_pair_threshold: 32

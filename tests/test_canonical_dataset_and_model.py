@@ -236,3 +236,16 @@ def test_shared_only_ablation_disables_domain_head_and_zeros_private_latents(can
     assert outputs.domain_logits is None
     assert torch.count_nonzero(outputs.z_perception_private) == 0
     assert torch.count_nonzero(outputs.z_imagery_private) == 0
+
+
+def test_zero_out_groups_masks_serialized_roi_features(canonical_fixture_dir):
+    config = load_workflow_config(
+        str(canonical_fixture_dir["config_path"]),
+        ['roi.zero_out_groups=["ventral_visual","metacognitive"]'],
+    )
+    train_ds, _, _, _, _, _ = build_datasets(config)
+    sample = train_ds[0]
+
+    assert torch.count_nonzero(torch.from_numpy(sample["roi_features"]["early_visual"])) > 0
+    assert torch.count_nonzero(torch.from_numpy(sample["roi_features"]["ventral_visual"])) == 0
+    assert torch.count_nonzero(torch.from_numpy(sample["roi_features"]["metacognitive"])) == 0

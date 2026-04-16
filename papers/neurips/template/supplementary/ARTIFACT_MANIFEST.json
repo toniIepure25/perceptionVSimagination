@@ -1,0 +1,117 @@
+{
+  "paper": "Benchmarking Paired fMRI Perception--Imagery Decoding Under Overlap Scarcity",
+  "venue": "NeurIPS 2026 Evaluations and Datasets Track",
+  "manifest_version": "1.0",
+
+  "benchmark_summary": {
+    "rows": 94,
+    "subjects": ["subj02", "subj03", "subj05", "subj07"],
+    "subject_row_counts": {"subj02": 38, "subj03": 18, "subj05": 19, "subj07": 19},
+    "shared_paired_nsd_ids": 5,
+    "held_out_paired_groups": 1,
+    "target_space": "vit_l14_image_768",
+    "target_dimension": 768,
+    "preflight_paper_pair_threshold": 32
+  },
+
+  "frozen_results": {
+    "ridge": {
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "role": "external_low_data_reference",
+      "test_cosine": 0.55199,
+      "test_mse": 0.001167,
+      "imagery_mean": 0.55152,
+      "perception_mean": 0.55446
+    },
+    "shared_only": {
+      "config": "configs/canonical/animus_core_decoder.yaml",
+      "role": "canonical_neural_baseline",
+      "test_cosine": 0.13596,
+      "test_mse": 0.002250,
+      "imagery_mean": 0.13422,
+      "perception_mean": 0.14527
+    },
+    "shared_private_p16": {
+      "config": "configs/canonical/threshold_shared_private_p16.yaml",
+      "role": "best_exploratory_sp_variant",
+      "test_cosine": 0.10784,
+      "test_mse": 0.002323,
+      "imagery_mean": null,
+      "perception_mean": null
+    },
+    "shared_private_p8": {
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "role": "exploratory_recovery_variant",
+      "test_cosine": 0.09595,
+      "test_mse": 0.002354,
+      "imagery_mean": null,
+      "perception_mean": null,
+      "note": "override: model.private_dim=8"
+    },
+    "shared_private_default": {
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "role": "hypothesis_family_baseline",
+      "test_cosine": 0.06927,
+      "test_mse": 0.002424,
+      "imagery_mean": 0.07151,
+      "perception_mean": 0.05735
+    },
+    "shared_private_no_domain": {
+      "config": "configs/canonical/max_available_overlap.yaml",
+      "role": "diagnostic_control",
+      "test_cosine": 0.05907,
+      "test_mse": 0.002450,
+      "imagery_mean": null,
+      "perception_mean": null,
+      "note": "override: model.use_domain_head=false"
+    }
+  },
+
+  "training_hyperparameters": {
+    "batch_size": 8,
+    "epochs": 5,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "seed": 0,
+    "device": "cuda (auto-fallback to cpu)"
+  },
+
+  "external_assets": [
+    {
+      "name": "Natural Scenes Dataset (NSD)",
+      "citation": "Allen et al., 2022",
+      "url": "https://naturalscenesdataset.org",
+      "license": "CC BY 4.0 (subject to NSD data use terms)",
+      "usage": "Perception indices, ROI masks, stimulus identifiers"
+    },
+    {
+      "name": "NSD-Imagery",
+      "citation": "NSD consortium",
+      "url": "https://naturalscenesdataset.org",
+      "license": "Same as NSD release terms",
+      "usage": "Imagery beta maps, imagery conditions"
+    },
+    {
+      "name": "COCO Images (via NSD stimuli)",
+      "citation": "Microsoft COCO",
+      "url": "https://cocodataset.org",
+      "license": "CC BY 4.0",
+      "usage": "Stimulus images for CLIP target embedding extraction"
+    },
+    {
+      "name": "CLIP ViT-L/14",
+      "citation": "Radford et al., 2021",
+      "url": "https://github.com/openai/CLIP",
+      "license": "MIT",
+      "usage": "Target embedding model (vit_l14_image_768)"
+    }
+  ],
+
+  "supplementary_contents": [
+    "README_ANONYMOUS.md",
+    "ARTIFACT_MANIFEST.json",
+    "configs/animus_core_decoder.yaml",
+    "configs/threshold_shared_private_p16.yaml",
+    "configs/max_available_overlap.yaml"
+  ]
+}

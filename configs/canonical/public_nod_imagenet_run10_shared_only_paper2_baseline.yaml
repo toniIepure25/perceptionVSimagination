@@ -1,0 +1,29 @@
+_base_: public_nod_imagenet_run10_shared_only.yaml
+
+experiment:
+  name: public_nod_imagenet_run10_shared_only_paper2_baseline
+  description: >
+    First dedicated non-smoke paper-2 shared-only baseline for the fixed public
+    NOD imagenet run-10 slice. This is a separate paper-2 public-data baseline
+    lane for reliability-oriented Animus work, not the full-overlap benchmark
+    thread and not evidence-grade by itself.
+  benchmark_role: paper2_public_nod_baseline_non_smoke
+  evidence_tier: operational_baseline
+
+training:
+  epochs: 5
+  device: cuda
+  output_dir: outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/train
+
+evaluation:
+  output_dir: outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/eval
+  transfer_output_dir: outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/transfer
+
+analysis:
+  output_dir: outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/analysis
+
+export:
+  output_dir: outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/export
+
+public_nod:
+  lane: paper2_public_animus

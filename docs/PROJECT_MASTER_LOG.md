@@ -887,3 +887,187 @@ Risk:
   only: it does not modify the `full_imagery_overlap_shared_only` benchmark
   lane, does not promote smoke artifacts to evidence, and does not claim
   production Animus readiness
+- 2026-04-09: the separate paper-2 public-NOD lane document was tightened
+  around repo-grounded evidence boundaries and rerun locally. The current
+  workspace wrote
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/paper_lane_plan.json`
+  as a truthful blocked planning artifact with
+  `paper_lane_plan_ready=false`, `operational_ready=false`,
+  `downstream_contract_ready=false`, and `training_ready=false` because the
+  local workspace does not currently contain the required fixed-slice prepared
+  dataset and target cache under `cache/indices/public_nod/`. This is still a
+  valid lane-planning milestone: it preserves the paper-2 separation from
+  `full_imagery_overlap_shared_only`, records the exact local reproducibility
+  gap, and does not promote any public-NOD smoke surface to evidence
+- 2026-04-09: the separate paper-2 public-NOD lane now has its first dedicated
+  non-smoke baseline bundle and a first small reliability-support artifact. The
+  live pod ran a paper-2-specific preflight plus train/eval/transfer/export
+  sequence using the fixed public NOD slice with the separate experiment
+  identity `public_nod_imagenet_run10_shared_only_paper2_baseline`, writing
+  outputs under
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/`. The local
+  workspace now also contains the checked-in config
+  `configs/canonical/public_nod_imagenet_run10_shared_only_paper2_baseline.yaml`,
+  the report workflow
+  `fmri2img.workflows.report_public_nod_paper2_baseline`, the machine-readable
+  baseline summary
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/paper2_baseline_report.json`,
+  and the exploratory support artifact
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/baseline/reliability_seed_report.json`.
+  The current honest state is:
+  `baseline_bundle_exists=true`, `operational_ready=true`,
+  `evidence_ready_candidate=false`, and `training_ready=false`. This is real
+  paper-2 lane execution progress, but it is still not evidence-grade
+  calibration or a claim against the full-overlap paper thread
+- 2026-04-09: the separate paper-2 public-NOD lane now also has its first
+  controlled comparison pack. The live pod executed two shared-capacity
+  ablations on the same fixed public slice,
+  `public_nod_imagenet_run10_shared_only_paper2_shareddim32` and
+  `public_nod_imagenet_run10_shared_only_paper2_shareddim128`, each with their
+  own train/eval/transfer/export bundle under
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/`. The local workspace
+  now contains per-run machine-readable summaries plus the unified comparison
+  artifacts
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/shared_capacity_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/reliability_comparison.json`.
+  The current honest comparative read is: the baseline remains best by eval and
+  transfer cosine, `shared_dim32` has the cleanest low-trust tail by the
+  lane's simple bottom-decile heuristic, and `shared_dim128` exposed an
+  export-side condition-semantics inconsistency that keeps it from being
+  operationally clean. This materially improves the paper-2 lane's
+  publishability as a real controlled comparison, but it remains
+  operational-ablation evidence rather than publication-grade support
+- 2026-04-09: the paper-2 public-NOD lane now has an artifact-backed diagnosis
+  for the original `shared_dim128` export inconsistency plus its first ROI-only
+  comparison pack. The diagnosis artifact
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/shared_dim128/condition_semantics_diagnosis.json`
+  shows that eval and transfer agreed on the run-local `perception`-only
+  condition semantics while the original export manifest omitted
+  `metadata.condition_semantics`, so the issue was a malformed export bundle
+  rather than an eval/transfer mismatch. An export-only rerun refreshed the
+  `shared_dim128` export surface and restored operational consistency without
+  retraining unrelated runs. The live pod also executed two ROI-only ablations,
+  `public_nod_imagenet_run10_shared_only_paper2_earlyvisualonly` and
+  `public_nod_imagenet_run10_shared_only_paper2_metacognitiveonly`, and the
+  local workspace now contains their per-run summaries plus the unified ROI
+  comparison artifacts
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/roi_ablation_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/roi_reliability_comparison.json`.
+  The current honest read is: both ROI-only runs are operationally clean,
+  `metacognitive_only` is strongest by eval cosine (`0.6714602`), transfer
+  cosine (`0.6714602`), and the current low-trust-tail heuristic
+  (`0.609336`), while `early_visual_only` also remains competitive
+  (`0.6711952`). This materially improves the paper-2 lane's scientific story
+  because the lane now has an interpretable ROI-only comparison, but it still
+  remains operational-ablation evidence rather than publication-grade support
+- 2026-04-10: the paper-2 public-NOD lane now has its first subject/session
+  robustness pack built entirely from real existing run artifacts. The local
+  workspace wrote per-run robustness summaries for `baseline`,
+  `early_visual_only`, and `metacognitive_only` under
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/*/robustness_report.json`,
+  then aggregated them into
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/robustness_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/robustness_tail_comparison.json`.
+  All three runs joined cleanly to the fixed
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`
+  on `pair_id`, so the subject/session breakdown is now fully recoverable in
+  the active workspace. The current honest read is: `metacognitive_only`
+  remains strongest by eval cosine (`0.6714602`), transfer cosine
+  (`0.6714602`), and subject-level dispersion (`0.00743` std of subject
+  means), while `early_visual_only` is the most even by session dispersion
+  (`0.00274` std of session means). The weakest subject is consistently
+  `sub-08`, the weakest session remains around `ses-imagenet03`, and the
+  low-trust tails do not trip a severe concentration flag under the current
+  heuristic. This materially improves the paper-2 lane's publishability as a
+  stability-and-trust story, but it still does not create publication-grade
+  evidence and does not change `evidence_ready_candidate=false` or
+  `training_ready=false`
+- 2026-04-12: the paper-2 public-NOD lane now also has its first exploratory
+  trust-signal pack built from the existing baseline and ROI-only runs. The
+  local workspace wrote
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/{baseline,early_visual_only,metacognitive_only}/trust_signal_report.json`
+  plus the unified comparison artifacts
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/trust_signal_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/trust_instability_comparison.json`.
+  All three trust reports reused the real
+  `paper2_*_report.json`, `reliability_seed_report.json`,
+  `robustness_report.json`, `transfer/per_trial_pairs.csv`, and the fixed
+  prepared dataset under
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`,
+  so the trust/instability joins are fully recoverable in the active
+  workspace. The current honest read is: low-score tails do track instability
+  beyond mean cosine alone, with bottom-10% samples enriched roughly `1.45x`
+  to `1.51x` in the low-performing subject/session groups across the three
+  runs; `metacognitive_only` remains the most interesting overall run because
+  it is strongest by eval cosine (`0.6714602`), transfer cosine (`0.6714602`),
+  subject-level stability (`0.00743` std of subject means), and bottom-10%
+  tail cleanliness (`0.609336`), while `baseline` ties the strongest bottom-10
+  instability enrichment and `early_visual_only` remains the most even by
+  session dispersion (`0.00274` std of session means). This materially
+  improves the paper-2 lane's publishability as an exploratory trust-and-
+  instability story, but it still does not establish calibrated uncertainty,
+  publication-grade evidence, or any change to
+  `evidence_ready_candidate=false` and `training_ready=false`
+- 2026-04-12: the paper-2 public-NOD lane now also has its first exploratory
+  bucketed risk-stratification pack built from the existing baseline and ROI-
+  only runs. The local workspace wrote
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/{baseline,early_visual_only,metacognitive_only}/risk_bucket_report.json`
+  plus the unified comparison artifacts
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/risk_bucket_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/risk_monotonicity_comparison.json`.
+  All three risk reports reused the real `paper2_*_report.json`,
+  `robustness_report.json`, `trust_signal_report.json`,
+  `transfer/per_trial_pairs.csv`, and the fixed prepared dataset under
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`,
+  so the risk/instability joins are fully recoverable in the active
+  workspace. The current honest read is: all three runs show a real
+  lowest-bucket versus highest-bucket instability gap of roughly `0.31` to
+  `0.33`, but none of the three runs satisfies a clean monotonic bucket-by-
+  bucket instability rise as cosine falls under the current heuristic.
+  `metacognitive_only` remains the strongest overall run by eval cosine
+  (`0.6714602`), transfer cosine (`0.6714602`), subject-level stability
+  (`0.00743` std of subject means), and bottom-10 tail cleanliness
+  (`0.609336`), while `early_visual_only` remains the most even by session
+  dispersion (`0.00274` std of session means) and is the cleanest run on the
+  bucket-level cosine-versus-instability Spearman diagnostic
+  (`-0.36699`). This materially improves the paper-2 lane's publishability as
+  an exploratory risk-stratification story, but it still does not establish
+  calibrated uncertainty, publication-grade evidence, or any change to
+  `evidence_ready_candidate=false` and `training_ready=false`
+- 2026-04-12: the paper-2 public-NOD lane now also has its first coarse-bin
+  trust-risk follow-up built from the existing baseline and ROI-only runs. The
+  local workspace refreshed
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/{baseline,early_visual_only,metacognitive_only}/risk_bucket_report.json`
+  so each report now includes explicit `deciles`, `tertiles`, `quintiles`, and
+  low-performing-group-conditioned tables, and it wrote the unified coarse
+  comparison artifacts
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/coarse_risk_comparison.json`
+  and
+  `outputs/public_nod/paper2/imagenet_run10_shared_only/comparison/coarse_risk_monotonicity_comparison.json`.
+  All three refreshed reports still reuse the real `paper2_*_report.json`,
+  `robustness_report.json`, `trust_signal_report.json`,
+  `transfer/per_trial_pairs.csv`, and the fixed prepared dataset under
+  `cache/indices/public_nod/imagenet_run10_shared_only_prepared_dataset.parquet`,
+  so the joins remain fully recoverable in the active workspace. The current
+  honest read is: tertiles do strengthen the exploratory risk signal over
+  deciles, because `baseline` becomes monotonic by unstable-group share with a
+  tertile cosine-versus-instability Spearman of `-1.0`; quintiles improve the
+  rank-correlation view over deciles for all three runs, but they still do not
+  produce a clean monotonic flag; `metacognitive_only` remains the strongest
+  overall run by eval cosine (`0.6714602`), transfer cosine (`0.6714602`),
+  subject-level stability (`0.00743` std of subject means), and bottom-10 tail
+  cleanliness (`0.609336`); `early_visual_only` remains the most even by
+  session dispersion (`0.00274` std of session means); and `baseline` is the
+  cleanest coarse-bin risk run because the tertile view is the only one that
+  flips to a clean monotonic signal. The low-performing-group-conditioned
+  tables mainly confirm that the signal is concentrated in the globally
+  defined low-performing groups rather than revealing a stronger within-group
+  graded-risk story. This materially improves the paper-2 lane's
+  publishability as an exploratory trust-risk story, but it still does not
+  establish calibrated uncertainty, publication-grade evidence, or any change
+  to `evidence_ready_candidate=false` and `training_ready=false`

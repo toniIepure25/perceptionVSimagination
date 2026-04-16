@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
@@ -99,6 +100,7 @@ def validate_canonical_workflow_config(config: ConfigDict) -> None:
 
 def _create_roi_resolver(config: ConfigDict):
     roi_config = config.get("roi", {})
+    zero_out_groups = {str(value) for value in roi_config.get("zero_out_groups", [])}
     group_spec = ROIGroupSpec(
         groups=roi_config.get("groups", DEFAULT_ROI_GROUPS),
         missing_policy=roi_config.get("missing_policy", "error"),
@@ -115,21 +117,35 @@ def _create_roi_resolver(config: ConfigDict):
             return [str(value) for value in raw]
         return list(config_roi_names)
 
+    def _apply_zero_out(features: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+        if not zero_out_groups:
+            return features
+        zeroed: dict[str, np.ndarray] = {}
+        for name, value in features.items():
+            array = np.asarray(value, dtype=np.float32)
+            if name in zero_out_groups:
+                zeroed[name] = np.zeros_like(array, dtype=np.float32)
+            else:
+                zeroed[name] = array
+        return zeroed
+
     def resolve_fn(fmri, row):
         if "roi_features_json" in row and pd.notna(row.get("roi_features_json")):
             raw = json.loads(row["roi_features_json"])
-            return {key: pd.Series(value, dtype="float32").to_numpy() for key, value in raw.items()}
+            return _apply_zero_out({key: pd.Series(value, dtype="float32").to_numpy() for key, value in raw.items()})
         if "roi_values_json" in row and pd.notna(row.get("roi_values_json")):
             roi_values = pd.Series(json.loads(row["roi_values_json"])).astype("float32").to_numpy()
             roi_names = _row_roi_names(row)
-            return project_group_features(
+            return _apply_zero_out(
+                project_group_features(
                 roi_values=roi_values,
                 roi_names=roi_names,
                 spec=group_spec,
                 fallback_vector=fmri,
             )
+            )
         if group_spec.fallback_policy == "full_feature_vector":
-            return {name: fmri.astype("float32") for name in group_spec.groups}
+            return _apply_zero_out({name: fmri.astype("float32") for name in group_spec.groups})
         raise ValueError(
             "Canonical ROI grouping requires either roi_features_json/roi_values_json "
             "or fallback_policy=full_feature_vector for smoke tests."
@@ -297,6 +313,7 @@ def checkpoint_artifact_spec(
         "roi_spec": {
             "groups": config["roi"].get("groups", {}),
             "resolved": roi_summary,
+            "zero_out_groups": list(config["roi"].get("zero_out_groups", [])),
         },
         "checkpoint_path": str(checkpoint_path),
         "metadata": {

@@ -1,0 +1,85 @@
+\section*{NeurIPS Paper Checklist}
+
+\begin{enumerate}
+
+\item {\bf Claims}
+    \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: The abstract and Section~1 explicitly limit the paper's scope to a frozen benchmark ordering, a claim-boundary methodology, and a reproducibility contribution.  No architectural novelty, disentanglement benefit, or statistical significance is claimed.
+
+\item {\bf Limitations}
+    \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Section~7 provides a structured discussion of five threats to validity (overlap scarcity, held-out support weakness, lack of statistical breadth, dependence on recoverable artifacts, and absence of confirmatory threshold evidence) and explicitly argues why they are compatible with the paper's E\&D contribution.
+
+\item {\bf Theory assumptions and proofs}
+    \item[] Question: For each theoretical result, does the paper provide the full set of assumptions and a complete (and correct) proof?
+    \item[] Answer: \answerNA{}
+    \item[] Justification: No theoretical results or proofs are presented.
+
+    \item {\bf Experimental result reproducibility}
+    \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Sections~3--5 specify the data regime (94 rows, 4 subjects, 5 paired IDs), ROI groups, target space, hyperparameters, metrics, and evaluation protocol.  Appendix~A provides exact canonical configs, workflow commands, and artifact paths for every benchmark rung.
+
+\item {\bf Open access to data and code}
+    \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Anonymous supplementary material includes the exact YAML configs for every ladder rung, a machine-readable artifact manifest, step-by-step reproduction instructions, and an external-asset inventory.  All source data is publicly available (NSD, NSD-Imagery, COCO, CLIP ViT-L/14).  Full source code will be released upon acceptance.  See Appendix~\ref{app:artifacts}.
+
+\item {\bf Experimental setting/details}
+    \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer) necessary to understand the results?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Section~4 specifies model roles, the complete hyperparameter family (batch size, epochs, learning rate, weight decay, seed), primary and secondary metrics, and evaluation constraints.  Appendix~A provides the exact canonical configs.
+
+\item {\bf Experiment statistical significance}
+    \item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
+    \item[] Answer: \answerNo{}
+    \item[] Justification: The frozen benchmark reports single runs (seed 0) without error bars.  This is acknowledged in Sections~5, 7, and Appendix~\ref{app:notes}.  Seed-stability reproduction instructions are provided in the supplementary material but actual multi-seed results are not yet included.  The paper does not claim statistical significance.
+
+\item {\bf Experiments compute resources}
+    \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Appendix~\ref{app:notes} reports approximate per-run wall-clock time ($<$5 min neural on consumer GPU, $<$30 s Ridge on CPU) and memory requirements ($<$4\,GB GPU, $<$8\,GB system RAM).  Workflows support automatic CPU fallback.
+
+\item {\bf Code of ethics}
+    \item[] Question: Does the research conducted in the paper conform, in every respect, with the NeurIPS Code of Ethics \url{https://neurips.cc/public/EthicsGuidelines}?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: The submission is anonymous, uses existing public scientific datasets with citation, emphasizes conservative interpretation, and centers claim boundaries rather than deployment claims.
+
+\item {\bf Broader impacts}
+    \item[] Question: Does the paper discuss both potential positive societal impacts and negative societal impacts of the work performed?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: Appendix~\ref{app:notes} discusses the methodological value of disciplined benchmark reporting and the risk of overstating brain-decoding capabilities.
+
+\item {\bf Safeguards}
+    \item[] Question: Does the paper describe safeguards that have been put in place for responsible release of data or models that have a high risk for misuse (e.g., pre-trained language models, image generators, or scraped datasets)?
+    \item[] Answer: \answerNA{}
+    \item[] Justification: No high-risk model, scraped dataset, or deployment artifact is released.  The safeguard is conservative claim-boundary setting.
+
+\item {\bf Licenses for existing assets}
+    \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: All external assets are cited in the paper.  The supplementary material (Appendix~\ref{app:artifacts}) includes a complete external-asset inventory listing each dataset and pretrained model with its source URL and license (NSD: CC BY 4.0/NSD terms; COCO: CC BY 4.0; CLIP ViT-L/14: MIT).
+
+\item {\bf New assets}
+    \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
+    \item[] Answer: \answerYes{}
+    \item[] Justification: The paper's new asset is a frozen benchmark specification.  The supplementary material documents this asset with exact configs, a machine-readable artifact manifest, reproduction instructions, and an expected artifact tree.  Full source code will be released upon acceptance.
+
+\item {\bf Crowdsourcing and research with human subjects}
+    \item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)?
+    \item[] Answer: \answerNA{}
+    \item[] Justification: No new crowdsourcing or human-subject data collection is reported.  The paper analyzes existing public neuroimaging resources.
+
+\item {\bf Institutional review board (IRB) approvals or equivalent for research with human subjects}
+    \item[] Question: Does the paper describe potential risks incurred by study participants, whether such risks were disclosed to the subjects, and whether Institutional Review Board (IRB) approvals (or an equivalent approval/review based on the requirements of your country or institution) were obtained?
+    \item[] Answer: \answerNA{}
+    \item[] Justification: No new human-subject study is reported.  The submission is based on existing public datasets.
+
+\item {\bf Declaration of LLM usage}
+    \item[] Question: Does the paper describe the usage of LLMs if it is an important, original, or non-standard component of the core methods in this research? Note that if the LLM is used only for writing, editing, or formatting purposes and does \emph{not} impact the core methodology, scientific rigor, or originality of the research, declaration is not required.
+    \item[] Answer: \answerNA{}
+    \item[] Justification: No LLM is part of the benchmark methodology, model family, or reported experiments.
+
+\end{enumerate}
