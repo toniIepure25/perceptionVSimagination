@@ -1071,3 +1071,17 @@ Risk:
   publishability as an exploratory trust-risk story, but it still does not
   establish calibrated uncertainty, publication-grade evidence, or any change
   to `evidence_ready_candidate=false` and `training_ready=false`
+
+## 2026-04-16 – Paper 1 bootstrap CIs and final upgrade pack
+
+- Bootstrap confidence intervals (10,000 resamples, 19-row test set) confirm
+  all three pairwise ordering differences exclude zero at 95% level:
+  Ridge > shared-only > SP p16.
+- Per-condition breakdown: ordering preserved in both perception (n=3) and
+  imagery (n=16) conditions; test set is entirely subj02.
+- "Why Ridge Dominates" paragraph added to Discussion, explaining the 4×
+  gap as a structural finding of the benchmark.
+- ARTIFACT_MANIFEST.json reconciled; supplementary package expanded with
+  bootstrap_ci_analysis.json and per_condition_breakdown.json.
+- Author acceptance estimate raised to 55–70%.
+- Paper 1 is now in its final pre-submission state.

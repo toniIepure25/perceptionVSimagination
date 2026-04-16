@@ -529,6 +529,20 @@ Copy this block:
 - Interpretation summary: confirms the benchmark ordering is not a single-seed artifact. Absolute values differ from original frozen results due to global seeding change (model weight initialization now deterministic per seed). The finding is ordering stability, not exact value reproduction. Three seeds do not constitute a significance test, but they move the benchmark from a frozen single-run snapshot toward a reproducibly stable ordering.
 - Promoted to evidence?: yes, as supplementary appendix (Appendix D in paper1_eandd.tex, Table 4). Checklist item 7 upgraded from No to Yes.
 
+## EXP-2026-04-16-BOOTSTRAP-CI-ANALYSIS
+
+- Date: 2026-04-16
+- Lane: Paper writing / Threshold research
+- Benchmark rung / role: bootstrap confidence intervals and per-condition breakdown for the frozen benchmark ordering
+- Config: same as EXP-2026-04-16-SEED-STABILITY-CHECK (seed-stability checkpoints used as input)
+- Dataset / prepared artifacts: Ridge per-trial scores from `outputs/canonical/baselines/full_imagery_overlap_ridge_legacy/test_scores.json`; seed-stability checkpoints from `outputs/seed_stability/`
+- Output / artifact path: `outputs/seed_stability/bootstrap_ci_analysis.json`; `outputs/seed_stability/per_condition_breakdown.json`
+- Hardware: NVIDIA H100 80GB (orchestraiq-jupyter pod on runai-romania-dev)
+- Status: done
+- Result summary: 10,000-resample bootstrap over 19-row test set. All pairwise ordering differences exclude zero at 95%: Ridge − Shared-only = +0.451 [0.404, 0.495]; Shared-only − SP p16 = +0.081 [0.074, 0.087]; Ridge − SP p16 = +0.532 [0.487, 0.576]. Per-seed CIs also exclude zero for all 3 seeds. Per-condition: test set has 3 perception + 16 imagery trials (all subj02); ordering preserved in both conditions.
+- Interpretation summary: provides statistical grounding that the benchmark ordering is unlikely to be a sampling artifact. Combined with seed stability, two independent lines of evidence support the same ordering (Ridge > shared-only > SP p16). Neither constitutes a formal hypothesis test; honestly stated in the paper. Per-subject analysis was not feasible because the test set is entirely from subj02.
+- Promoted to evidence?: yes, as supplementary appendix (Appendix E in paper1_eandd.tex, Tables 5-7). Checklist item 7 further strengthened.
+
 ## EXP-2026-04-09-PUBLIC-NOD-PAPER2-LANE-PLAN
 
 - Date: 2026-04-09

@@ -1334,3 +1334,45 @@ Paper handoff rule:
   significance. Absolute values differ from original frozen results due to
   global seeding change. This is honestly noted in the appendix.
 - Follow-up: paper is now submission-ready for NeurIPS 2026 E&D
+
+## 2026-04-16: Paper 1 bootstrap CIs, per-condition breakdown, and manuscript upgrades
+
+- Lane: Paper writing / Threshold research
+- What happened: ran bootstrap CI analysis and per-condition breakdown on the
+  orchestraiq H100 pod to strengthen the statistical grounding of the benchmark
+  ordering. Also added a "Why Ridge Dominates" paragraph to the Discussion.
+- Key results:
+  - Bootstrap CIs (10,000 resamples over 19-row test set):
+    - Ridge − Shared-only: +0.451, CI [0.404, 0.495], excludes zero
+    - Shared-only − SP p16: +0.081, CI [0.074, 0.087], excludes zero
+    - Ridge − SP p16: +0.532, CI [0.487, 0.576], excludes zero
+    - Per-seed CIs also exclude zero for all 3 seeds
+  - Per-condition breakdown (3 perception, 16 imagery trials, all subj02):
+    - Ordering preserved within both conditions
+    - Ridge equally strong on both (0.554 perception, 0.552 imagery)
+  - Test set is entirely from subj02, so per-subject breakdown was not feasible
+- Paper updates:
+  - New "Why Ridge Dominates" paragraph in Discussion (cites Naselaris 2011,
+    Horikawa 2017, explains 4× gap as structural finding)
+  - Updated threats-to-validity paragraph on statistical breadth to cite
+    bootstrap CIs with specific numbers
+  - New Appendix E (bootstrap CIs): 3 tables (per-model CIs, pairwise ordering
+    CIs, per-condition breakdown), per-seed ordering stability text
+  - Checklist item 7 further strengthened with bootstrap CI reference
+  - Appendix A note: clarified that shared-only can be trained via either
+    train_animus_core_decoder or train_decoder with
+    full_imagery_overlap_shared_only.yaml
+  - ARTIFACT_MANIFEST.json: added seed_stability, bootstrap_ci, and
+    per_condition_breakdown sections; updated supplementary contents list
+  - Supplementary README: added bootstrap CI and per-condition sections
+  - notes_for_authors.md: acceptance probability updated to 55–70%
+- Files changed: `paper1_eandd.tex`, `checklist.tex`, `notes_for_authors.md`,
+  `supplementary/README_ANONYMOUS.md`, `supplementary/ARTIFACT_MANIFEST.json`,
+  `supplementary/bootstrap_ci_analysis.json`,
+  `supplementary/per_condition_breakdown.json`
+- Validation: PDF compiles cleanly (15 pages, no undefined refs)
+- Claim boundary: bootstrap CIs provide statistical grounding that ordering
+  differences are unlikely to be sampling artifacts. Combined with seed
+  stability, two independent lines of evidence support the same ordering.
+  Neither constitutes a formal hypothesis test; honestly stated in the paper.
+- Follow-up: final proofread, commit, push. Then Paper 2 hold.

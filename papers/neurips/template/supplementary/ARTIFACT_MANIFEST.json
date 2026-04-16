@@ -107,11 +107,34 @@
     }
   ],
 
+  "seed_stability": {
+    "seeds": [0, 42, 123],
+    "models_checked": ["shared_only", "shared_private_p16"],
+    "shared_only_mean_cosine": 0.101,
+    "shared_only_std_cosine": 0.035,
+    "sp_p16_mean_cosine": 0.020,
+    "sp_p16_std_cosine": 0.020,
+    "ordering_stable": true,
+    "note": "Ordering shared-only > SP p16 holds for every seed. See seed_stability_summary.json for per-seed details."
+  },
+
+  "bootstrap_ci": {
+    "n_test": 19,
+    "n_bootstrap": 10000,
+    "ridge_vs_shared_only": {"mean_diff": 0.451, "ci_95": [0.404, 0.495], "excludes_zero": true},
+    "shared_only_vs_sp_p16": {"mean_diff": 0.081, "ci_95": [0.074, 0.087], "excludes_zero": true},
+    "ridge_vs_sp_p16": {"mean_diff": 0.532, "ci_95": [0.487, 0.576], "excludes_zero": true},
+    "note": "All pairwise ordering differences exclude zero at the 95% level. See bootstrap_ci_analysis.json for full results."
+  },
+
   "supplementary_contents": [
     "README_ANONYMOUS.md",
     "ARTIFACT_MANIFEST.json",
     "configs/animus_core_decoder.yaml",
     "configs/threshold_shared_private_p16.yaml",
-    "configs/max_available_overlap.yaml"
+    "configs/max_available_overlap.yaml",
+    "seed_stability_summary.json",
+    "bootstrap_ci_analysis.json",
+    "per_condition_breakdown.json"
   ]
 }

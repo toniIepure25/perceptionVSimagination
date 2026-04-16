@@ -53,6 +53,8 @@
 \@writefile{toc}{\contentsline {paragraph}{Hyperparameters and metrics.}{4}{section*.10}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}Results}{4}{section.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Strongly supported findings.}{4}{section*.11}\protected@file@percent }
+\citation{naselaris2011encoding}
+\citation{horikawa2017generic}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Frozen benchmark ladder on the max-available paired overlap set. Bar length is proportional to test cosine similarity. Ridge dominates all neural models; shared-only is the strongest canonical neural baseline; all shared-private (SP) variants remain below shared-only. Color encodes the system's pre-declared evidential role.}}{5}{figure.1}\protected@file@percent }
 \newlabel{fig:ladder}{{1}{5}{Frozen benchmark ladder on the max-available paired overlap set. Bar length is proportional to test cosine similarity. Ridge dominates all neural models; shared-only is the strongest canonical neural baseline; all shared-private (SP) variants remain below shared-only. Color encodes the system's pre-declared evidential role}{figure.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{Diagnostic findings.}{5}{section*.12}\protected@file@percent }
@@ -60,25 +62,26 @@
 \@writefile{toc}{\contentsline {paragraph}{Takeaway.}{5}{section*.14}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{5}{section.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{What the benchmark establishes.}{5}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{What is suggestive but not confirmed.}{5}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why Ridge dominates.}{5}{section*.16}\protected@file@percent }
 \citation{dehghani2021benchmark}
 \citation{takagi2023high,ozcelik2023brain,scotti2024mindeye2}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Claim boundary for the frozen benchmark. Each row classifies a potential conclusion and states what additional evidence would be needed to upgrade it. The paper is strongest as an evaluation and reproducibility contribution, not as a positive disentanglement result.}}{6}{table.2}\protected@file@percent }
-\newlabel{tab:claims}{{2}{6}{Claim boundary for the frozen benchmark. Each row classifies a potential conclusion and states what additional evidence would be needed to upgrade it. The paper is strongest as an evaluation and reproducibility contribution, not as a positive disentanglement result}{table.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Why negative findings matter for E\&D.}{6}{section*.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Why this community, why now.}{6}{section*.18}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Reproducibility as contribution.}{6}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What is suggestive but not confirmed.}{6}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why negative findings matter for E\&D.}{6}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why this community, why now.}{6}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reproducibility as contribution.}{6}{section*.20}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {7}Threats to Validity}{6}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Overlap scarcity.}{6}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Overlap scarcity.}{6}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Held-out support weakness.}{6}{section*.22}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Claim boundary for the frozen benchmark. Each row classifies a potential conclusion and states what additional evidence would be needed to upgrade it. The paper is strongest as an evaluation and reproducibility contribution, not as a positive disentanglement result.}}{7}{table.2}\protected@file@percent }
+\newlabel{tab:claims}{{2}{7}{Claim boundary for the frozen benchmark. Each row classifies a potential conclusion and states what additional evidence would be needed to upgrade it. The paper is strongest as an evaluation and reproducibility contribution, not as a positive disentanglement result}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Limited statistical breadth.}{7}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dependence on recoverable artifacts.}{7}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Absence of confirmatory threshold evidence.}{7}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why the benchmark is still useful.}{7}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{7}{section.8}\protected@file@percent }
 \bibstyle{plainnat}
 \bibdata{paper1_eandd}
 \bibcite{allen2022nsd}{{1}{2022}{{Allen et~al.}}{{Allen, St-Yves, Wu, Breedlove, Prince, Dowdle, Nau, Caron, Pestilli, Charest, Hutchinson, Naselaris, and Kay}}}
-\@writefile{toc}{\contentsline {paragraph}{Held-out support weakness.}{7}{section*.21}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Limited statistical breadth.}{7}{section*.22}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Dependence on recoverable artifacts.}{7}{section*.23}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Absence of confirmatory threshold evidence.}{7}{section*.24}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Why the benchmark is still useful.}{7}{section*.25}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{7}{section.8}\protected@file@percent }
 \bibcite{chang2019bold5000}{{2}{2019}{{Chang et~al.}}{{Chang, Pyles, Marcus, Gupta, Tarr, and Aminoff}}}
 \bibcite{dehghani2021benchmark}{{3}{2021}{{Dehghani et~al.}}{{Dehghani, Tay, Gritsenko, Zhao, Houlsby, Diaz, Metzler, and Vinyals}}}
 \bibcite{dijkstra2018temporal}{{4}{2018}{{Dijkstra et~al.}}{{Dijkstra, Mostert, de~Lange, Bosch, and van Gerven}}}
@@ -96,21 +99,32 @@
 \bibcite{tang2023semantic}{{16}{2023}{{Tang et~al.}}{{Tang, LeBel, Jain, and Huth}}}
 \@writefile{toc}{\contentsline {section}{\numberline {A}Reproducibility Contract}{9}{appendix.A}\protected@file@percent }
 \newlabel{app:repro}{{A}{9}{Reproducibility Contract}{appendix.A}{}}
-\@writefile{toc}{\contentsline {paragraph}{Data preparation.}{9}{section*.27}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Baseline and model training.}{9}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Data preparation.}{9}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Baseline and model training.}{10}{section*.29}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {B}Supplementary Material and Artifact Package}{10}{appendix.B}\protected@file@percent }
 \newlabel{app:artifacts}{{B}{10}{Supplementary Material and Artifact Package}{appendix.B}{}}
-\@writefile{toc}{\contentsline {paragraph}{What a reviewer can verify.}{10}{section*.29}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {C}Additional Notes for Reviewers}{10}{appendix.C}\protected@file@percent }
-\newlabel{app:notes}{{C}{10}{Additional Notes for Reviewers}{appendix.C}{}}
-\@writefile{toc}{\contentsline {paragraph}{Subject breakdown.}{10}{section*.30}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Seed stability.}{10}{section*.31}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Broader impacts.}{10}{section*.32}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Compute note.}{10}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What a reviewer can verify.}{11}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {C}Additional Notes for Reviewers}{11}{appendix.C}\protected@file@percent }
+\newlabel{app:notes}{{C}{11}{Additional Notes for Reviewers}{appendix.C}{}}
+\@writefile{toc}{\contentsline {paragraph}{Subject breakdown.}{11}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Seed stability.}{11}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Broader impacts.}{11}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Compute note.}{11}{section*.34}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {D}Seed-Stability Check}{11}{appendix.D}\protected@file@percent }
 \newlabel{app:seeds}{{D}{11}{Seed-Stability Check}{appendix.D}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Seed-stability check for the two primary neural models on the frozen overlap benchmark (94 rows, 4 subjects, 5 epochs per run). The ordering shared-only $>$ SP\nobreakspace  {}$d_\mathrm  {priv}\!=\!16$ is consistent across all seeds. Even the worst shared-only seed (0.073) exceeds the best SP\nobreakspace  {}$d_\mathrm  {priv}\!=\!16$ seed (0.048).}}{11}{table.3}\protected@file@percent }
 \newlabel{tab:seeds}{{3}{11}{Seed-stability check for the two primary neural models on the frozen overlap benchmark (94 rows, 4 subjects, 5 epochs per run). The ordering shared-only $>$ SP~$d_\mathrm {priv}\!=\!16$ is consistent across all seeds. Even the worst shared-only seed (0.073) exceeds the best SP~$d_\mathrm {priv}\!=\!16$ seed (0.048)}{table.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Interpretation.}{11}{section*.34}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Note on absolute values.}{11}{section*.35}\protected@file@percent }
-\gdef \@abspage@last{14}
+\@writefile{toc}{\contentsline {paragraph}{Interpretation.}{11}{section*.35}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Note on absolute values.}{12}{section*.36}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {E}Bootstrap Confidence Intervals}{12}{appendix.E}\protected@file@percent }
+\newlabel{app:bootstrap}{{E}{12}{Bootstrap Confidence Intervals}{appendix.E}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Bootstrap 95\% confidence intervals on mean test cosine similarity. Seed-averaged values aggregate the three seed runs (0, 42, 123) per model family. All pairwise ordering differences exclude zero.}}{12}{table.4}\protected@file@percent }
+\newlabel{tab:bootstrap}{{4}{12}{Bootstrap 95\% confidence intervals on mean test cosine similarity. Seed-averaged values aggregate the three seed runs (0, 42, 123) per model family. All pairwise ordering differences exclude zero}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Bootstrap 95\% CIs on pairwise cosine differences. ``Excl.\ zero'' indicates whether the CI excludes zero, i.e., whether the ordering is statistically distinguishable at the 95\% level on this test set.}}{12}{table.5}\protected@file@percent }
+\newlabel{tab:ordering}{{5}{12}{Bootstrap 95\% CIs on pairwise cosine differences. ``Excl.\ zero'' indicates whether the CI excludes zero, i.e., whether the ordering is statistically distinguishable at the 95\% level on this test set}{table.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Per-seed ordering stability.}{12}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Interpretation.}{12}{section*.38}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Per-condition breakdown.}{12}{section*.39}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Per-condition test cosine similarity (seed-averaged $\pm $ std for neural models). The test set has 3\nobreakspace  {}perception and 16\nobreakspace  {}imagery trials from \texttt  {subj02}. The small perception count makes per-condition estimates noisy.}}{13}{table.6}\protected@file@percent }
+\newlabel{tab:percond}{{6}{13}{Per-condition test cosine similarity (seed-averaged $\pm $ std for neural models). The test set has 3~perception and 16~imagery trials from \texttt {subj02}. The small perception count makes per-condition estimates noisy}{table.6}{}}
+\gdef \@abspage@last{15}

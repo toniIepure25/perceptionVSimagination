@@ -337,3 +337,45 @@ The ordering (shared-only > SP p16) is consistent across all 3 seeds. The
 worst shared-only seed (0.073) exceeds the best SP p16 seed (0.048).
 
 Machine-readable summary: `seed_stability_summary.json`
+
+---
+
+## Bootstrap Confidence Intervals
+
+A 10,000-resample bootstrap analysis was run over the 19-row test set to
+assess whether pairwise ordering differences are statistically robust. Neural
+model cosines are seed-averaged (over seeds 0, 42, 123) before bootstrapping.
+
+### Pairwise ordering CIs (95%)
+
+| Comparison | Mean diff | 95% CI | Excludes zero? |
+|---|---|---|---|
+| Ridge − Shared-only | +0.451 | [0.404, 0.495] | Yes |
+| Shared-only − SP d₁₆ | +0.081 | [0.074, 0.087] | Yes |
+| Ridge − SP d₁₆ | +0.532 | [0.487, 0.576] | Yes |
+
+All pairwise ordering differences exclude zero at the 95% level.
+
+### Per-seed ordering CIs (shared-only − SP d₁₆)
+
+| Seed | Mean diff | 95% CI | Excludes zero? |
+|---|---|---|---|
+| 0 | +0.077 | [0.063, 0.094] | Yes |
+| 42 | +0.026 | [0.020, 0.030] | Yes |
+| 123 | +0.140 | [0.127, 0.151] | Yes |
+
+Machine-readable results: `bootstrap_ci_analysis.json`
+
+---
+
+## Per-Condition Breakdown
+
+The test set contains 3 perception and 16 imagery trials, all from subj02.
+
+| Model | Overall | Perception (n=3) | Imagery (n=16) |
+|---|---|---|---|
+| Ridge | 0.552 | 0.554 | 0.552 |
+| Shared-only (seed-avg) | 0.101 ± 0.035 | 0.108 ± 0.026 | 0.100 ± 0.037 |
+| SP, d₁₆ (seed-avg) | 0.020 ± 0.020 | 0.050 ± 0.006 | 0.014 ± 0.024 |
+
+Machine-readable results: `per_condition_breakdown.json`

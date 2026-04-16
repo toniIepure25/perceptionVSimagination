@@ -275,13 +275,17 @@ what the results actually support.
 
 ## Honest acceptance outlook for NeurIPS E&D
 
-**Probability estimate (final, post seed-stability):** 50–65%.
+**Probability estimate (final, post bootstrap CIs):** 55–70%.
 
 **Trajectory:** Started at 30–45% (pre red-team), improved to 40–55% (post
-supplementary + artifact package), now 50–65% (post seed-stability). The
-seed-stability check closes the single most cited reviewer attack vector.
-What remains is structural (benchmark scale, limited model diversity) and
-cannot be fixed by writing or additional runs on the current data.
+supplementary + artifact package), then 50–65% (post seed-stability), now
+55–70% (post bootstrap CIs and per-condition breakdown). The bootstrap CIs
+provide the statistical grounding that the seed check alone could not: all
+three pairwise ordering differences exclude zero at 95%. Combined with the
+"Why Ridge Dominates" paragraph, the ordering is now well-motivated
+scientifically rather than just empirically frozen. What remains is structural
+(benchmark scale, limited model diversity) and cannot be fixed by writing or
+additional runs on the current data.
 
 **Rationale:** The paper is well-written, epistemically disciplined, and
 well-suited to the E&D track in framing. The Related Work now properly
@@ -310,9 +314,27 @@ substantially reduces the "noise" objection.
 2. ~~**Run a small seed sweep**~~ **Done.** 3-seed stability check completed
    on H100 cluster. Results in Appendix D, checklist item 7 upgraded.
 
-3. The paper is now submittable with both the supplementary package and seed
-   stability evidence. The remaining structural weakness (benchmark scale) is
-   well-framed and honestly acknowledged.
+3. ~~**Run bootstrap CIs on ordering**~~ **Done.** 10,000-resample bootstrap
+   over 19-row test set. All pairwise ordering differences exclude zero at 95%.
+   Per-seed CIs also exclude zero. Results in Appendix E, checklist item 7
+   further strengthened.
+
+4. ~~**Per-condition breakdown**~~ **Done.** Imagery/perception split for all
+   models added to Appendix E. Ordering preserved within both conditions.
+
+5. ~~**"Why Ridge Dominates" paragraph**~~ **Done.** New paragraph in Discussion
+   explains the 4× Ridge gap as a structural finding (56 training rows, 39-dim
+   feature space) rather than a neural-model failure. Cites Naselaris 2011 and
+   Horikawa 2017.
+
+6. ~~**Fix ARTIFACT_MANIFEST.json**~~ **Done.** Added seed_stability,
+   bootstrap_ci, and per_condition_breakdown sections. Updated supplementary
+   contents list.
+
+7. The paper is now submittable with the full upgrade pack: supplementary
+   package, seed stability, bootstrap CIs, per-condition breakdown, and
+   scientific explanation of Ridge dominance. The remaining structural weakness
+   (benchmark scale) is well-framed and honestly acknowledged.
 
 **Fallback venue:** If NeurIPS E&D rejects on scale grounds, TMLR is the
 strongest fallback. The paper's writing quality, claim discipline, and

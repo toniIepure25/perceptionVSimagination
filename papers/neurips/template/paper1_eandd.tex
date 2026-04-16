@@ -453,6 +453,24 @@ decoding in this regime, shared-private structure does not improve transfer
 generalization, and private branches do not yet capture neuroscientifically
 interpretable structure.
 
+\paragraph{Why Ridge dominates.}
+The 4$\times$ gap between Ridge (0.552) and the best neural model (0.136) is
+large but not unexpected.  Linear ridge regression is a consistently strong
+baseline in fMRI decoding with limited training data
+\citep{naselaris2011encoding}, and the effect is amplified in our setting for
+two structural reasons.  First, the training set contains only 56 rows after
+splits, which is well below the regime where over-parameterized neural models
+outperform regularized linear methods on typical fMRI feature
+spaces~\citep{horikawa2017generic}.  Second, Ridge operates on an ROI-feature
+space with only 39 dimensions, where the bias--variance trade-off strongly
+favors a high-bias estimator.  Neural models must learn shared (and,
+optionally, private) representations from the same 56 rows; the additional
+capacity is not warranted by the available supervision.  The gap is therefore
+\emph{a finding of the benchmark}, not a limitation of the neural models: it
+quantifies how much low-overlap regimes favor simplicity, and it establishes
+the baseline that future, larger paired datasets must beat before architectural
+sophistication can be justified.
+
 \paragraph{What is suggestive but not confirmed.}
 The pattern of improvement within the shared-private family as private capacity
 decreases is consistent with the hypothesis that disentanglement may begin to
@@ -571,10 +589,14 @@ secondary diagnostics only and avoid basing claims on them.
 The frozen results in Table~\ref{tab:results} come from a single run per model
 configuration.  A supplementary seed-stability check
 (Appendix~\ref{app:seeds}) re-runs the two primary neural models with three
-global random seeds and confirms the ordering, but three seeds do not
-constitute a significance test.  The benchmark ordering should be interpreted
-as a reproducible snapshot consistent across seeds, not as a statistically
-confirmed ranking.
+global random seeds and confirms the ordering.  A bootstrap analysis over the
+19-row test set (Appendix~\ref{app:bootstrap}) provides 95\% confidence
+intervals: the Ridge--shared-only difference (0.45, CI [0.40, 0.49]) and the
+shared-only--SP~$d_\mathrm{priv}\!=\!16$ difference (0.081, CI [0.074, 0.087])
+both exclude zero, indicating that the ordering is unlikely to be a
+sampling artifact.  Three seeds are not a formal significance test, and 19 test
+rows limit statistical power, but together they move the benchmark from a
+single-run snapshot toward a reproducibly stable ordering.
 
 \paragraph{Dependence on recoverable artifacts.}
 The benchmark relies on the particular subjects, splits, and public-data
@@ -693,7 +715,12 @@ environment active.  Config paths below are relative to
   Config: \texttt{animus\_core\_decoder.yaml}\\
   \texttt{python -m fmri2img.workflows.train\_animus\_core\_decoder}\\
   Output: \texttt{outputs/animus/core\_decoder/\allowbreak train/\allowbreak
-  full\_imagery\_overlap\_shared\_only/\allowbreak best\_decoder.pt}
+  full\_imagery\_overlap\_shared\_only/\allowbreak best\_decoder.pt}\\[2pt]
+  \textit{Note:} Equivalently, shared-only can be trained via the general
+  entry point with
+  \texttt{full\_imagery\_overlap\_shared\_only.yaml}:\\
+  \texttt{python -m fmri2img.workflows.train\_decoder -{}-config \ldots}\\
+  The seed-stability check (Appendix~\ref{app:seeds}) uses this path.
 
 \item[Shared-private, $d_\mathrm{priv}\!=\!16$.]
   Config: \texttt{threshold\_shared\_private\_p16.yaml}\\
@@ -853,6 +880,99 @@ frozen benchmark and this appendix.  The relevant finding is the stability of
 the \emph{ordering}, not the exact values.  The supplementary material includes
 the machine-readable summary (\texttt{seed\_stability\_summary.json}) and all
 per-seed training histories.
+
+\section{Bootstrap Confidence Intervals}
+\label{app:bootstrap}
+
+To assess whether the benchmark ordering is robust to test-set sampling, we
+compute bootstrap confidence intervals over the 19 held-out test rows.  For
+each of the six seed-stability models (three shared-only seeds, three
+SP~$d_\mathrm{priv}\!=\!16$ seeds), we collect per-trial cosine similarities
+on the test set.  We then average across seeds to obtain a seed-averaged
+per-trial cosine vector for each model family, and bootstrap 10{,}000 resamples
+to estimate 95\% CIs on the mean cosine and on pairwise differences.  Ridge
+per-trial cosines are taken from the frozen baseline evaluation.
+
+\begin{table}[h]
+  \centering
+  \footnotesize
+  \caption{Bootstrap 95\% confidence intervals on mean test cosine similarity.
+  Seed-averaged values aggregate the three seed runs (0, 42, 123) per model
+  family.  All pairwise ordering differences exclude zero.}
+  \label{tab:bootstrap}
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    Model & Mean cosine & 95\% CI \\
+    \midrule
+    Ridge & 0.552 & [0.503, 0.597] \\
+    Shared-only (seed-avg.) & 0.101 & [0.093, 0.111] \\
+    SP, $d_\mathrm{priv}\!=\!16$ (seed-avg.) & 0.020 & [0.012, 0.030] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \footnotesize
+  \caption{Bootstrap 95\% CIs on pairwise cosine differences.  ``Excl.\ zero''
+  indicates whether the CI excludes zero, i.e., whether the ordering is
+  statistically distinguishable at the 95\% level on this test set.}
+  \label{tab:ordering}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    Comparison & Mean diff & 95\% CI & Excl.\ zero? \\
+    \midrule
+    Ridge $-$ Shared-only & $+$0.451 & [0.404, 0.495] & Yes \\
+    Shared-only $-$ SP $d_{16}$ & $+$0.081 & [0.074, 0.087] & Yes \\
+    Ridge $-$ SP $d_{16}$ & $+$0.532 & [0.487, 0.576] & Yes \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Per-seed ordering stability.}
+The pairwise CI between shared-only and SP~$d_\mathrm{priv}\!=\!16$ excludes
+zero for every individual seed (seed~0: $+$0.077, CI [0.063, 0.094]; seed~42:
+$+$0.026, CI [0.020, 0.030]; seed~123: $+$0.140, CI [0.127, 0.151]).  Even the
+weakest single-seed difference (seed~42, $+$0.026) has a CI that does not
+include zero, indicating that the ordering is not an artifact of any particular
+random initialization.
+
+\paragraph{Interpretation.}
+On 19 test rows, bootstrap CIs have limited precision.  The intervals reported
+here should be read as evidence that the ordering is consistent with a
+real population-level difference rather than as definitive inference.  Together
+with the seed-stability check (Appendix~\ref{app:seeds}), the bootstrap
+analysis provides two independent lines of evidence for the same ordering:
+Ridge $>$ shared-only $>$ SP~$d_\mathrm{priv}\!=\!16$.  Neither line alone
+constitutes a formal hypothesis test, but their convergence raises the bar for
+an alternative explanation.
+
+\paragraph{Per-condition breakdown.}
+The test set contains 3 perception and 16 imagery trials, all from
+\texttt{subj02}.  Table~\ref{tab:percond} reports the per-condition cosine
+breakdown.  Ridge performs similarly on both conditions (perception~0.554,
+imagery~0.552).  Neural models show noisier condition splits, as expected given
+the 3-trial perception subsample, but the overall ordering is preserved within
+both conditions.
+
+\begin{table}[h]
+  \centering
+  \footnotesize
+  \caption{Per-condition test cosine similarity (seed-averaged $\pm$ std for
+  neural models).  The test set has 3~perception and 16~imagery trials from
+  \texttt{subj02}.  The small perception count makes per-condition estimates
+  noisy.}
+  \label{tab:percond}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    Model & Overall & Perception ($n\!=\!3$) & Imagery ($n\!=\!16$) \\
+    \midrule
+    Ridge & 0.552 & 0.554 & 0.552 \\
+    Shared-only & 0.101 $\pm$ 0.035 & 0.108 $\pm$ 0.026 & 0.100 $\pm$ 0.037 \\
+    SP, $d_{16}$ & 0.020 $\pm$ 0.020 & 0.050 $\pm$ 0.006 & 0.014 $\pm$ 0.024 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \input{checklist}
 
