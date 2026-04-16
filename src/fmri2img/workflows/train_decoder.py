@@ -40,6 +40,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     config = load_workflow_config(args.config, args.override)
+
+    seed = int(config["training"].get("seed", 0))
+    from fmri2img.models.train_utils import torch_seed_all
+    torch_seed_all(seed)
+
     runtime_device = resolve_runtime_device(config["training"].get("device", "cpu"))
     train_ds, val_ds, test_ds, _, roi_summary, target_summary = build_datasets(config)
     train_loader, val_loader, _ = build_loaders(config, train_ds, val_ds, test_ds)
