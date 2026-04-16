@@ -515,6 +515,20 @@ Copy this block:
 - Interpretation summary: this is operational handoff hardening only. It does not claim new paired data, benchmark progress, evidence-grade validation, or production Animus readiness. It removes the remaining ad hoc operator ambiguity between “source mounted” and “full canonical rebuild can start”
 - Promoted to evidence?: no
 
+## EXP-2026-04-16-SEED-STABILITY-CHECK
+
+- Date: 2026-04-16
+- Lane: Threshold research
+- Benchmark rung / role: seed-stability verification for the two primary neural benchmark rungs (shared-only and SP d_priv=16) on the frozen full-imagery overlap surface
+- Config: `configs/canonical/full_imagery_overlap_shared_only.yaml`; `configs/canonical/threshold_shared_private_p16.yaml`; seeds 0, 42, 123 via `--override "training.seed=N"`
+- Dataset / prepared artifacts: `outputs/canonical/prepared/full_imagery_overlap/full_imagery_overlap_mixed_with_roi.parquet`; `outputs/targets/full_imagery_overlap_vit_l14_image_768.parquet` (both pre-existing on the orchestraiq pod)
+- Output / artifact path: `outputs/seed_stability/shared_only/seed{0,42,123}/`; `outputs/seed_stability/sp_p16/seed{0,42,123}/`; `outputs/seed_stability/seed_stability_summary.json`
+- Hardware: NVIDIA H100 80GB (orchestraiq-jupyter pod on runai-romania-dev)
+- Status: done
+- Result summary: shared-only cosine mean 0.101 ± 0.035 (seeds: 0.079, 0.073, 0.150); SP p16 cosine mean 0.020 ± 0.020 (seeds: 0.002, 0.048, 0.010). Ordering (shared-only > SP p16) is consistent across all seeds; worst shared-only seed (0.073) exceeds best SP p16 seed (0.048). MSE stable within families. Global seeding via `torch_seed_all` added before model construction.
+- Interpretation summary: confirms the benchmark ordering is not a single-seed artifact. Absolute values differ from original frozen results due to global seeding change (model weight initialization now deterministic per seed). The finding is ordering stability, not exact value reproduction. Three seeds do not constitute a significance test, but they move the benchmark from a frozen single-run snapshot toward a reproducibly stable ordering.
+- Promoted to evidence?: yes, as supplementary appendix (Appendix D in paper1_eandd.tex, Table 4). Checklist item 7 upgraded from No to Yes.
+
 ## EXP-2026-04-09-PUBLIC-NOD-PAPER2-LANE-PLAN
 
 - Date: 2026-04-09

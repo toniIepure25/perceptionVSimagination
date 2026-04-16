@@ -1306,3 +1306,31 @@ Paper handoff rule:
   smoke bundle to evidence, and does not claim production Animus readiness
 - Follow-up: the next exact rerunnable command for this lane is
   `./.venv/bin/python -m fmri2img.workflows.plan_public_nod_animus_paper_lane --config configs/canonical/public_nod_imagenet_run10_shared_only.yaml`
+
+## 2026-04-16: Paper 1 seed-stability check completed
+
+- Lane: Threshold research / Paper writing
+- What happened: ran 3-seed stability check for shared-only and SP p16 on
+  the orchestraiq H100 cluster pod. Seeds 0, 42, 123. All 6 training runs +
+  6 evaluations completed in ~90 seconds total.
+- Key results:
+  - Shared-only cosine: 0.079, 0.073, 0.150 (mean 0.101 ± 0.035)
+  - SP p16 cosine: 0.002, 0.048, 0.010 (mean 0.020 ± 0.020)
+  - Ordering consistent across all seeds
+- Pipeline change: added `torch_seed_all()` call before model construction
+  in `train_decoder.py` to make weight initialization deterministic per seed
+- Paper updates:
+  - New Appendix D (seed-stability table and interpretation)
+  - Updated threats-to-validity paragraph on statistical breadth
+  - Checklist item 7 upgraded No → Yes
+  - Supplementary README extended with seed commands and results table
+  - Machine-readable `seed_stability_summary.json` added to supplementary
+  - `notes_for_authors.md` updated: acceptance probability raised to 50–65%
+- Files changed: `paper1_eandd.tex`, `checklist.tex`, `notes_for_authors.md`,
+  `supplementary/README_ANONYMOUS.md`, `supplementary/seed_stability_summary.json`,
+  `src/fmri2img/workflows/train_decoder.py`
+- Validation: PDF compiles cleanly (14 pages, no undefined refs)
+- Claim boundary: seed check confirms ordering stability, not statistical
+  significance. Absolute values differ from original frozen results due to
+  global seeding change. This is honestly noted in the appendix.
+- Follow-up: paper is now submission-ready for NeurIPS 2026 E&D
